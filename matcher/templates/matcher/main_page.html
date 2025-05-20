@@ -1,0 +1,75 @@
+{% extends 'matcher/base.html' %}
+
+{% block title %}Job Matcher - Find Your Fit{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <h1>Job Matcher</h1>
+    
+    <div class="card mt-4">
+        <div class="card-body">
+            <h5 class="card-title">Enter Your Skills & Experience</h5>
+            <form method="POST" action="{% url 'matcher:main_page' %}">
+                {% csrf_token %}
+                <div class="form-group mb-3">
+                    <textarea name="skills_text" class="form-control" rows="5" placeholder="Paste your key skills and experience here...">{{ skills_text }}</textarea>
+                </div>
+                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Match Jobs</button>
+            </form>
+        </div>
+    </div>
+
+    {% if processed_job_matches %}
+    <div class="mt-5">
+        <h2>Matched Job Listings (Sorted by Score)</h2>
+        <ul class="list-group">
+            {% for match_item in processed_job_matches %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5><a href="{% url 'matcher:job_detail_page' match_item.job.id %}">{{ match_item.job.job_title }}</a> at {{ match_item.job.company_name }}</h5>
+                        <p class="mb-1"><strong>Reason:</strong> {{ match_item.reason }}</p>
+                        <p class="mb-1"><small>{{ match_item.job.description|truncatewords:30 }}</small></p>
+                        {% if match_item.job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ match_item.job.location }}</span>{% endif %}
+                        {% if match_item.job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ match_item.job.industry }}</span>{% endif %}
+                    </div>
+                    <span class="badge bg-success rounded-pill p-2">{{ match_item.score }}% Match</span>
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% elif request.method == 'POST' %}
+    <div class="mt-5">
+        <h2>Matched Job Listings</h2>
+        <div class="alert alert-warning" role="alert">
+            No specific matches found based on your input. You can browse all jobs below or refine your skills input.
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="mt-5">
+        <h2>All Available Job Listings</h2>
+        {% if jobs %}
+            <div class="row row-cols-1 row-cols-md-2 g-4">
+                {% for job in jobs %}
+                <div class="col">
+                    <div class="card h-100">
+                        <div class="card-body">
+                            <h5 class="card-title"><a href="{% url 'matcher:job_detail_page' job.id %}">{{ job.job_title }}</a></h5>
+                            <h6 class="card-subtitle mb-2 text-muted">{{ job.company_name }}</h6>
+                            <p class="card-text"><small>{{ job.description|truncatewords:25 }}</small></p>
+                            {% if job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ job.location }}</span>{% endif %}
+                            {% if job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ job.industry }}</span>{% endif %}
+                        </div>
+                        <div class="card-footer">
+                             <a href="{% url 'matcher:job_detail_page' job.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        {% else %}
+            <p>No job listings available at the moment.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %} 

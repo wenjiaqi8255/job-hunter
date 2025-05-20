@@ -1,0 +1,87 @@
+{% extends 'matcher/base.html' %}
+
+{% block title %}{{ job.job_title }} - Job Details{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+  <nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+      <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home / Job Matches</a></li>
+      <li class="breadcrumb-item active" aria-current="page">Job Detail</li>
+    </ol>
+  </nav>
+  
+  <div class="card mb-4">
+    <div class="card-header bg-primary text-white">
+      <h2>{{ job.job_title }}</h2>
+      <h4 class="text-light">{{ job.company_name }}</h4>
+    </div>
+    <div class="card-body">
+      <div class="row mt-3">
+        <div class="col-md-4">
+          <p><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> {{ job.location|default:"N/A" }}</p>
+        </div>
+        <div class="col-md-4">
+          <p><strong><i class="fas fa-industry"></i> Industry:</strong> {{ job.industry|default:"N/A" }}</p>
+        </div>
+        <div class="col-md-4">
+          <p><strong><i class="fas fa-briefcase"></i> Flexibility:</strong> {{ job.flexibility|default:"N/A" }}</p>
+        </div>
+      </div>
+      
+      <div class="mt-3">
+        <p><strong><i class="fas fa-dollar-sign"></i> Salary Range:</strong> {{ job.salary_range|default:"N/A" }}</p>
+      </div>
+      
+      {% if job.description %}
+      <div class="mt-4">
+        <h5><i class="fas fa-file-alt"></i> Job Description</h5>
+        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; white-space: pre-wrap;">
+            {{ job.description|linebreaksbr }}
+        </div>
+      </div>
+      {% endif %}
+      
+      {# The reason_for_match for this specific job, if available #}
+      {# This would have been populated if this job was part of a match result #}
+      {% if job.reason_for_match %}
+      <div class="alert alert-success mt-4">
+        <h5><i class="fas fa-lightbulb"></i> Matching Analysis (from previous match)</h5>
+        <p>{{ job.reason_for_match }}</p>
+      </div>
+      {% endif %}
+
+      <div class="mt-4">
+        <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" class="btn btn-primary"><i class="fas fa-envelope"></i> Generate Cover Letter</a>
+        {% if job.application_url %}
+        <a href="{{ job.application_url }}" class="btn btn-outline-success ms-2" target="_blank"><i class="fas fa-external-link-alt"></i> Apply for Job</a>
+        {% endif %}
+      </div>
+    </div>
+    <div class="card-footer text-muted">
+        Source: {{ job.source|default:"N/A" }} | Posted: {{ job.created_at|date:"Y-m-d H:i" }}
+        {% if job.processed_at %}| Processed: {{ job.processed_at|date:"Y-m-d H:i" }}{% endif %}
+    </div>
+  </div>
+
+  {# Placeholder for Phase 3: Status Management #}
+  <!-- 
+  <div class="card">
+    <div class="card-body">
+      <h5>Application Status & Notes (Future Feature)</h5>
+      <form method="post" action="#">
+        {% csrf_token %}
+        <select class="form-select mb-3" name="status" disabled>
+          <option>Not Applied</option>
+        </select>
+        <div class="mb-3">
+          <label class="form-label">Notes</label>
+          <textarea class="form-control" name="notes" rows="3" disabled></textarea>
+        </div>
+        <button type="submit" class="btn btn-success" disabled>Save Status</button>
+      </form>
+    </div>
+  </div>
+  -->
+</div>
+{% endblock %} 

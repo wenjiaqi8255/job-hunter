@@ -1,0 +1,45 @@
+{% extends 'matcher/base.html' %}
+
+{% block title %}Cover Letter for {{ job.job_title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+          <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'matcher:job_detail_page' job.id %}">Job Detail: {{ job.job_title }}</a></li>
+          <li class="breadcrumb-item active" aria-current="page">Generated Cover Letter</li>
+        </ol>
+    </nav>
+
+    <h2>Cover Letter for: {{ job.job_title }} at {{ job.company_name }}</h2>
+    <p class="text-muted">Based on your skills: "{{ skills_text|truncatechars:100 }}"</p>
+    
+    <div class="card mt-3">
+        <div class="card-header">
+            Generated Cover Letter Content
+        </div>
+        <div class="card-body">
+            <textarea id="coverLetterContent" class="form-control" rows="15" readonly>{{ cover_letter_content }}</textarea>
+        </div>
+        <div class="card-footer">
+            <button class="btn btn-secondary" onclick="copyCoverLetter()"><i class="fas fa-copy"></i> Copy Full Text</button>
+        </div>
+    </div>
+</div>
+
+<script>
+function copyCoverLetter() {
+    var copyText = document.getElementById("coverLetterContent");
+    copyText.select();
+    copyText.setSelectionRange(0, 99999); /* For mobile devices */
+    navigator.clipboard.writeText(copyText.value)
+        .then(() => {
+            alert("Cover letter copied to clipboard!");
+        })
+        .catch(err => {
+            alert("Failed to copy text. Please try selecting and copying manually. Error: " + err);
+        });
+}
+</script>
+{% endblock %} 
