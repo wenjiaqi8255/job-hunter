@@ -3,73 +3,276 @@
 {% block title %}Job Matcher - Find Your Fit{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <h1>Job Matcher</h1>
-    
-    <div class="card mt-4">
-        <div class="card-body">
-            <h5 class="card-title">Enter Your Skills & Experience</h5>
-            <form method="POST" action="{% url 'matcher:main_page' %}">
-                {% csrf_token %}
-                <div class="form-group mb-3">
-                    <textarea name="skills_text" class="form-control" rows="5" placeholder="Paste your key skills and experience here...">{{ skills_text }}</textarea>
+<div class="container-fluid mt-0">
+    <div class="row">
+        <!-- Sidebar: Match History -->
+        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
+            <div class="position-sticky pt-3 sidebar-sticky">
+                <div class="d-flex justify-content-between align-items-center px-3 mt-0 mb-2">
+                     <h4 class="mb-0">Match Sessions</h4>
+                     {# Sidebar Toggle Button - will be visible on all screen sizes for now #}
+                     {# For md and up, it's already visible due to d-md-block #}
+                     {# We will hide the main toggle for large screens and use a dedicated one #}
                 </div>
-                <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Match Jobs</button>
-            </form>
-        </div>
-    </div>
 
-    {% if processed_job_matches %}
-    <div class="mt-5">
-        <h2>Matched Job Listings (Sorted by Score)</h2>
-        <ul class="list-group">
-            {% for match_item in processed_job_matches %}
-                <li class="list-group-item d-flex justify-content-between align-items-center">
-                    <div>
-                        <h5><a href="{% url 'matcher:job_detail_page' match_item.job.id %}">{{ match_item.job.job_title }}</a> at {{ match_item.job.company_name }}</h5>
-                        <p class="mb-1"><strong>Reason:</strong> {{ match_item.reason }}</p>
-                        <p class="mb-1"><small>{{ match_item.job.description|truncatewords:30 }}</small></p>
-                        {% if match_item.job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ match_item.job.location }}</span>{% endif %}
-                        {% if match_item.job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ match_item.job.industry }}</span>{% endif %}
-                    </div>
-                    <span class="badge bg-success rounded-pill p-2">{{ match_item.score }}% Match</span>
-                </li>
-            {% endfor %}
-        </ul>
-    </div>
-    {% elif request.method == 'POST' %}
-    <div class="mt-5">
-        <h2>Matched Job Listings</h2>
-        <div class="alert alert-warning" role="alert">
-            No specific matches found based on your input. You can browse all jobs below or refine your skills input.
-        </div>
-    </div>
-    {% endif %}
-
-    <div class="mt-5">
-        <h2>All Available Job Listings</h2>
-        {% if jobs %}
-            <div class="row row-cols-1 row-cols-md-2 g-4">
-                {% for job in jobs %}
-                <div class="col">
-                    <div class="card h-100">
-                        <div class="card-body">
-                            <h5 class="card-title"><a href="{% url 'matcher:job_detail_page' job.id %}">{{ job.job_title }}</a></h5>
-                            <h6 class="card-subtitle mb-2 text-muted">{{ job.company_name }}</h6>
-                            <p class="card-text"><small>{{ job.description|truncatewords:25 }}</small></p>
-                            {% if job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ job.location }}</span>{% endif %}
-                            {% if job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ job.industry }}</span>{% endif %}
-                        </div>
-                        <div class="card-footer">
-                             <a href="{% url 'matcher:job_detail_page' job.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
+                <a href="{% url 'matcher:main_page' %}" 
+                   class="btn btn-primary btn-sm d-block mx-3 mb-3 {% if not current_match_session_id %}active{% endif %}">
+                    <i class="fas fa-plus-circle"></i> Start New Match
+                </a>
+                <ul class="nav flex-column">
+                    {% for session in match_history %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}" 
+                               href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
+                                <i class="fas fa-history me-2"></i>
+                                <span class="sidebar-text">Skills: {{ session.skills_text|truncatewords:5 }}</span><br>
+                                <small class="text-muted sidebar-text">{{ session.matched_at|date:"Y-m-d H:i" }}</small>
+                            </a>
+                        </li>
+                    {% empty %}
+                        <li class="nav-item px-3">
+                            <small class="text-muted sidebar-text">No match history yet.</small>
+                        </li>
+                    {% endfor %}
+                </ul>
             </div>
-        {% else %}
-            <p>No job listings available at the moment.</p>
-        {% endif %}
+        </nav>
+
+        <!-- Main content -->
+        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content-area">
+            <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
+                <div class_="d-flex align-items-center">
+                    <button class="btn btn-link d-md-none me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle sidebar">
+                        <i class="fas fa-bars"></i>
+                    </button>
+                    <button id="sidebarToggleDesktop" class="btn btn-link d-none d-md-inline-block me-3" type="button" title="Toggle sidebar">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h1 class="h2 mb-0">Job Matcher Dashboard</h1>
+                </div>
+            </div>
+
+            <!-- Skills Input Form -->
+            <div class="card mt-4">
+                <div class="card-body">
+                    <h5 class="card-title">Enter Your Skills & Experience</h5>
+                    <form method="POST" action="{% url 'matcher:main_page' %}">
+                        {% csrf_token %}
+                        <div class="form-group mb-3">
+                            <textarea name="skills_text" class="form-control" rows="5" placeholder="Paste your key skills and experience here...">{{ skills_text }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Match Jobs</button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Matched Job Listings -->
+            {% if processed_job_matches %}
+            <div class="mt-5">
+                <h2>Matched Job Listings (Sorted by Score)</h2>
+                <p class="text-muted">
+                    {% if selected_session_object %}
+                        Displaying results for match session from {{ selected_session_object.matched_at|date:"F d, Y, P" }}.
+                    {% elif current_match_session_id %}
+                        Displaying results from your latest submission (processing or just submitted).
+                    {% endif %}
+                </p>
+                <ul class="list-group">
+                    {% for match_item in processed_job_matches %}
+                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                            <div>
+                                <h5><a href="{% url 'matcher:job_detail_page' match_item.job.id %}">{{ match_item.job.job_title }}</a> at {{ match_item.job.company_name }}</h5>
+                                <p class="mb-1"><strong>Reason:</strong> {{ match_item.reason }}</p>
+                                <p class="mb-1"><small>{{ match_item.job.description|truncatewords:30 }}</small></p>
+                                {% if match_item.job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ match_item.job.location }}</span>{% endif %}
+                                {% if match_item.job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ match_item.job.industry }}</span>{% endif %}
+                            </div>
+                            <span class="badge bg-success rounded-pill p-2">{{ match_item.score }}% Match</span>
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% elif request.method == 'POST' and not processed_job_matches %}
+             <div class="mt-5">
+                <h2>Matched Job Listings</h2>
+                <div class="alert alert-warning" role="alert">
+                    No specific matches found based on your input. You can browse all jobs below or refine your skills input.
+                </div>
+            </div>
+            {% elif current_match_session_id and not processed_job_matches %}
+             <div class="mt-5">
+                <h2>Matched Job Listings</h2>
+                <div class="alert alert-info" role="alert">
+                    No matches were found for the selected historical session.
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- All Available Job Listings -->
+            <div class="mt-5 mb-5">
+                <h2>All Available Job Listings <span class="badge bg-secondary">{{ all_jobs_count }}</span></h2>
+                {% if jobs %}
+                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        {% for job in jobs %}
+                        <div class="col">
+                            <div class="card h-100">
+                                <div class="card-body">
+                                    <h5 class="card-title"><a href="{% url 'matcher:job_detail_page' job.id %}">{{ job.job_title }}</a></h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">{{ job.company_name }}</h6>
+                                    <p class="card-text"><small>{{ job.description|truncatewords:25 }}</small></p>
+                                    {% if job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ job.location }}</span>{% endif %}
+                                    {% if job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ job.industry }}</span>{% endif %}
+                                </div>
+                                <div class="card-footer">
+                                     <a href="{% url 'matcher:job_detail_page' job.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                </div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                {% else %}
+                    <p>No job listings available at the moment.</p>
+                {% endif %}
+            </div>
+        </main>
     </div>
 </div>
+
+<style>
+    .sidebar {
+        position: fixed;
+        top: 56px; /* Height of the fixed navbar */
+        bottom: 0;
+        left: 0;
+        z-index: 100; /* Behind the navbar but on top of content */
+        padding: 0; /* Remove padding, use .sidebar-sticky for content padding */
+        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
+        transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
+        width: 250px; /* Default sidebar width */
+    }
+
+    .sidebar.collapsed {
+        margin-left: -250px; /* Width of sidebar */
+    }
+    
+    .sidebar.collapsed .sidebar-text {
+        display: none;
+    }
+
+    .sidebar-sticky {
+        position: relative;
+        top: 0;
+        height: calc(100vh - 56px); /* Full height minus navbar */
+        padding-top: .5rem;
+        overflow-x: hidden;
+        overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
+    }
+
+    .main-content-area {
+        transition: margin-left 0.3s ease-in-out;
+        padding-top: 0; /* Navbar padding is on body */
+    }
+
+    .main-content-area.sidebar-collapsed {
+        margin-left: 0 !important; /* Override Bootstrap ms-sm-auto when sidebar is hidden */
+    }
+    
+    /* Adjust main content margin when sidebar is visible */
+    @media (min-width: 768px) { /* md breakpoint */
+        .main-content-area {
+             margin-left: 250px; /* Default sidebar width */
+        }
+        .main-content-area.sidebar-collapsed {
+            margin-left: 0px !important; 
+        }
+        #sidebarMenu.collapsed + .main-content-area {
+            margin-left: 0px !important;
+        }
+
+    }
+
+    /* Styles for the mobile toggle (hamburger) already provided by Bootstrap via d-md-none and data-bs-target */
+
+    .sidebar .nav-link {
+        font-weight: 500;
+        color: var(--bs-emphasis-color);
+    }
+
+    .sidebar .nav-link .fa-history {
+        margin-right: 8px;
+    }
+
+    .sidebar .nav-link.active {
+        color: var(--bs-primary);
+    }
+
+    .sidebar .nav-link:hover {
+        color: var(--bs-primary-text-emphasis);
+        background-color: var(--bs-tertiary-bg);
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const sidebar = document.getElementById('sidebarMenu');
+    const mainContent = document.querySelector('.main-content-area');
+    const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
+    const sidebarToggleMobile = document.querySelector('button[data-bs-target="#sidebarMenu"]'); // Hamburger
+
+    // Function to toggle sidebar for desktop
+    function toggleDesktopSidebar() {
+        sidebar.classList.toggle('collapsed');
+        mainContent.classList.toggle('sidebar-collapsed');
+        // Adjust col-md-9 and col-lg-10 on mainContent if sidebar is collapsed
+        if (sidebar.classList.contains('collapsed')) {
+            mainContent.classList.remove('col-md-9', 'ms-sm-auto', 'col-lg-10');
+            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        } else {
+            mainContent.classList.add('col-md-9', 'ms-sm-auto', 'col-lg-10');
+            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left"></i>';
+        }
+    }
+
+    if (sidebarToggleDesktop) {
+        sidebarToggleDesktop.addEventListener('click', toggleDesktopSidebar);
+        // Initialize desktop sidebar state (e.g. based on localStorage if you want persistence)
+        // For now, default to expanded
+        if (window.innerWidth < 768) { // If mobile, start collapsed unless toggled by Bootstrap
+             if (!sidebar.classList.contains('show')) { // Check if BS has not shown it
+                // No, we don't want to force collapse on desktop toggle for mobile state
+             }
+        } else {
+            // Default state for desktop: expanded
+             mainContent.classList.add('col-md-9', 'ms-sm-auto', 'col-lg-10');
+        }
+    }
+
+    // Mobile toggle is handled by Bootstrap's collapse plugin.
+    // We might want to sync the desktop icon if mobile toggle is used.
+    if (sidebar && sidebarToggleMobile) {
+        sidebar.addEventListener('shown.bs.collapse', function () {
+            // When mobile sidebar opens, ensure desktop toggle icon is for collapsing
+            if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left"></i>';
+            // And ensure main content has its margins (though this might not be needed if it's full width on mobile)
+        });
+        sidebar.addEventListener('hidden.bs.collapse', function () {
+            // When mobile sidebar closes, ensure desktop toggle icon is for expanding
+            if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right"></i>';
+        });
+    }
+
+    // Initial state for desktop toggle icon based on sidebar visibility (for larger screens)
+    if (window.innerWidth >= 768 && sidebarToggleDesktop) {
+        if (sidebar.classList.contains('collapsed')) {
+            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right"></i>';
+             mainContent.classList.remove('col-md-9', 'ms-sm-auto', 'col-lg-10');
+        } else {
+            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left"></i>';
+             mainContent.classList.add('col-md-9', 'ms-sm-auto', 'col-lg-10');
+        }
+    }
+
+});
+</script>
+
 {% endblock %} 

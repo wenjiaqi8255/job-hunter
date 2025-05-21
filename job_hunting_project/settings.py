@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,10 +21,15 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = "django-insecure-2z=l+mg%qa#ruuz%wy-oh9iv*b0b10*%ybk-63w1z=&uj)wv7&"
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY', 'a_default_secret_key_if_not_set')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
+
+# AI Simulation Setting
+# Defaults to True (simulated) if env var is not set or not 'False'
+# Set USE_AI_SIMULATION_ENV=False in your .env or environment to use the real API
+USE_AI_SIMULATION = os.environ.get('USE_AI_SIMULATION_ENV', 'True').lower() != 'false'
 
 ALLOWED_HOSTS = []
 
