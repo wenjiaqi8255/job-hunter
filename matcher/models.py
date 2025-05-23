@@ -1,5 +1,6 @@
 from django.db import models
 import uuid # Import uuid for UUIDField default
+import json # For storing structured profile as JSON
 
 # Create your models here.
 
@@ -10,14 +11,12 @@ class JobListing(models.Model):
     description = models.TextField(null=True, blank=True)
     application_url = models.URLField(null=True, blank=True)
     location = models.CharField(max_length=200, null=True, blank=True)
-    # Assuming 'industry' is a required field based on lack of null=True
     industry = models.CharField(max_length=100) 
     flexibility = models.CharField(max_length=50, null=True, blank=True)
     salary_range = models.CharField(max_length=100, null=True, blank=True)
-    # 'reason_for_match' will be populated by Gemini, not from CSV typically
+    level = models.CharField(max_length=100, null=True, blank=True)
     reason_for_match = models.TextField(null=True, blank=True) 
     source = models.CharField(max_length=50, null=True, blank=True)
-    # 'status' seems more related to SavedJob, but including if it's in core listings
     status = models.CharField(max_length=50, null=True, blank=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     processed_at = models.DateTimeField(null=True, blank=True)
@@ -27,19 +26,26 @@ class JobListing(models.Model):
 
 class MatchSession(models.Model):
     """Stores a specific matching session, including the skills input used."""
-    # Using Django's session key if available, or a manually generated one
-    # If we want to associate with Django user sessions for logged-in users later, this can be adapted.
-    # For anonymous users, request.session.session_key can be used if session is saved.
-    # For MVP, a simple unique ID per match run might suffice if we don't need strict user separation yet.
-    # Let's use a UUIDField for a unique ID for each matching run.
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     skills_text = models.TextField()
+    user_preferences_text = models.TextField(null=True, blank=True)
+    structured_user_profile_json = models.JSONField(null=True, blank=True)
     matched_at = models.DateTimeField(auto_now_add=True)
-    # If using Django sessions directly for anonymous users:
     # session_key = models.CharField(max_length=40, null=True, blank=True, unique=True) 
 
     def __str__(self):
-        return f"Match session on {self.matched_at.strftime('%Y-%m-%d %H:%M')} with skills: {self.skills_text[:50]}..."
+        preferences_snippet = self.user_preferences_text[:30] + "..." if self.user_preferences_text else "No preferences"
+        return f"Match on {self.matched_at.strftime('%Y-%m-%d %H:%M')} | CV: {self.skills_text[:30]}... | Prefs: {preferences_snippet}"
+
+    def get_structured_profile(self):
+        if self.structured_user_profile_json:
+            if isinstance(self.structured_user_profile_json, str):
+                try:
+                    return json.loads(self.structured_user_profile_json)
+                except (json.JSONDecodeError, TypeError):
+                    return None
+            return self.structured_user_profile_json
+        return None
 
 class MatchedJob(models.Model):
     """Links a JobListing to a MatchSession with a specific score and reason for that match."""
@@ -47,6 +53,8 @@ class MatchedJob(models.Model):
     job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE)
     score = models.IntegerField(default=0) # Score from 0-100
     reason = models.TextField(blank=True, null=True) # Reason from Gemini
+    insights = models.TextField(blank=True, null=True) # New field for 'job_insights'
+    tips = models.TextField(blank=True, null=True) # New field for 'application_tips'
 
     class Meta:
         # Ensure a job is only listed once per match session
@@ -55,3 +63,36 @@ class MatchedJob(models.Model):
 
     def __str__(self):
         return f"{self.job_listing.job_title} ({self.score}%) for session {self.match_session_id}"
+
+class SavedJob(models.Model):
+    STATUS_CHOICES = [
+        ('not_applied', 'Not Applied'),
+        ('applied', 'Applied'),
+        ('interviewing', 'Interviewing'),
+        ('offer_received', 'Offer Received'),
+        ('rejected', 'Rejected'),
+        ('accepted', 'Accepted'),
+    ]
+
+    job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name='saved_instances')
+    user_session_key = models.CharField(max_length=40, db_index=True) 
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_applied')
+    notes = models.TextField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('job_listing', 'user_session_key')
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"{self.job_listing.job_title} - {self.get_status_display()} for session {self.user_session_key}"
+
+class CoverLetter(models.Model):
+    saved_job = models.OneToOneField(SavedJob, on_delete=models.CASCADE, related_name='cover_letter') # Assuming one cover letter per saved job for simplicity
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True) # Good to have to see when it was last modified if ever editable
+
+    def __str__(self):
+        return f"Cover Letter for {self.saved_job.job_listing.job_title} (SavedJob ID: {self.saved_job.id})"

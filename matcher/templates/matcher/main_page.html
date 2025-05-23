@@ -1,4 +1,5 @@
 {% extends 'matcher/base.html' %}
+{% load matcher_extras %}
 
 {% block title %}Job Matcher - Find Your Fit{% endblock %}
 
@@ -55,13 +56,18 @@
             <!-- Skills Input Form -->
             <div class="card mt-4">
                 <div class="card-body">
-                    <h5 class="card-title">Enter Your Skills & Experience</h5>
+                    <h5 class="card-title">Enter Your Profile Details</h5>
                     <form method="POST" action="{% url 'matcher:main_page' %}">
                         {% csrf_token %}
                         <div class="form-group mb-3">
-                            <textarea name="skills_text" class="form-control" rows="5" placeholder="Paste your key skills and experience here...">{{ skills_text }}</textarea>
+                            <label for="user_cv_text" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
+                            <textarea name="user_cv_text" id="user_cv_text" class="form-control" rows="8" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
                         </div>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-search"></i> Match Jobs</button>
+                        <div class="form-group mb-3">
+                            <label for="user_preferences_text" class="form-label"><strong>Your Preferences:</strong></label>
+                            <textarea name="user_preferences_text" id="user_preferences_text" class="form-control" rows="4" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
                     </form>
                 </div>
             </div>
@@ -83,6 +89,18 @@
                             <div>
                                 <h5><a href="{% url 'matcher:job_detail_page' match_item.job.id %}">{{ match_item.job.job_title }}</a> at {{ match_item.job.company_name }}</h5>
                                 <p class="mb-1"><strong>Reason:</strong> {{ match_item.reason }}</p>
+                                {% if match_item.insights and match_item.insights != 'N/A' %}
+                                    <p class="mb-1"><small><strong>Insights:</strong><br>{{ match_item.insights|linebreaksbr }}</small></p>
+                                {% endif %}
+                                {% if match_item.tips and match_item.tips != 'N/A' %}
+                                    <p class="mb-1"><small><strong>Application Tips:</strong><br>{{ match_item.tips|linebreaksbr }}</small></p>
+                                {% endif %}
+                                {% if match_item.saved_status %}
+                                    <p class="mb-1"><small><strong>Status:</strong> <span class="badge bg-info">{{ match_item.saved_status }}</span></small></p>
+                                {% endif %}
+                                {% if match_item.job.level %}
+                                    <p class="mb-1"><small><strong>Level:</strong> {{ match_item.job.level }}</small></p>
+                                {% endif %}
                                 <p class="mb-1"><small>{{ match_item.job.description|truncatewords:30 }}</small></p>
                                 {% if match_item.job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ match_item.job.location }}</span>{% endif %}
                                 {% if match_item.job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ match_item.job.industry }}</span>{% endif %}
@@ -111,20 +129,26 @@
             <!-- All Available Job Listings -->
             <div class="mt-5 mb-5">
                 <h2>All Available Job Listings <span class="badge bg-secondary">{{ all_jobs_count }}</span></h2>
-                {% if jobs %}
+                {% if all_jobs_annotated %}
                     <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
-                        {% for job in jobs %}
+                        {% for item in all_jobs_annotated %}
                         <div class="col">
                             <div class="card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title"><a href="{% url 'matcher:job_detail_page' job.id %}">{{ job.job_title }}</a></h5>
-                                    <h6 class="card-subtitle mb-2 text-muted">{{ job.company_name }}</h6>
-                                    <p class="card-text"><small>{{ job.description|truncatewords:25 }}</small></p>
-                                    {% if job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ job.location }}</span>{% endif %}
-                                    {% if job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ job.industry }}</span>{% endif %}
+                                    <h5 class="card-title"><a href="{% url 'matcher:job_detail_page' item.job_object.id %}">{{ item.job_object.job_title }}</a></h5>
+                                    <h6 class="card-subtitle mb-2 text-muted">{{ item.job_object.company_name }}</h6>
+                                    {% if item.saved_status %}
+                                        <p class="mb-1"><small><strong>Status:</strong> <span class="badge bg-info">{{ item.saved_status }}</span></small></p>
+                                    {% endif %}
+                                    {% if item.job_object.level %}
+                                        <p class="mb-1"><small><strong>Level:</strong> {{ item.job_object.level }}</small></p>
+                                    {% endif %}
+                                    <p class="card-text"><small>{{ item.job_object.description|truncatewords:25 }}</small></p>
+                                    {% if item.job_object.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ item.job_object.location }}</span>{% endif %}
+                                    {% if item.job_object.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ item.job_object.industry }}</span>{% endif %}
                                 </div>
                                 <div class="card-footer">
-                                     <a href="{% url 'matcher:job_detail_page' job.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                     <a href="{% url 'matcher:job_detail_page' item.job_object.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
                                 </div>
                             </div>
                         </div>

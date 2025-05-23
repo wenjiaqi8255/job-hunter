@@ -29,8 +29,8 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 # AI Simulation Setting
 # Defaults to True (simulated) if env var is not set or not 'False'
 # Set USE_AI_SIMULATION_ENV=False in your .env or environment to use the real API
-USE_AI_SIMULATION = os.environ.get('USE_AI_SIMULATION_ENV', 'True').lower() != 'false'
-
+# USE_AI_SIMULATION = os.environ.get('USE_AI_SIMULATION_ENV', 'True').lower() != 'false'
+USE_AI_SIMULATION = True
 ALLOWED_HOSTS = []
 
 

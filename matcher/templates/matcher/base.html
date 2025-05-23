@@ -33,12 +33,12 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="{% url 'matcher:main_page' %}">Home</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'main_page' %}active{% endif %}" href="{% url 'matcher:main_page' %}">Home & Matching</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'my_applications_page' %}active{% endif %}" href="{% url 'matcher:my_applications_page' %}">My Applications</a>
                     </li>
                     {# Add other nav links here as features are built #}
-                    {# <li class="nav-item">
-                        <a class="nav-link" href="#">My Applications (Future)</a>
-                    </li> #}
                 </ul>
             </div>
         </div>

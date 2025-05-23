@@ -70,7 +70,7 @@ class Command(BaseCommand):
                         industry=industry_val,
                         flexibility=get_val('flexibility'),
                         salary_range=get_val('salary_range'),
-                        # reason_for_match is usually AI-generated, so typically not from CSV
+                        level=get_val('level', default='entry level'),
                         reason_for_match=get_val('reason_for_match'), 
                         source=get_val('source'),
                         status=get_val('status'), # This field seems more for user interaction later
