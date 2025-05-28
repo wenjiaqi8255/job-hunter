@@ -316,6 +316,7 @@ def job_detail_page(request, job_id, match_session_id=None):
     job = get_object_or_404(JobListing, id=job_id)
     skills_text = request.session.get('skills_text', '')
     saved_job_instance = None
+    parsed_insights = [] # Initialize parsed_insights
     
     # Ensure session key exists
     if not request.session.session_key:
@@ -348,6 +349,9 @@ def job_detail_page(request, job_id, match_session_id=None):
                 job.reason_for_match = job_match_analysis.reason
                 job.insights_for_match = job_match_analysis.insights
                 job.tips_for_match = job_match_analysis.tips
+                # Parse insights here if job_match_analysis is found
+                if job_match_analysis.insights:
+                    parsed_insights = parse_and_prepare_insights_for_template(job_match_analysis.insights)
         except MatchSession.DoesNotExist:
             active_match_session = None # Session not found, clear it
             session_id_to_use = None    # Ensure session_id_to_use is also None if session doesn't exist
@@ -386,6 +390,11 @@ def job_detail_page(request, job_id, match_session_id=None):
     else:
         form = SavedJobForm(instance=saved_job_instance)
 
+    # If job_match_analysis was not found, but job object itself might have insights_for_match
+    # (e.g. from a different source or default value), try parsing that.
+    if not parsed_insights and hasattr(job, 'insights_for_match') and job.insights_for_match:
+        parsed_insights = parse_and_prepare_insights_for_template(job.insights_for_match)
+
     context = {
         'job': job,
         'skills_text': skills_text,
@@ -394,7 +403,8 @@ def job_detail_page(request, job_id, match_session_id=None):
         'status_choices': SavedJob.STATUS_CHOICES, # Pass choices for direct iteration if needed
         'job_match_analysis': job_match_analysis,
         'current_match_session_id_for_url': session_id_to_use, 
-        'active_match_session': active_match_session # Pass the session object for breadcrumb
+        'active_match_session': active_match_session, # Pass the session object for breadcrumb
+        'parsed_insights_list': parsed_insights # Add parsed insights to context
     }
     return render(request, 'matcher/job_detail.html', context)
 

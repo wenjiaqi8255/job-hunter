@@ -1,10 +1,15 @@
 {% extends 'matcher/base.html' %}
+{% load static %}
 
 {% block title %}{{ job.job_title }} - Job Details{% endblock %}
 
+{% block head_extra %}
+    <link rel="stylesheet" href="{% static 'matcher/css/jobbAI_styles.css' %}">
+{% endblock %}
+
 {% block content %}
-<div class="container py-4">
-  <nav aria-label="breadcrumb">
+<div class="container-fluid py-4 px-md-5 mb-5">
+  <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home / Job Matches</a></li>
       {% if active_match_session %}
@@ -14,121 +19,188 @@
         </a>
       </li>
       {% endif %}
-      <li class="breadcrumb-item active" aria-current="page">Job Detail</li>
+      <li class="breadcrumb-item active" aria-current="page">{{ job.job_title }}</li>
     </ol>
   </nav>
   
-  <div class="card mb-4">
-    <div class="card-header bg-primary text-white">
-      <h2>{{ job.job_title }}</h2>
-      <h4 class="text-light">{{ job.company_name }}</h4>
-      {% if saved_job_instance and saved_job_instance.status %}
-      <p class="mb-0 mt-1"><span class="badge bg-info" style="font-size: 0.9rem;">Status: {{ saved_job_instance.get_status_display }}</span></p>
-      {% endif %}
-    </div>
-    <div class="card-body">
-      <div class="row mt-3">
-        <div class="col-md-4">
-          <p><strong><i class="fas fa-map-marker-alt"></i> Location:</strong> {{ job.location|default:"N/A" }}</p>
+  <div class="row">
+    <div class="col-lg-8">
+      <div class="card jobbAI-job-card shadow-sm mb-4">
+        <div class="card-header bg-light border-bottom-0 py-3">
+          <div class="d-flex justify-content-between align-items-start">
+            <div>
+              <h4 class="mb-1">{{ job.job_title }}</h4>
+              <p class="text-muted fw-normal mb-2">{{ job.company_name }}</p>
+            </div>
+            <span class="badge status-badge status-{{ saved_job_instance.status|default_if_none:'not-applied'|lower }}">
+              {{ saved_job_instance.get_status_display|default:"Not Applied" }}
+            </span>
+          </div>
         </div>
-        <div class="col-md-4">
-          <p><strong><i class="fas fa-industry"></i> Industry:</strong> {{ job.industry|default:"N/A" }}</p>
-        </div>
-        <div class="col-md-4">
-          <p><strong><i class="fas fa-briefcase"></i> Flexibility:</strong> {{ job.flexibility|default:"N/A" }}</p>
-        </div>
-      </div>
-      
-      <div class="row mt-2">
-        <div class="col-md-4">
-          <p><strong><i class="fas fa-dollar-sign"></i> Salary Range:</strong> {{ job.salary_range|default:"N/A" }}</p>
-        </div>
-        <div class="col-md-4">
-            <p><strong><i class="fas fa-level-up-alt"></i> Level:</strong> {{ job.level|default:"N/A" }}</p>
-        </div>
-        <div class="col-md-4">
-            {# Placeholder for another field if needed #}
-        </div>
-      </div>
-      
-      {% comment %} Display personalized matching reasons, insights, and tips {% endcomment %}
-      {% if job.reason_for_match or job.insights_for_match or job.tips_for_match %}
-      <div class="alert alert-success mt-4 mb-4">
-        <h5><i class="fas fa-lightbulb"></i> Why this job could be a great match:</h5>
-        
-        {% if job.reason_for_match %}
-        <p class="mb-2"><strong>Reason for recommendation:</strong><br>{{ job.reason_for_match|linebreaksbr }}</p>
-        {% endif %}
-        
-        {% if job.insights_for_match and job.insights_for_match != 'N/A' %}
-        <p class="mb-2"><small><strong>Further Insights:</strong><br>{{ job.insights_for_match|linebreaksbr }}</small></p>
-        {% endif %}
-        
-        {% if job.tips_for_match and job.tips_for_match != 'N/A' %}
-        <p class="mb-0"><small><strong>Application Tips:</strong><br>{{ job.tips_for_match|linebreaksbr }}</small></p>
-        {% endif %}
-      </div>
-      {% endif %}
+        <div class="card-body p-4">
+          <!-- <div class="row mb-3">
+            <div class="col-md-6 col-lg-4 mb-2">
+              <p class="mb-0"><small class="text-muted">Location</small></p>
+              <p><strong><i class="fas fa-map-marker-alt me-2 text-muted"></i>{{ job.location|default:"N/A" }}</strong></p>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-2">
+              <p class="mb-0"><small class="text-muted">Industry</small></p>
+              <p><strong><i class="fas fa-industry me-2 text-muted"></i>{{ job.industry|default:"N/A" }}</strong></p>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-2">
+              <p class="mb-0"><small class="text-muted">Flexibility</small></p>
+              <p><strong><i class="fas fa-briefcase me-2 text-muted"></i>{{ job.flexibility|default:"N/A" }}</strong></p>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-2">
+              <p class="mb-0"><small class="text-muted">Salary Range</small></p>
+              <p><strong><i class="fas fa-dollar-sign me-2 text-muted"></i>{{ job.salary_range|default:"N/A" }}</strong></p>
+            </div>
+            <div class="col-md-6 col-lg-4 mb-2">
+              <p class="mb-0"><small class="text-muted">Level</small></p>
+              <p><strong><i class="fas fa-level-up-alt me-2 text-muted"></i>{{ job.level|default:"N/A" }}</strong></p>
+            </div>
+          </div> -->
+          
+          <div class="mb-2">
+            <small class="text-muted">
+                <i class="fas fa-briefcase"></i> {{ job.level|default:"Unknown Level" }} | 
+                <i class="fas fa-map-marker-alt"></i> {{ job.location|default:"Unknown Location" }} | 
+                <i class="fas fa-industry"></i> {{ job.industry|default:"Unknown Industry" }} 
+            </small>
+          </div>
+          <div class="mb-2">
+            <small class="text-muted">            
+                <i class="fas fa-clock"></i> {{ job.flexibility|default:"Unknown flexibility"}} |
+                <i class="fas fa-dollar-sign"></i> {{ job.salary_range|default:"Unknown salary range"}} 
+            </small>
+          </div>
+          {% if parsed_insights_list %}
+          <div class="mt-4">
+            <div class="accordion accordion-flush accordion-sm mb-3" id="accordionInsights{{ job.id }}">
+                <div class="accordion-item border rounded">
+                    <h2 class="accordion-header" id="headingInsights{{ job.id }}">
+                        <button class="accordion-button p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsights{{ job.id }}" aria-expanded="true" aria-controls="collapseInsights{{ job.id }}">
+                            <strong class="h6 mb-0"><i class="fas fa-list-ul me-2 text-primary"></i>Key Insights</strong>
+                        </button>
+                    </h2>
+                    <div id="collapseInsights{{ job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingInsights{{ job.id }}">
+                        <div class="accordion-body p-0">
+                            <table class="table table-sm small table-borderless mb-0">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="w-50 ps-3 pt-2 text-success"><small>Pros</small></th>
+                                        <th scope="col" class="w-50 ps-3 pt-2 text-danger"><small>Cons</small></th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for pro_insight, con_insight in parsed_insights_list %}
+                                    <tr>
+                                        <td class="ps-3 align-top pb-2"><small>{% if pro_insight %}<i class="fas fa-check-circle text-success me-1"></i>{{ pro_insight }}{% endif %}</small></td>
+                                        <td class="ps-3 align-top pb-2"><small>{% if con_insight %}<i class="fas fa-times-circle text-danger me-1"></i>{{ con_insight }}{% endif %}</small></td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+          </div>
+          {% elif job.insights_for_match and job.insights_for_match != 'N/A' %}
+          <div class="mt-4">
+            <h5 class="h6 mb-2"><i class="fas fa-search-plus me-2 text-primary"></i>Further Insights</h5>
+            <p class="small">{{ job.insights_for_match|linebreaksbr }}</p>
+          </div>
+          {% endif %}
 
-      {% if job.description %}
-      <div class="mt-4">
-        <h5><i class="fas fa-file-alt"></i> Job Description</h5>
-        <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; white-space: pre-wrap;">
-            {{ job.description|linebreaksbr }}
+          {% if job.reason_for_match %}
+          <div class="mt-4">
+            <h5 class="h6 mb-2"><i class="fas fa-bullseye me-2 text-primary"></i>Reason for Recommendation</h5>
+            <p class="small">{{ job.reason_for_match|linebreaksbr }}</p>
+          </div>
+          {% endif %}
+
+          {% if job.description %}
+          <div class="mt-4">
+            <h5 class="h6 mb-2"><i class="fas fa-file-alt me-2 text-primary"></i>Job Description</h5>
+            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto; white-space: pre-wrap; background-color: #f8f9fa;">
+                {{ job.description|linebreaksbr }}
+                {% if job.source %}
+                <p class="mt-3 mb-0 text-muted small">Source: {{ job.source }}</p>
+                {% endif %}
+            </div>
+          </div>
+          {% endif %}
+
+          {% if job.tips_for_match and job.tips_for_match != 'N/A' %}
+          <div class="mt-4">
+            <h5 class="h6 mb-2"><i class="fas fa-magic me-2 text-primary"></i>Application Tips</h5>
+            <p class="small">{{ job.tips_for_match|linebreaksbr }}</p>
+          </div>
+          {% endif %}
+        </div>
+        <div class="card-footer bg-light text-muted small py-2 px-4">
+            Source: {{ job.source|default:"N/A" }} | Posted: {{ job.created_at|date:"Y-m-d H:i" }}
+            {% if job.processed_at %}| Processed: {{ job.processed_at|date:"Y-m-d H:i" }}{% endif %}
         </div>
       </div>
-      {% endif %}
-
-      <div class="mt-4">
-        <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" class="btn btn-primary"><i class="fas fa-envelope"></i> Generate Cover Letter</a>
-        {% if job.application_url %}
-        <a href="{{ job.application_url }}" class="btn btn-outline-success ms-2" target="_blank"><i class="fas fa-external-link-alt"></i> Apply for Job</a>
-        {% endif %}
-      </div>
     </div>
-    <div class="card-footer text-muted">
-        Source: {{ job.source|default:"N/A" }} | Posted: {{ job.created_at|date:"Y-m-d H:i" }}
-        {% if job.processed_at %}| Processed: {{ job.processed_at|date:"Y-m-d H:i" }}{% endif %}
+
+    <div class="col-lg-4">
+      <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
+        <div class="card-header bg-light border-bottom-0 py-3">
+            <h5 class="h6 mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
+        </div>
+        <div class="card-body p-4">
+          <form method="post" 
+                action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}"
+                id="applicationStatusForm">
+            {% csrf_token %}
+            
+            <div class="mb-3">
+                <label for="{{ saved_job_form.status.id_for_label }}" class="form-label small"><strong>Status</strong></label>
+                {{ saved_job_form.status }}
+                {% if saved_job_form.status.errors %}
+                    <div class="invalid-feedback d-block small">
+                        {{ saved_job_form.status.errors|join:", " }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="mb-3">
+                <label for="{{ saved_job_form.notes.id_for_label }}" class="form-label small"><strong>Notes</strong></label>
+                {{ saved_job_form.notes }}
+                {% if saved_job_form.notes.errors %}
+                    <div class="invalid-feedback d-block small">
+                        {{ saved_job_form.notes.errors|join:", " }}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <button type="submit" class="btn btn-primary w-100" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
+            {% if saved_job_instance and saved_job_instance.pk %}
+                <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ saved_job_instance.updated_at|date:"M d, Y H:i" }}</small></p>
+            {% endif %}
+          </form>
+        </div>
+      </div>
     </div>
   </div>
-
-  {# Phase 3: Application Status Management #}
-  <div class="card mt-4">
-    <div class="card-header">
-        <h5><i class="fas fa-clipboard-check"></i> Application Status & Notes</h5>
-    </div>
-    <div class="card-body">
-      <form method="post" 
-            action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}">
-        {% csrf_token %}
-        
-        <div class="mb-3">
-            <label for="{{ saved_job_form.status.id_for_label }}" class="form-label"><strong>Status:</strong></label>
-            {{ saved_job_form.status }}
-            {% if saved_job_form.status.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ saved_job_form.status.errors|join:", " }}
-                </div>
-            {% endif %}
-        </div>
-        
-        <div class="mb-3">
-            <label for="{{ saved_job_form.notes.id_for_label }}" class="form-label"><strong>Notes:</strong></label>
-            {{ saved_job_form.notes }}
-            {% if saved_job_form.notes.errors %}
-                <div class="invalid-feedback d-block">
-                    {{ saved_job_form.notes.errors|join:", " }}
-                </div>
-            {% endif %}
-        </div>
-        
-        <button type="submit" class="btn btn-success"><i class="fas fa-save"></i> Save Status & Notes</button>
-        {% if saved_job_instance and saved_job_instance.pk %}
-            <span class="ms-2 text-muted"><small>Last updated: {{ saved_job_instance.updated_at|date:"Y-m-d H:i" }}</small></span>
-        {% endif %}
-      </form>
-    </div>
-  </div>
-
 </div>
+
+{% if job.application_url or True %}
+<nav class="navbar fixed-bottom navbar-light bg-light shadow-lg py-3">
+  <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
+    <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" class="btn btn-lg btn-outline-secondary">
+        <i class="fas fa-envelope me-2"></i>Generate Cover Letter
+    </a>
+    {% if job.application_url %}
+    <a href="{{ job.application_url }}" class="btn btn-lg" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;" target="_blank">
+        <i class="fas fa-external-link-alt me-2"></i>Apply Now
+    </a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+
 {% endblock %} 

@@ -5,8 +5,8 @@
 
 {% block content %}
 <div class="container py-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1>My Saved Applications</h1>
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h2 class="h2">My Saved Applications</h2>
         {# Optional: Link to go back to main matching page #}
         {# <a href="{% url 'matcher:main_page' %}" class="btn btn-outline-secondary">Back to Matching</a> #}
     </div>
@@ -18,7 +18,7 @@
             <a class="nav-link {% if selected_status == status_val %}active{% endif %}" 
                href="{% url 'matcher:my_applications_page' %}{% if status_val %}?status={{ status_val }}{% endif %}">
                 {{ status_display }} 
-                <span class="badge bg-secondary rounded-pill">{{ status_counts|lookup:status_val|default:0 }}</span>
+                <span class="badge rounded-pill">{{ status_counts|lookup:status_val|default:0 }}</span>
             </a>
         </li>
         {% endfor %}
@@ -28,13 +28,13 @@
         <div class="row row-cols-1 row-cols-md-2 g-4">
             {% for item_dict in saved_jobs_with_forms_and_letters %}
             <div class="col">
-                <div class="card h-100 shadow-sm">
+                <div class="card h-100 jobbAI-job-card">
                     <div class="card-body">
                         <h5 class="card-title"><a href="{% url 'matcher:job_detail_page_no_session' item_dict.saved_job.job_listing.id %}">{{ item_dict.saved_job.job_listing.job_title }}</a></h5>
                         <h6 class="card-subtitle mb-2 text-muted">{{ item_dict.saved_job.job_listing.company_name }}</h6>
                         <p class="card-text">
                             <strong>Status:</strong> 
-                            <span class="badge bg-{% if item_dict.saved_job.status == 'applied' %}primary{% elif item_dict.saved_job.status == 'interviewing' %}info{% elif item_dict.saved_job.status == 'offer_received' %}success{% elif item_dict.saved_job.status == 'accepted' %}success{% elif item_dict.saved_job.status == 'rejected' %}danger{% else %}secondary{% endif %}">
+                            <span class="badge status-badge {% if item_dict.saved_job.status == 'applied' %}status-applied{% elif item_dict.saved_job.status == 'interviewing' %}status-interviewing{% elif item_dict.saved_job.status == 'offer_received' %}status-offer-received{% elif item_dict.saved_job.status == 'accepted' %}status-accepted{% elif item_dict.saved_job.status == 'rejected' %}status-rejected{% else %}status-default{% endif %}">
                                 {{ item_dict.saved_job.get_status_display }}
                             </span>
                         </p>
@@ -48,11 +48,11 @@
                         {% endif %}
                     </div>
                     <div class="card-footer bg-light">
-                        <a href="{% url 'matcher:job_detail_page_no_session' item_dict.saved_job.job_listing.id %}" class="btn btn-outline-primary btn-sm"><i class="fas fa-eye"></i> View Details</a>
+                        <a href="{% url 'matcher:job_detail_page_no_session' item_dict.saved_job.job_listing.id %}" class="btn btn-outline-secondary btn-sm"><i class="fas fa-eye"></i> View Details</a>
                         {% if item_dict.cover_letter %}
                             <a href="{% url 'matcher:generate_cover_letter_page' item_dict.saved_job.job_listing.id %}" class="btn btn-outline-secondary btn-sm ms-2"><i class="fas fa-file-alt"></i> View Cover Letter</a>
                         {% else %}
-                             <a href="{% url 'matcher:generate_cover_letter_page' item_dict.saved_job.job_listing.id %}" class="btn btn-outline-info btn-sm ms-2"><i class="fas fa-envelope"></i> Generate Cover Letter</a>
+                             <a href="{% url 'matcher:generate_cover_letter_page' item_dict.saved_job.job_listing.id %}" class="btn btn-success btn-sm ms-2"><i class="fas fa-envelope"></i> Generate Cover Letter</a>
                         {% endif %}
                     </div>
                 </div>
