@@ -42,6 +42,9 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'my_applications_page' %}active{% endif %}" href="{% url 'matcher:my_applications_page' %}">My Applications</a>
                     </li>
+                    <li class="nav-item">
+                        <a class="nav-link {% if request.resolver_match.url_name == 'profile_page' %}active{% endif %}" href="{% url 'matcher:profile_page' %}">Profile</a>
+                    </li>
                     {# Add other nav links here as features are built #}
                 </ul>
             </div>

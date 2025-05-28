@@ -1,0 +1,194 @@
+{% extends 'matcher/base.html' %}
+{% load matcher_extras %} {# Load custom template tags #}
+{% load static %}
+
+{% block title %}My Profile - Job Matcher MVP{% endblock %}
+
+{% block styles %}
+<style>
+    .profile-header {
+        margin-bottom: 2rem;
+    }
+    .profile-header h1 {
+        font-size: 2rem; /* Figma: Hi, Anya - 32px, bold */
+        font-weight: bold;
+    }
+    .stats-container {
+        display: flex;
+        justify-content: space-around;
+        margin-bottom: 2rem;
+        gap: 1rem; /* Add gap between cards */
+    }
+    .stat-card {
+        border: 1px solid #dee2e6; /* Figma border color */
+        border-radius: 8px; /* Figma border radius */
+        padding: 1.5rem; /* Figma padding */
+        text-align: center;
+        background-color: #fff;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        flex-basis: 30%; /* Distribute space among 3 cards */
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Center content vertically */
+        min-height: 120px; /* Ensure cards have a minimum height */
+    }
+    .stat-value {
+        font-size: 2rem; /* Figma: 24px, bold */
+        font-weight: bold;
+        color: #121417; /* Figma text color */
+    }
+    .stat-label {
+        font-size: 1rem; /* Figma: 16px, medium */
+        color: #121417; /* Figma text color */
+        margin-top: 0.5rem;
+    }
+    .placeholder-section {
+        background-color: #f8f9fa;
+        padding: 1.5rem;
+        border-radius: .25rem;
+        margin-top: 2rem;
+    }
+</style>
+{% endblock styles %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="profile-header">
+        <h1>Hi, {{ username }}!</h1> 
+    </div>
+
+    <div class="stats-container">
+        <div class="stat-card">
+            <div class="stat-value">{{ job_matches_count }}</div>
+            <div class="stat-label">Job Matches</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ already_saved_minutes }} mins</div>
+            <div class="stat-label">Time Saved Searching</div>
+            <small class="text-muted mt-1">(Based on {{ application_count }} applications at 20 mins each)</small>
+        </div>
+        <div class="stat-card">
+            <div class="stat-value">{{ tips_to_improve_count }}</div>
+            <div class="stat-label">Tips to Improve</div>
+        </div>
+    </div>
+
+    {# Placeholder sections for CV/Resume, Preferences, Newsletter as per Figma #}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="placeholder-section">
+                <h4>CV/Resume</h4>
+                <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}Anya_CV.pdf (Placeholder){% endif %}</strong></p>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="placeholder-section">
+                <h4>Preferences</h4>
+                <p>Your default preferences for jobs: <strong>{% if user_preferences_text %}{{ user_preferences_text|truncatewords:10 }}{% else %}Little German required, startup... (Placeholder){% endif %}</strong></p>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- CV and Preferences Input Modals (Moved from direct form) -->
+                <!-- CV Modal -->
+                <div class="modal fade" id="cvModal" tabindex="-1" aria-labelledby="cvModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <form method="POST" action="{% url 'matcher:profile_page' %}" id="cvForm">
+                        {% csrf_token %}
+                                <input type="hidden" name="form_type" value="cv_form">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="cvModalLabel">Update CV/Resume</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                        <div class="form-group mb-3">
+                                        <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
+                                        <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
+                                    </div>
+                                    {# Keep preferences in its own modal, or decide if one modal is enough #}
+                                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                                    <input type="hidden" name="user_email_text" value="{{ user_email_text }}">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Preferences Modal -->
+                <div class="modal fade" id="preferencesModal" tabindex="-1" aria-labelledby="preferencesModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                             <form method="POST" action="{% url 'matcher:profile_page' %}" id="preferencesForm">
+                                {% csrf_token %}
+                                <input type="hidden" name="form_type" value="preferences_form">
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="preferencesModalLabel">Edit Preferences</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                        <div class="form-group mb-3">
+                                        <label for="user_preferences_text_modal" class="form-label"><strong>Your Preferences:</strong></label>
+                                        <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
+                                    </div>
+                                    <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                                    <input type="hidden" name="user_email_text" value="{{ user_email_text }}">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Update Preferences & Match Jobs</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+
+    <div class="row mt-3 mb-5">
+        <div class="col-md-12">
+            <div class="placeholder-section">
+                <h4>Newsletter</h4>
+                <p>You'll get an actionable email at 8:00am: <strong>{% if user_email_text %}{{ user_email_text }}{% else %}{{ username|lower|slice:":5" }}@example.com (Placeholder){% endif %}</strong></p>
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#emailModal">Edit Email</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Email Modal -->
+    <div class="modal fade" id="emailModal" tabindex="-1" aria-labelledby="emailModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                 <form method="POST" action="{% url 'matcher:profile_page' %}" id="emailForm">
+                    {% csrf_token %}
+                    <input type="hidden" name="form_type" value="email_form">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="emailModalLabel">Edit Email</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+            <div class="form-group mb-3">
+                            <label for="user_email_text_modal" class="form-label"><strong>Your Email:</strong></label>
+                            <textarea name="user_email_text" id="user_email_text_modal" class="form-control" rows="1" placeholder="We'll send you an actionable email at 8:00am">{{ user_email_text }}</textarea>
+                        </div>
+                        <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                        <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Update Email & Match Jobs</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock content %} 

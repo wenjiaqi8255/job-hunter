@@ -312,6 +312,55 @@ def main_page(request):
     }
     return render(request, 'matcher/main_page.html', context)
 
+def profile_page(request):
+    # Placeholder values, replace with actual logic to retrieve these
+    # For example, from a UserProfile model or session
+    username = request.user.username if request.user.is_authenticated else "Guest"
+    user_cv_text = request.session.get('user_cv_text', '')
+    user_preferences_text = request.session.get('user_preferences_text', '')
+    user_email_text = request.session.get('user_email_text', '') # Retrieve email from session
+
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+
+        # Always update all three from the POST data, as hidden fields carry them over
+        user_cv_text = request.POST.get('user_cv_text', user_cv_text) # Keep existing if not in POST
+        user_preferences_text = request.POST.get('user_preferences_text', user_preferences_text)
+        user_email_text = request.POST.get('user_email_text', user_email_text)
+
+        # Save to session
+        request.session['user_cv_text'] = user_cv_text
+        request.session['user_preferences_text'] = user_preferences_text
+        request.session['user_email_text'] = user_email_text
+
+        if form_type == 'cv_form':
+            # Specific logic for CV form if any, e.g., messages.success(request, "CV updated!")
+            # The profile extraction and matching might be better handled in a separate view 
+            # or triggered explicitly by a button within this form's modal if it's heavy.
+            # For now, just updating session and re-rendering.
+            messages.success(request, "CV text updated in session.")
+        elif form_type == 'preferences_form':
+            messages.success(request, "Preferences updated in session.")
+        elif form_type == 'email_form':
+            messages.success(request, "Email updated in session.")
+        
+        # It's generally good practice to redirect after a POST to prevent re-submission
+        # However, if you're just updating session and re-rendering the same page, this might be acceptable.
+        # If you have more complex logic (like actual profile processing), consider redirecting.
+        # return redirect('matcher:profile_page') # Uncomment if you prefer to redirect
+
+    context = {
+        'username': username,
+        'job_matches_count': 0, # Replace with actual data
+        'already_saved_minutes': 0, # Replace with actual data
+        'application_count': 0, # Replace with actual data
+        'tips_to_improve_count': 0, # Replace with actual data
+        'user_cv_text': user_cv_text,
+        'user_preferences_text': user_preferences_text,
+        'user_email_text': user_email_text, # Add email to context
+    }
+    return render(request, 'matcher/profile_page.html', context)
+
 def job_detail_page(request, job_id, match_session_id=None):
     job = get_object_or_404(JobListing, id=job_id)
     skills_text = request.session.get('skills_text', '')
@@ -459,7 +508,6 @@ def generate_cover_letter_page(request, job_id):
         'generation_error': generation_error
     }
     return render(request, 'matcher/cover_letter_page.html', context)
-
 def my_applications_page(request):
     session_key = request.session.session_key
     if not session_key:
@@ -569,3 +617,4 @@ def update_job_application_status(request, job_id):
         # Log the exception e for server-side review
         print(f"Error updating job status: {e}") # Basic logging
         return JsonResponse({'success': False, 'message': 'An unexpected error occurred while updating status.'}, status=500)
+
