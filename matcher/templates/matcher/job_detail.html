@@ -7,6 +7,13 @@
   <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
       <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home / Job Matches</a></li>
+      {% if active_match_session %}
+      <li class="breadcrumb-item">
+        <a href="{% url 'matcher:main_page' %}?session_id={{ active_match_session.id }}">
+          Session {{ active_match_session.matched_at|date:"M d, H:i" }}
+        </a>
+      </li>
+      {% endif %}
       <li class="breadcrumb-item active" aria-current="page">Job Detail</li>
     </ol>
   </nav>
@@ -15,6 +22,9 @@
     <div class="card-header bg-primary text-white">
       <h2>{{ job.job_title }}</h2>
       <h4 class="text-light">{{ job.company_name }}</h4>
+      {% if saved_job_instance and saved_job_instance.status %}
+      <p class="mb-0 mt-1"><span class="badge bg-info" style="font-size: 0.9rem;">Status: {{ saved_job_instance.get_status_display }}</span></p>
+      {% endif %}
     </div>
     <div class="card-body">
       <div class="row mt-3">
@@ -41,21 +51,31 @@
         </div>
       </div>
       
+      {% comment %} Display personalized matching reasons, insights, and tips {% endcomment %}
+      {% if job.reason_for_match or job.insights_for_match or job.tips_for_match %}
+      <div class="alert alert-success mt-4 mb-4">
+        <h5><i class="fas fa-lightbulb"></i> Why this job could be a great match:</h5>
+        
+        {% if job.reason_for_match %}
+        <p class="mb-2"><strong>Reason for recommendation:</strong><br>{{ job.reason_for_match|linebreaksbr }}</p>
+        {% endif %}
+        
+        {% if job.insights_for_match and job.insights_for_match != 'N/A' %}
+        <p class="mb-2"><small><strong>Further Insights:</strong><br>{{ job.insights_for_match|linebreaksbr }}</small></p>
+        {% endif %}
+        
+        {% if job.tips_for_match and job.tips_for_match != 'N/A' %}
+        <p class="mb-0"><small><strong>Application Tips:</strong><br>{{ job.tips_for_match|linebreaksbr }}</small></p>
+        {% endif %}
+      </div>
+      {% endif %}
+
       {% if job.description %}
       <div class="mt-4">
         <h5><i class="fas fa-file-alt"></i> Job Description</h5>
         <div style="max-height: 300px; overflow-y: auto; border: 1px solid #eee; padding: 10px; white-space: pre-wrap;">
             {{ job.description|linebreaksbr }}
         </div>
-      </div>
-      {% endif %}
-      
-      {# The reason_for_match for this specific job, if available #}
-      {# This would have been populated if this job was part of a match result #}
-      {% if job.reason_for_match %}
-      <div class="alert alert-success mt-4">
-        <h5><i class="fas fa-lightbulb"></i> Matching Analysis (from previous match)</h5>
-        <p>{{ job.reason_for_match }}</p>
       </div>
       {% endif %}
 
@@ -78,7 +98,8 @@
         <h5><i class="fas fa-clipboard-check"></i> Application Status & Notes</h5>
     </div>
     <div class="card-body">
-      <form method="post" action="{% url 'matcher:job_detail_page' job.id %}">
+      <form method="post" 
+            action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}">
         {% csrf_token %}
         
         <div class="mb-3">

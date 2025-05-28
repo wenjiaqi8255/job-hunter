@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse # Import reverse for redirect
 from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter # Added CoverLetter
-from .forms import SavedJobForm # Added SavedJobForm
+from .forms import SavedJobForm # Corrected import: JobSearchForm and UserProfileForm were not in forms.py
 from . import gemini_utils
 from django.db import transaction
 import uuid # For validating UUID from GET param
@@ -11,8 +11,101 @@ import json # For storing profile as JSON
 from django.db.models import Prefetch, OuterRef, Subquery, Exists, Q
 from uuid import UUID # For validating UUIDs
 import random # Added for random sampling
+import os # Added for environment variables
+from django.conf import settings # Added for Supabase settings
+from supabase import create_client, Client # Added for Supabase
+from datetime import datetime, date, time # Added for date calculations
+from django.http import JsonResponse # Added for JSON response
+from django.views.decorators.http import require_POST # Added for POST requests only
+from django.views.decorators.csrf import csrf_exempt # Consider CSRF implications, ensure frontend sends token
+import itertools # Added for zip_longest
 
 # Create your views here.
+
+# Helper to initialize Supabase client
+def get_supabase_client():
+    url: str = settings.SUPABASE_URL
+    key: str = settings.SUPABASE_KEY
+    if not url or not key:
+        # Handle missing configuration, perhaps log a warning or raise an error
+        # For now, returning None, which will be checked by the caller
+        print("Supabase URL or Key not configured.")
+        return None
+    return create_client(url, key)
+
+# Helper to parse insights string into a list of (pro, con) tuples for table display
+def parse_and_prepare_insights_for_template(insights_str):
+    if not insights_str or insights_str == 'N/A':
+        return [] 
+    
+    pros = []
+    cons = []
+    # Normalize: remove leading/trailing whitespace, then split by '*'
+    # Each item will be like " Pro: text" or " Con: text" or empty string
+    items = [item.strip() for item in insights_str.strip().split('*') if item.strip()]
+    
+    for item in items:
+        if item.startswith("Pro:"):
+            pros.append(item[len("Pro:"):].strip())
+        elif item.startswith("Con:"):
+            cons.append(item[len("Con:"):].strip())
+        # else:
+            # Optionally handle items that don't fit the Pro/Con format
+            # print(f"Warning: Unrecognized insight format: {item}")
+            
+    # Ensure we have at least one pro or con to make a table
+    if not pros and not cons:
+        return []
+
+    return list(itertools.zip_longest(pros, cons, fillvalue=None))
+
+# Helper to fetch today's jobs from Supabase
+def fetch_todays_job_listings_from_supabase():
+    supabase = get_supabase_client()
+    if not supabase:
+        return [] # Return empty list if client can't be initialized
+
+    today = date.today()
+    start_of_day_utc = datetime.combine(today, time.min).isoformat()
+    end_of_day_utc = datetime.combine(today, time.max).isoformat()
+    
+    try:
+        # Assuming your table name in Supabase is 'job_listings'
+        # and it has a 'created_at' column (timestamp with timezone)
+        response = (supabase.table('job_listings')
+                           .select('*')
+                           .gte('created_at', start_of_day_utc)
+                           .lte('created_at', end_of_day_utc)
+                           .execute())
+        if response.data:
+            # Adapt Supabase data to a structure usable by gemini_utils.match_jobs
+            # We'll create simple objects or dicts that mimic JobListing attributes
+            adapted_jobs = []
+            for job_data in response.data:
+                # Create a dictionary that mimics the JobListing model structure
+                # This allows gemini_utils.match_jobs to work with minimal changes
+                # if it expects objects with specific attributes.
+                # Ensure all fields expected by gemini_utils.match_jobs are present.
+                adapted_job = {
+                    'id': job_data.get('id'),
+                    'company_name': job_data.get('company_name'),
+                    'job_title': job_data.get('job_title'),
+                    'description': job_data.get('description'),
+                    'application_url': job_data.get('application_url'),
+                    'location': job_data.get('location'),
+                    'industry': job_data.get('industry'),
+                    'flexibility': job_data.get('flexibility'),
+                    'salary_range': job_data.get('salary_range'),
+                    'level': job_data.get('level'), # Make sure 'level' exists in your Supabase table
+                    # Add other fields as needed by gemini_utils.match_jobs
+                }
+                adapted_jobs.append(adapted_job)
+            return adapted_jobs
+        else:
+            return []
+    except Exception as e:
+        print(f"Error fetching jobs from Supabase: {e}")
+        return []
 
 def main_page(request):
     session_key = request.session.session_key
@@ -34,18 +127,37 @@ def main_page(request):
         # Phase 4.1: Extract structured user profile
         structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text_input, user_preferences_text_input)
         
-        # Phase 4.1 Step 2: Call the new match_jobs with the structured profile
-        # Fetch all jobs first
-        all_job_listings = list(JobListing.objects.all())
+        # NEW: Fetch today's job listings from Supabase
+        job_listings_for_api = fetch_todays_job_listings_from_supabase()
         
-        # Sample 10 random jobs if more than 10 exist, otherwise use all
-        if len(all_job_listings) > 10: 
-            # Development and testing purpose
-            job_listings_for_api = random.sample(all_job_listings, 10)
-        else:
-            job_listings_for_api = all_job_listings
+        if not job_listings_for_api:
+            # Handle case where no jobs were fetched for today
+            # You might want to display a message to the user
+            messages.info(request, "No new job listings found for today. Matching cannot proceed with current day's data.")
+            # Option 1: Redirect back or render with a message (current approach)
+            # To redirect and show the message, we need to ensure messages are displayed on the target template
+            # Or, pass a specific context variable to indicate this state.
+            # For now, we'll let it proceed to match_jobs with an empty list,
+            # which should result in 'No specific matches found'.
+            # Or, redirect to avoid unnecessary API calls if gemini_utils.match_jobs can't handle empty list
+            # return redirect(reverse('matcher:main_page')) # This might clear POST data.
+
+        # The sampling logic might not be necessary if Supabase query is efficient
+        # and if the number of daily jobs isn't excessively large.
+        # For now, I'm removing the random sampling as we are already filtering by day.
+        # if len(all_job_listings) > 10: 
+        #     # Development and testing purpose
+        #     job_listings_for_api = random.sample(all_job_listings, 10)
+        # else:
+        #     job_listings_for_api = all_job_listings
         
-        job_matches_from_api = gemini_utils.match_jobs(structured_profile_dict, job_listings_for_api)
+        # If job_listings_for_api is empty, gemini_utils.match_jobs should ideally handle this gracefully.
+        max_jobs_for_testing = 5 # Define the maximum number of jobs for testing
+        job_matches_from_api = gemini_utils.match_jobs(
+            structured_profile_dict, 
+            job_listings_for_api,
+            max_jobs_to_process=max_jobs_for_testing # Pass the new parameter
+        )
 
         new_match_session = MatchSession.objects.create(
             skills_text=user_cv_text_input, # Storing CV here
@@ -55,15 +167,77 @@ def main_page(request):
         current_match_session_id_str = str(new_match_session.id)
         request.session['last_match_session_id'] = current_match_session_id_str
 
-        for match_item in job_matches_from_api:
-            MatchedJob.objects.create(
-                match_session=new_match_session,
-                job_listing=match_item['job'],
-                score=match_item['score'], 
-                reason=match_item['reason'],
-                insights=match_item.get('insights'), 
-                tips=match_item.get('tips')    
-            )
+        # When saving MatchedJob, ensure the 'job_listing' foreign key can handle
+        # the dictionary structure or find/create a temporary JobListing-like object.
+        # This part needs careful handling if gemini_utils.match_jobs returns jobs
+        # that are dictionaries and MatchedJob expects a JobListing instance.
+
+        # For now, assuming gemini_utils.match_jobs returns a list of dicts,
+        # and each dict contains an 'id' for the job from Supabase.
+        # We might need to retrieve the actual JobListing instance if it's stored locally
+        # or create a temporary one if not.
+        #
+        # Given the requirement to use Supabase as the primary source for *matching*,
+        # the MatchedJob.job_listing might need to point to a Supabase ID or a local
+        # stub if we don't want to duplicate all Supabase jobs into the local Django DB.
+        #
+        # For simplicity in this step, let's assume `gemini_utils.match_jobs` returns
+        # dicts and `match_item['job']` within that list contains the job's 'id' (from Supabase).
+        # We will then need to fetch or create a local JobListing stub to satisfy the ForeignKey.
+        #
+        # ALTERNATIVE: If `MatchedJob`'s `job_listing` FK can be temporarily nullable or point to a text ID,
+        # that would simplify. But that's a model change.
+        #
+        # Let's assume for now, we need to get/create a local JobListing object.
+        # This implies jobs from Supabase *might* also need to be synced/replicated to local DB
+        # at some point if `MatchedJob` must link to a local `JobListing`.
+        #
+        # The original requirement stated "The table structure in Supabase is identical to your current Django JobListing model."
+        # This is helpful. If a job from Supabase (matched today) does not exist in local Django DB,
+        # we should probably create it locally before creating the MatchedJob record.
+
+        with transaction.atomic(): # Ensure all MatchedJob are created or none
+            for match_item in job_matches_from_api:
+                job_data_from_api = match_item['job'] # This is now expected to be a dict from fetch_todays_job_listings_from_supabase
+
+                # Ensure job_data_from_api is not None and has an 'id'
+                if not job_data_from_api or 'id' not in job_data_from_api:
+                    print(f"Skipping match item due to missing job data or ID: {match_item}")
+                    continue
+
+                # Get or create the JobListing instance in the local Django DB
+                # This ensures that MatchedJob.job_listing can point to a valid local record.
+                # This also means your local DB will store copies of jobs that were matched.
+                job_listing_obj, created = JobListing.objects.update_or_create(
+                    id=job_data_from_api['id'], # Assuming 'id' is the primary key and matches Supabase
+                    defaults={
+                        'company_name': job_data_from_api.get('company_name', 'N/A'),
+                        'job_title': job_data_from_api.get('job_title', 'N/A'),
+                        'description': job_data_from_api.get('description'),
+                        'application_url': job_data_from_api.get('application_url'),
+                        'location': job_data_from_api.get('location'),
+                        'industry': job_data_from_api.get('industry', 'Unknown'), # Provide default if mandatory
+                        'flexibility': job_data_from_api.get('flexibility'),
+                        'salary_range': job_data_from_api.get('salary_range'),
+                        'level': job_data_from_api.get('level'),
+                        # 'source': 'SupabaseToday', # Optional: mark the source
+                        # 'status': 'pending_match_evaluation', # Optional: internal status
+                        # 'created_at' will be set if 'created' is True and auto_now_add=True
+                        # 'processed_at': timezone.now() # Or handle as needed
+                    }
+                )
+                if created:
+                    print(f"Created local JobListing stub for ID: {job_listing_obj.id} from Supabase data.")
+
+
+                MatchedJob.objects.create(
+                    match_session=new_match_session,
+                    job_listing=job_listing_obj, # Link to the local JobListing instance
+                    score=match_item['score'], 
+                    reason=match_item['reason'],
+                    insights=match_item.get('insights'), 
+                    tips=match_item.get('tips')    
+                )
         # Redirect to the same page with the new session_id in GET to show results
         return redirect(f"{reverse('matcher:main_page')}?session_id={current_match_session_id_str}")
 
@@ -89,11 +263,14 @@ def main_page(request):
 
             for mj in matched_jobs_for_session: # mj is a MatchedJob instance
                 saved_status_result = SavedJob.objects.filter(job_listing=mj.job_listing, user_session_key=session_key).values('status').first()
+                
+                parsed_insights_for_table = parse_and_prepare_insights_for_template(mj.insights)
+
                 processed_job_matches.append({
                     'job': mj.job_listing,
                     'score': mj.score, 
                     'reason': mj.reason, 
-                    'insights': mj.insights, # Now directly accessing from model
+                    'parsed_insights_list': parsed_insights_for_table, # New field for structured insights
                     'tips': mj.tips,       # Now directly accessing from model
                     'saved_status': saved_status_result['status'] if saved_status_result else None
                 })
@@ -135,7 +312,7 @@ def main_page(request):
     }
     return render(request, 'matcher/main_page.html', context)
 
-def job_detail_page(request, job_id):
+def job_detail_page(request, job_id, match_session_id=None):
     job = get_object_or_404(JobListing, id=job_id)
     skills_text = request.session.get('skills_text', '')
     saved_job_instance = None
@@ -144,6 +321,43 @@ def job_detail_page(request, job_id):
     if not request.session.session_key:
         request.session.create()
     user_session_key = request.session.session_key
+
+    # Attempt to fetch the specific match details for this job and session
+    job_match_analysis = None
+    active_match_session = None # To store the MatchSession object for breadcrumb
+    session_id_to_use = match_session_id # Prioritize URL parameter
+    if not session_id_to_use:
+        session_id_to_use = request.session.get('last_match_session_id') # Fallback to session
+
+    if session_id_to_use:
+        try:
+            # Ensure session_id_to_use is UUID if it came from session (string)
+            if isinstance(session_id_to_use, str):
+                try:
+                    session_id_to_use = UUID(session_id_to_use)
+                except ValueError:
+                    session_id_to_use = None # Invalid UUID string, treat as no session ID
+            
+            if isinstance(session_id_to_use, UUID):
+                # Fetch the MatchSession object for breadcrumb and analysis
+                active_match_session = MatchSession.objects.get(id=session_id_to_use)
+                job_match_analysis = MatchedJob.objects.get(
+                    match_session=active_match_session, # Use the fetched session object
+                    job_listing_id=job.id
+                )
+                job.reason_for_match = job_match_analysis.reason
+                job.insights_for_match = job_match_analysis.insights
+                job.tips_for_match = job_match_analysis.tips
+        except MatchSession.DoesNotExist:
+            active_match_session = None # Session not found, clear it
+            session_id_to_use = None    # Ensure session_id_to_use is also None if session doesn't exist
+            # job_match_analysis will remain None
+        except MatchedJob.DoesNotExist:
+            # MatchedJob not found for this session, but session itself is valid for breadcrumb
+            pass # job_match_analysis will remain None, active_match_session is still set
+        except TypeError: 
+            session_id_to_use = None # Catch if session_id_to_use couldn't be cast to UUID
+            active_match_session = None
 
     try:
         saved_job_instance = SavedJob.objects.get(job_listing=job, user_session_key=user_session_key)
@@ -164,7 +378,11 @@ def job_detail_page(request, job_id):
             # For now, the form's default or user's choice will prevail.
             saved_job.save()
             # Optionally, add a success message with Django messages framework
-            return redirect('matcher:job_detail_page', job_id=job.id) # Redirect to same page to show updated data / clear POST
+            # Redirect to the correct URL (with or without session_id) based on how the page was accessed
+            if match_session_id: # match_session_id is the one passed to the view from URL
+                return redirect('matcher:job_detail_page', job_id=job.id, match_session_id=match_session_id)
+            else:
+                return redirect('matcher:job_detail_page_no_session', job_id=job.id)
     else:
         form = SavedJobForm(instance=saved_job_instance)
 
@@ -173,7 +391,10 @@ def job_detail_page(request, job_id):
         'skills_text': skills_text,
         'saved_job_form': form,
         'saved_job_instance': saved_job_instance, # For displaying current status if needed outside form
-        'status_choices': SavedJob.STATUS_CHOICES # Pass choices for direct iteration if needed
+        'status_choices': SavedJob.STATUS_CHOICES, # Pass choices for direct iteration if needed
+        'job_match_analysis': job_match_analysis,
+        'current_match_session_id_for_url': session_id_to_use, 
+        'active_match_session': active_match_session # Pass the session object for breadcrumb
     }
     return render(request, 'matcher/job_detail.html', context)
 
@@ -230,33 +451,75 @@ def generate_cover_letter_page(request, job_id):
     return render(request, 'matcher/cover_letter_page.html', context)
 
 def my_applications_page(request):
-    if not request.session.session_key:
-        request.session.create() # Ensure session exists
-        # If no session, there are no saved jobs for this user yet.
-        # Redirect to main page or show a message?
-        # For now, proceed, it will just show an empty list.
-    user_session_key = request.session.session_key
+    session_key = request.session.session_key
+    if not session_key:
+        # If there's no session key, there are no applications to show for this anonymous user.
+        # You might want to prompt them to interact with the site first or handle this case gracefully.
+        return render(request, 'matcher/my_applications.html', {'saved_jobs_with_forms_and_letters': [], 'page_title': "My Applications"})
 
-    saved_jobs_query = SavedJob.objects.filter(user_session_key=user_session_key).select_related(
-        'job_listing', 'cover_letter' # Eager load related job and cover letter
-    ).order_by('-updated_at')
+    # Fetch SavedJob instances for the current user_session_key
+    # Pre-fetch related JobListing and CoverLetter to avoid N+1 queries
+    saved_jobs = SavedJob.objects.filter(user_session_key=session_key)\
+                                .select_related('job_listing')\
+                                .prefetch_related(Prefetch('cover_letter', queryset=CoverLetter.objects.all()))\
+                                .order_by('-updated_at')
 
-    selected_status = request.GET.get('status', '')
-    if selected_status:
-        saved_jobs_query = saved_jobs_query.filter(status=selected_status)
-    
-    status_choices_for_template = SavedJob.STATUS_CHOICES
-    # Add an 'all' option for the filter tabs
-    all_statuses_option = [('', 'All Applications')] + list(status_choices_for_template)
-
-    # Count for each status for summary (optional, but good for UI)
-    status_counts = {status_val: SavedJob.objects.filter(user_session_key=user_session_key, status=status_val).count() for status_val, _ in status_choices_for_template}
-    status_counts[''] = SavedJob.objects.filter(user_session_key=user_session_key).count() # Total count
+    saved_jobs_with_forms_and_letters = []
+    for saved_job in saved_jobs:
+        form = SavedJobForm(instance=saved_job) # Form for each saved job to allow updates
+        cover_letter = getattr(saved_job, 'cover_letter', None) # Safely get cover_letter
+        saved_jobs_with_forms_and_letters.append({
+            'saved_job': saved_job,
+            'form': form,
+            'cover_letter': cover_letter
+        })
 
     context = {
-        'saved_jobs': saved_jobs_query,
-        'status_choices': all_statuses_option, # For filter tabs
-        'selected_status': selected_status,
-        'status_counts': status_counts
+        'saved_jobs_with_forms_and_letters': saved_jobs_with_forms_and_letters,
+        'page_title': "My Applications"
     }
     return render(request, 'matcher/my_applications.html', context)
+
+@require_POST
+# Make sure your JS sends the CSRF token.
+def update_job_application_status(request, job_id):
+    session_key = request.session.session_key
+    if not session_key:
+        return JsonResponse({'success': False, 'message': 'Session not found. Please interact with the site first.'}, status=401)
+
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
+
+    if not new_status:
+        return JsonResponse({'success': False, 'message': 'Status not provided.'}, status=400)
+
+    # Validate if the new_status is a valid choice in SavedJob.STATUS_CHOICES
+    valid_statuses = [choice[0] for choice in SavedJob.STATUS_CHOICES]
+    if new_status not in valid_statuses:
+        return JsonResponse({'success': False, 'message': f'Invalid status value: {new_status}.'}, status=400)
+
+    try:
+        job_listing = get_object_or_404(JobListing, id=job_id)
+        
+        saved_job, created = SavedJob.objects.update_or_create(
+            job_listing=job_listing,
+            user_session_key=session_key,
+            defaults={'status': new_status}
+        )
+        
+        if created:
+            message = f"Status for job '{job_listing.job_title}' set to '{saved_job.get_status_display()}'."
+        else:
+            message = f"Status for job '{job_listing.job_title}' updated to '{saved_job.get_status_display()}'."
+            
+        return JsonResponse({'success': True, 'message': message, 'new_status': saved_job.get_status_display(), 'job_id': job_id})
+
+    except JobListing.DoesNotExist:
+        return JsonResponse({'success': False, 'message': 'Job listing not found.'}, status=404)
+    except Exception as e:
+        # Log the exception e for server-side review
+        print(f"Error updating job status: {e}") # Basic logging
+        return JsonResponse({'success': False, 'message': 'An unexpected error occurred while updating status.'}, status=500)

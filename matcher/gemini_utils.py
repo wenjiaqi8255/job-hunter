@@ -1,3 +1,4 @@
+from dotenv import load_dotenv
 import os
 import google.generativeai as genai
 import json
@@ -5,7 +6,7 @@ import random
 from django.conf import settings # Import Django settings
 
 # Configure the Gemini API client
-GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 # print(f"DEBUG: GEMINI_API_KEY from env: '{GEMINI_API_KEY}'") # Keep this commented out for normal use
 model = None
 
@@ -17,7 +18,7 @@ if not settings.USE_AI_SIMULATION:
             # Using a model that supports function calling or structured output is ideal.
             # 'gemini-1.5-flash-latest' is a good candidate for speed and capability.
             model = genai.GenerativeModel('gemini-1.5-flash-latest')
-            print("Gemini API configured successfully for job matching.")
+            print("INFO: Gemini API configured successfully for job matching.")
         except Exception as e:
             print(f"ERROR: Could not configure Gemini API: {e}. AI features will be effectively simulated.")
             model = None # Ensure model is None if config fails
@@ -28,6 +29,90 @@ else:
     print("INFO: USE_AI_SIMULATION is True. AI calls will be simulated.")
     model = None # Ensure model is None when simulating
 
+# --- Reusable Helper Functions ---
+
+def _get_processed_job_listings(job_listings, max_jobs_to_process, task_name_for_log="task"):
+    """
+    Slices the job_listings based on max_jobs_to_process.
+    Returns the processed list.
+    """
+    if max_jobs_to_process is not None and isinstance(max_jobs_to_process, int) and max_jobs_to_process > 0:
+        print(f"INFO: Processing only the top {max_jobs_to_process} job listings for {task_name_for_log}.")
+        return job_listings[:max_jobs_to_process]
+    elif max_jobs_to_process is not None:
+        print(f"WARNING: Invalid value for max_jobs_to_process ({max_jobs_to_process}) for {task_name_for_log}. Processing all jobs.")
+    return job_listings
+
+def _prepare_job_data_for_prompt(processed_job_listings):
+    """Prepares the job data in the format expected by the API prompt."""
+    return [
+        {
+            "id": str(job.get('id')),
+            "title": job.get('job_title'),
+            "company": job.get('company_name'),
+            "description": job.get('description', ''),
+            "level": job.get('level', "Not specified"),
+            "location": job.get('location', "Not specified"),
+            "industry": job.get('industry', "Not specified")
+        }
+        for job in processed_job_listings
+    ]
+
+def _execute_ai_task(
+    task_name,
+    prompt_generator_func,
+    prompt_generator_args: tuple,
+    response_parser_func,
+    response_parser_args: tuple, # Additional args for the parser besides api_response_text and api_response_object
+    simulation_func,
+    simulation_args: tuple,
+    pass_full_response_to_parser: bool = False
+):
+    """
+    Core function to execute an AI task: either call Gemini API or run a simulation.
+    Handles prompt generation, API call, response parsing, and error fallback.
+    """
+    if settings.USE_AI_SIMULATION or not model:
+        sim_reason = "USE_AI_SIMULATION is True" if settings.USE_AI_SIMULATION else "Gemini model not available"
+        print(f"INFO: Using simulated {task_name} ({sim_reason}).")
+        # Ensure error_message is passed if it's an expected arg for the simulation_func
+        # For simplicity, we assume simulation_func can take an error_message as its last arg if needed.
+        # This might need adjustment based on specific simulation function signatures.
+        # Here, we rely on simulation_args to be structured correctly by the caller.
+        return simulation_func(*simulation_args)
+
+    api_response_text = None
+    api_response_object = None
+    try:
+        prompt = prompt_generator_func(*prompt_generator_args)
+        print(f"INFO: --- Sending prompt to Gemini for {task_name} ---")
+        # print(f"DEBUG Prompt for {task_name} (first 500 chars):\n{prompt[:500]}...")
+        
+        api_response_object = model.generate_content(prompt)
+        api_response_text = api_response_object.text
+        # print(f"DEBUG API Response Text for {task_name} (first 500 chars):\n{api_response_text[:500]}...")
+
+        parser_all_args = (api_response_text, api_response_object) if pass_full_response_to_parser else (api_response_text,)
+        parser_all_args += response_parser_args # Add any other specific args for the parser
+
+        return response_parser_func(*parser_all_args)
+
+    except json.JSONDecodeError as e:
+        print(f"ERROR: Could not parse JSON from Gemini for {task_name}. Error: {e}. Raw response was: {api_response_text}")
+        # Fallback to simulation with error information
+        # Ensure the simulation_func can accept an error_message.
+        # Typically, simulation_args would already contain placeholders or default values for primary inputs.
+        # We append error_message, assuming it's the last parameter in simulation_func's signature if it handles errors.
+        error_sim_args = simulation_args + (f"API JSON parsing error: {e}",)
+        return simulation_func(*error_sim_args)
+    except Exception as e:
+        print(f"ERROR: Gemini API call or other processing failed for {task_name}: {e}")
+        # import traceback
+        # print(traceback.format_exc()) # For deeper debugging
+        error_sim_args = simulation_args + (f"API call/processing error: {e}",)
+        return simulation_func(*error_sim_args)
+
+# --- JSON Parsing Utilities (kept as is, but could be integrated if only used once) ---
 def parse_gemini_batch_json_response(response_text):
     """Attempts to parse a JSON array from Gemini's text response.
        Handles cases where the JSON might be wrapped in backticks or have leading/trailing text.
@@ -86,19 +171,10 @@ def parse_gemini_object_json_response(response_text):
         print(f"Could not find valid JSON object in response: {response_text}")
         raise json.JSONDecodeError("No valid JSON object found in response string", response_text, 0)
 
-def extract_user_profile(user_cv_text, user_preferences_text):
-    """
-    Uses Gemini API or simulation to extract a structured user profile 
-    from CV text and user preferences.
-    """
-    if settings.USE_AI_SIMULATION or not model:
-        if not model and not settings.USE_AI_SIMULATION:
-            print("Gemini API not available (model not loaded), falling back to simulated user profile extraction.")
-        else:
-            print("Using simulated user profile extraction (USE_AI_SIMULATION is True).")
-        return simulate_extract_user_profile(user_cv_text, user_preferences_text)
+# --- User Profile Extraction ---
 
-    prompt = f"""
+def _generate_user_profile_prompt(user_cv_text, user_preferences_text):
+    return f"""
     You are an expert HR and career consultant. Analyze the provided User CV/Resume Text and User Preferences.
     Extract key information and return it as a single, valid JSON object.
 
@@ -142,28 +218,12 @@ def extract_user_profile(user_cv_text, user_preferences_text):
     If some information is not available, use "Not Mentioned" or an empty array/object as appropriate for the field type.
     """
 
-    api_response_text = None
-    try:
-        print("--- Sending prompt to Gemini for user profile extraction ---")
-        # print(f"DEBUG Profile Prompt:\n{prompt[:1000]}...") # For debugging if needed
-        response = model.generate_content(prompt)
-        api_response_text = response.text
-        # print(f"DEBUG Profile API Response Text:\n{api_response_text}")
-
-        profile_data = parse_gemini_object_json_response(api_response_text)
-        return profile_data
-
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Could not parse JSON from Gemini for user profile. Error: {e}. Raw response was: {api_response_text}")
-        return simulate_extract_user_profile(user_cv_text, user_preferences_text, error_message=str(e))
-    except Exception as e:
-        print(f"ERROR: Gemini API call or other processing failed for user profile extraction: {e}")
-        # print(f"Traceback for general error: {traceback.format_exc()}") # For deeper debugging
-        return simulate_extract_user_profile(user_cv_text, user_preferences_text, error_message=str(e))
+def _parse_user_profile_response(api_response_text, _api_response_object=None): # Add _api_response_object for consistent signature
+    return parse_gemini_object_json_response(api_response_text)
 
 def simulate_extract_user_profile(user_cv_text, user_preferences_text, error_message=None):
     """Simulates user profile extraction."""
-    print(f"Executing SIMULATED user profile extraction. CV snippet: {user_cv_text[:50]}..., Prefs snippet: {user_preferences_text[:50]}...")
+    print(f"INFO: Executing SIMULATED user profile extraction. CV snippet: {user_cv_text[:50]}..., Prefs snippet: {user_preferences_text[:50]}...")
     simulated_profile = {
         "summary": f"Simulated summary based on CV and preferences. {(error_message if error_message else '')}",
         "key_skills": ["Python", "Django", "JavaScript", "Simulated Skill"],
@@ -188,138 +248,29 @@ def simulate_extract_user_profile(user_cv_text, user_preferences_text, error_mes
         simulated_profile["error_during_api_call"] = error_message
     return simulated_profile
 
-# --- Legacy Job Matching (based on simple skills_text) --- START ---
-def match_jobs_legacy_by_skills_text(skills_text, job_listings):
-    """Legacy: Uses Gemini API or simulation to match jobs based on simple skills text."""
-    if settings.USE_AI_SIMULATION or not model:
-        if not model and not settings.USE_AI_SIMULATION:
-            print("Gemini API not available (model not loaded), falling back to legacy simulated matching.")
-        else:
-            print("Using legacy simulated matching (USE_AI_SIMULATION is True).")
-        return simulate_match_jobs_legacy_by_skills_text(skills_text, job_listings)
-
-    jobs_data_for_prompt = []
-    for job in job_listings:
-        jobs_data_for_prompt.append({
-            "id": str(job.id),
-            "title": job.job_title,
-            "company": job.company_name,
-            "description": job.description[:1500],
-            "level": job.level if job.level else "Not specified"
-        })
-    
-    jobs_json_string = json.dumps(jobs_data_for_prompt, indent=2)
-
-    prompt = f"""
-    You are a job matching assistant. Based on the provided user skills and a list of jobs, please evaluate each job.
-    Each job listing includes an ID, title, company, description, and job level.
-    For each job in the list, provide a matching score between 0 and 100, and a brief 1-2 sentence reason for the score, considering all these details.
-
-    User Skills:
-    {skills_text}
-
-    Job Listings (JSON Array):
-    {jobs_json_string}
-
-    Your Response Format:
-    Return a single, valid JSON array. Each object in the array should correspond to one job from the input list and MUST contain the following keys:
-    - "id": The original ID of the job from the input list.
-    - "score": An integer between 0 and 100 representing the match score.
-    - "reason": A brief string (1-2 sentences) explaining the score.
-    Example for a single job in the array: {{"id": "some_job_id", "score": 85, "reason": "Excellent match due to strong Python skills and relevant project experience."}}
-    Ensure the output is ONLY the JSON array, starting with '[' and ending with ']'.
+def extract_user_profile(user_cv_text, user_preferences_text):
     """
+    Uses Gemini API or simulation to extract a structured user profile 
+    from CV text and user preferences.
+    """
+    return _execute_ai_task(
+        task_name="user profile extraction",
+        prompt_generator_func=_generate_user_profile_prompt,
+        prompt_generator_args=(user_cv_text, user_preferences_text),
+        response_parser_func=_parse_user_profile_response,
+        response_parser_args=(), # No extra args for this parser
+        simulation_func=simulate_extract_user_profile,
+        simulation_args=(user_cv_text, user_preferences_text),
+        pass_full_response_to_parser=False # Not strictly needed for this one
+    )
 
-    api_response_text = None
-    try:
-        print("--- Sending single batch prompt to Gemini for job matching ---")
-        response = model.generate_content(prompt)
-        api_response_text = response.text
-        
-        api_results_array = parse_gemini_batch_json_response(api_response_text)
-        
-        api_scores_reasons = {{item['id']: {'score': int(item.get('score', 0)), 'reason': str(item.get('reason', 'N/A'))} for item in api_results_array}}
-
-        matched_results = []
-        for job in job_listings:
-            job_id_str = str(job.id)
-            if job_id_str in api_scores_reasons:
-                score = max(0, min(100, api_scores_reasons[job_id_str]['score']))
-                reason = api_scores_reasons[job_id_str]['reason']
-            else:
-                print(f"Warning: Job ID {job_id_str} not found in Gemini's batch response.")
-                score = 0 
-                reason = "Not processed by API in this batch or ID mismatch."
-            
-            matched_results.append({
-                'job': job,
-                'score': score,
-                'reason': reason
-            })
-
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Could not parse JSON array from Gemini batch response for match_jobs. Error: {e}. Raw response was: {api_response_text}")
-        return simulate_match_jobs_legacy_by_skills_text(skills_text, job_listings)
-    except Exception as e:
-        print(f"ERROR: Gemini API batch call or other processing failed for match_jobs: {e}")
-        return simulate_match_jobs_legacy_by_skills_text(skills_text, job_listings)
-
-    matched_results.sort(key=lambda x: x['score'], reverse=True)
-    return matched_results
-
-# Renamed the old simulation function to be a clear fallback
-def simulate_match_jobs_legacy_by_skills_text(skills_text, job_listings):
-    """Legacy: Simulates job matching when the Gemini API is not available or a batch call fails."""
-    print("Executing SIMULATED LEGACY job matching by skills text.")
-    matched_results = []
-    skills_lower = skills_text.lower()
-    for job in job_listings:
-        score = random.randint(40, 90)
-        reason_fragments = ["Simulated:"]
-        if 'python' in skills_lower and 'python' in job.job_title.lower():
-            score = min(100, score + 10)
-            reason_fragments.append("Python skill noted.")
-        if not reason_fragments or len(reason_fragments) == 1:
-            reason_fragments.append("General simulated match.")
-        reason = " ".join(reason_fragments)
-        score = max(0, min(100, score))
-        matched_results.append({
-            'job': job,
-            'score': score,
-            'reason': reason
-        })
-    matched_results.sort(key=lambda x: x['score'], reverse=True)
-    return matched_results
-# --- Legacy Job Matching (based on simple skills_text) --- END ---
-
+# --- Legacy Job Matching (based on simple skills_text) --- REMOVED ---
 
 # --- Enhanced Job Matching (based on Structured User Profile) --- START ---
-def match_jobs(structured_user_profile, job_listings):
-    """Enhanced: Uses Gemini API or simulation to match jobs based on a structured user profile."""
-    if settings.USE_AI_SIMULATION or not model:
-        if not model and not settings.USE_AI_SIMULATION:
-            print("Gemini API not available (model not loaded), falling back to ENHANCED simulated matching.")
-        else:
-            print("Using ENHANCED simulated matching (USE_AI_SIMULATION is True).")
-        return simulate_match_jobs(structured_user_profile, job_listings)
 
-    # Prepare jobs data for the prompt
-    jobs_data_for_prompt = []
-    for job in job_listings:
-        jobs_data_for_prompt.append({
-            "id": str(job.id),
-            "title": job.job_title,
-            "company": job.company_name,
-            "description": job.description[:2000], # Slightly increased description length for better context
-            "level": job.level if job.level else "Not specified",
-            "location": job.location if job.location else "Not specified",
-            "industry": job.industry if job.industry else "Not specified"
-        })
-    
-    jobs_json_string = json.dumps(jobs_data_for_prompt, indent=2)
+def _generate_match_jobs_prompt(structured_user_profile, jobs_json_string):
     user_profile_json_string = json.dumps(structured_user_profile, indent=2)
-
-    prompt = f"""
+    return f"""
     You are a highly sophisticated AI job matching expert for the German market.
     You will receive a detailed structured user profile and a list of job listings.
     Your task is to meticulously analyze each job against the user's profile and provide a comprehensive evaluation.
@@ -360,78 +311,63 @@ def match_jobs(structured_user_profile, job_listings):
     Be critical and realistic in your assessment.
     """
 
-    api_response_text = None
-    try:
-        print("--- Sending ENHANCED batch prompt to Gemini for job matching ---")
-        # print(f"DEBUG Enhanced Prompt (first 1000 chars):\n{prompt[:1000]}...") # For debugging
-        response = model.generate_content(prompt)
-        api_response_text = response.text
-        # print(f"DEBUG Enhanced API Response Text:\n{api_response_text[:1000]}...") # For debugging
+def _parse_match_jobs_response(api_response_text, _api_response_object, original_processed_job_listings):
+    api_results_array = parse_gemini_batch_json_response(api_response_text)
+    
+    processed_matches = []
+    for item in api_results_array:
+        job_id_str = str(item.get('id'))
+        original_job_dict = next((job for job in original_processed_job_listings if str(job.get('id')) == job_id_str), None)
         
-        api_results_array = parse_gemini_batch_json_response(api_response_text) # Existing parser should work if new fields are just added keys
-        
-        processed_matches = []
-        for item in api_results_array:
-            job_id_str = str(item.get('id'))
-            # Find the original job object to link it
-            original_job_obj = next((job for job in job_listings if str(job.id) == job_id_str), None)
-            if not original_job_obj:
-                print(f"Warning: Job ID {job_id_str} from API response not found in original job listings. Skipping.")
-                continue
+        if not original_job_dict:
+            print(f"WARNING: Job ID {job_id_str} from API response not found in the processed job listings. Skipping.")
+            continue
 
-            processed_matches.append({
-                'job': original_job_obj, # Link to the actual JobListing model instance
-                'score': int(item.get('match_score', 0)),
-                'reason': str(item.get('match_reason', 'N/A')),
-                'insights': str(item.get('job_insights', 'N/A')),
-                'tips': str(item.get('application_tips', 'N/A'))
-            })
+        processed_matches.append({
+            'job': original_job_dict,
+            'score': int(item.get('match_score', 0)),
+            'reason': str(item.get('match_reason', 'N/A')),
+            'insights': str(item.get('job_insights', 'N/A')),
+            'tips': str(item.get('application_tips', 'N/A'))
+        })
 
-        # Sort by score descending
-        processed_matches.sort(key=lambda x: x['score'], reverse=True)
-        return processed_matches
+    processed_matches.sort(key=lambda x: x['score'], reverse=True)
+    return processed_matches
 
-    except json.JSONDecodeError as e:
-        print(f"ERROR: Could not parse JSON array from Gemini for ENHANCED match_jobs. Error: {e}.")
-        print(f"--- BEGIN Non-parsable API Response Text ---")
-        print(api_response_text) # Print the full raw response for debugging
-        print(f"--- END Non-parsable API Response Text ---")
-        return simulate_match_jobs(structured_user_profile, job_listings, error_message=f"JSON parsing error: {e}")
-    except Exception as e:
-        print(f"ERROR: Gemini API ENHANCED batch call or other processing failed for match_jobs: {e}")
-        # import traceback
-        # print(traceback.format_exc()) # For deeper debugging
-        return simulate_match_jobs(structured_user_profile, job_listings, error_message=str(e))
-
-def simulate_match_jobs(structured_user_profile, job_listings, error_message=None):
+def simulate_match_jobs(structured_user_profile, job_listings, max_jobs_to_process=None, error_message=None):
     """Enhanced: Simulates job matching with a structured user profile."""
-    print(f"Executing SIMULATED ENHANCED job matching. Profile summary: {structured_user_profile.get('summary', '')[:50]}...")
+    print(f"INFO: Executing SIMULATED ENHANCED job matching. Profile summary: {structured_user_profile.get('summary', '')[:50]}...")
+    
+    # Use the helper for consistent job list processing
+    processed_job_listings = _get_processed_job_listings(job_listings, max_jobs_to_process, "enhanced simulation")
+        
     matched_results = []
     
-    for job in job_listings:
+    for job in processed_job_listings: # Use the (potentially sliced) list
         score = random.randint(30, 95)
         reason_fragments = ["Simulated Enhanced Reason:"]
         insights_fragments = ["Simulated Insights:"]
         tips_fragments = ["Simulated Tips:"]
 
         # Simple logic for simulation based on profile
-        if 'Python' in structured_user_profile.get('key_skills', []) and 'python' in job.job_title.lower():
+        if 'Python' in structured_user_profile.get('key_skills', []) and 'python' in job.get('job_title', '').lower():
             score = min(100, score + 5)
             reason_fragments.append("Good Python skill alignment.")
             tips_fragments.append("Highlight Python projects.")
         
-        if job.location and structured_user_profile.get('preferences', {}).get('location_preferences'):
-            if job.location in structured_user_profile['preferences']['location_preferences']:
+        job_location = job.get('location')
+        if job_location and structured_user_profile.get('preferences', {}).get('location_preferences'):
+            if job_location in structured_user_profile['preferences']['location_preferences']:
                 score = min(100, score + 3)
-                insights_fragments.append(f"Location {job.location} matches preference.")
+                insights_fragments.append(f"Location {job_location} matches preference.")
             else:
-                insights_fragments.append(f"Location {job.location} does not match preference {structured_user_profile['preferences']['location_preferences']}.")
+                insights_fragments.append(f"Location {job_location} does not match preference {structured_user_profile['preferences']['location_preferences']}.")
 
         if not reason_fragments or len(reason_fragments) == 1: reason_fragments.append("General simulated match.")
         if not insights_fragments or len(insights_fragments) == 1: insights_fragments.append("Standard insights apply.")
         if not tips_fragments or len(tips_fragments) == 1: tips_fragments.append("Standard application advice.")
         
-        if error_message and job == job_listings[0]: # Add error to the first job for visibility
+        if error_message and job == processed_job_listings[0] if processed_job_listings else False: 
             reason_fragments.append(f"(SimError: {error_message})")
 
         matched_results.append({
@@ -443,34 +379,72 @@ def simulate_match_jobs(structured_user_profile, job_listings, error_message=Non
         })
     matched_results.sort(key=lambda x: x['score'], reverse=True)
     return matched_results
+
+def match_jobs(structured_user_profile, job_listings, max_jobs_to_process=None):
+    """Enhanced: Uses Gemini API or simulation to match jobs based on a structured user profile."""
+    print(f"INFO: [match_jobs] Top of function. settings.USE_AI_SIMULATION: {settings.USE_AI_SIMULATION}, Model: {model is not None}")
+
+    # Get the (potentially sliced) list of jobs to process
+    processed_job_listings = _get_processed_job_listings(job_listings, max_jobs_to_process, "enhanced job matching")
+    
+    if not processed_job_listings: # If no jobs to process, return empty list
+        print("INFO: [match_jobs] No job listings to process after applying max_jobs_to_process filter.")
+        return []
+
+    # Prepare job data specifically for the prompt
+    jobs_data_for_prompt = _prepare_job_data_for_prompt(processed_job_listings)
+    jobs_json_string = json.dumps(jobs_data_for_prompt, indent=2)
+
+    return _execute_ai_task(
+        task_name="enhanced job matching",
+        prompt_generator_func=_generate_match_jobs_prompt,
+        prompt_generator_args=(structured_user_profile, jobs_json_string),
+        response_parser_func=_parse_match_jobs_response,
+        response_parser_args=(processed_job_listings,), # Pass the original (but potentially sliced) job dicts for reconstruction
+        simulation_func=simulate_match_jobs,
+        simulation_args=(structured_user_profile, job_listings, max_jobs_to_process), # Simulation will internally call _get_processed_job_listings
+        pass_full_response_to_parser=False # Parser doesn't need the full response object for this one
+    )
 # --- Enhanced Job Matching (based on Structured User Profile) --- END ---
 
-def generate_cover_letter(skills_text, job):
-    """Uses Gemini API or simulation to generate a cover letter opening."""
-    if settings.USE_AI_SIMULATION or not model:
-        if not model and not settings.USE_AI_SIMULATION:
-            print("Gemini API not available (model not loaded), falling back to simulated cover letter.")
-        else:
-            print("Using simulated cover letter generation (USE_AI_SIMULATION is True).")
-        return f"(Simulated Cover Letter for {job.job_title} at {job.company_name}) Based on your skills in {skills_text[:50]}..., this job seems like a good fit because... (simulated reason)."
+# --- Cover Letter Generation ---
 
-    prompt = f"""
+def _generate_cover_letter_prompt(skills_text, job):
+    return f"""
     Based on the following user skills and job details, write a concise and compelling opening paragraph for a cover letter (1-2 sentences maximum).
     
     User Skills: {skills_text}
-    Job Title: {job.job_title}
-    Company: {job.company_name}
-    Level: {job.level if job.level else "Not specified"}
-    Description: {job.description}
+    Job Title: {job.get('job_title')}
+    Company: {job.get('company_name')}
+    Level: {job.get('level', "Not specified")}
+    Description: {job.get('description')}
     
     Cover Letter Opening Paragraph:
     """
-    try:
-        print(f"--- Sending prompt to Gemini for cover letter: {job.job_title} ---")
-        response = model.generate_content(prompt)
-        if response.prompt_feedback and response.prompt_feedback.block_reason:
-            return f"Could not generate cover letter due to safety settings. Reason: {response.prompt_feedback.block_reason}"
-        return response.text.strip()
-    except Exception as e:
-        print(f"ERROR: Cover letter generation API call failed for job '{job.job_title}': {e}")
-        return "(Error generating cover letter via API. Please try again.)" 
+
+def _parse_cover_letter_response(api_response_text, api_response_object):
+    if api_response_object and api_response_object.prompt_feedback and api_response_object.prompt_feedback.block_reason:
+        print(f"WARNING: Cover letter generation might have been blocked. Reason: {api_response_object.prompt_feedback.block_reason}")
+        return f"(Could not generate cover letter due to safety settings. Reason: {api_response_object.prompt_feedback.block_reason})"
+    return api_response_text.strip()
+
+def simulate_generate_cover_letter(skills_text, job, error_message=None):
+    """Simulates cover letter generation."""
+    print(f"INFO: Executing SIMULATED cover letter generation for job: {job.job_title}")
+    sim_text = f"(Simulated Cover Letter for {job.job_title} at {job.company_name}) Based on your skills in {skills_text[:50]}..., this job seems like a good fit because... (simulated reason)."
+    if error_message:
+        sim_text += f" (SimError: {error_message})"
+    return sim_text
+
+def generate_cover_letter(skills_text, job):
+    """Uses Gemini API or simulation to generate a cover letter opening."""
+    return _execute_ai_task(
+        task_name="cover letter generation",
+        prompt_generator_func=_generate_cover_letter_prompt,
+        prompt_generator_args=(skills_text, job),
+        response_parser_func=_parse_cover_letter_response,
+        response_parser_args=(),
+        simulation_func=simulate_generate_cover_letter,
+        simulation_args=(skills_text, job),
+        pass_full_response_to_parser=True # Parser needs the full response for feedback checks
+    ) 

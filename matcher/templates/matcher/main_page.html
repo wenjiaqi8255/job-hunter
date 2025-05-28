@@ -85,28 +85,72 @@
                 </p>
                 <ul class="list-group">
                     {% for match_item in processed_job_matches %}
-                        <li class="list-group-item d-flex justify-content-between align-items-center">
-                            <div>
-                                <h5><a href="{% url 'matcher:job_detail_page' match_item.job.id %}">{{ match_item.job.job_title }}</a> at {{ match_item.job.company_name }}</h5>
-                                <p class="mb-1"><strong>Reason:</strong> {{ match_item.reason }}</p>
-                                {% if match_item.insights and match_item.insights != 'N/A' %}
-                                    <p class="mb-1"><small><strong>Insights:</strong><br>{{ match_item.insights|linebreaksbr }}</small></p>
+                        <div class="card mb-3">
+                            <div class="card-header">
+                                <!-- Link to job_detail_page, including session_id if available -->
+                                {% if current_match_session_id %}
+                                    <a href="{% url 'matcher:job_detail_page' match_item.job.id current_match_session_id %}">
+                                        {{ match_item.job.job_title }} at {{ match_item.job.company_name }}
+                                    </a>
+                                {% else %}
+                                    <a href="{% url 'matcher:job_detail_page_no_session' match_item.job.id %}">
+                                        {{ match_item.job.job_title }} at {{ match_item.job.company_name }}
+                                    </a>
                                 {% endif %}
+                                <span class="badge bg-info float-end">Score: {{ match_item.score|floatformat:2 }}</span>
+                                {% if match_item.saved_status %}
+                                    <span class="badge bg-secondary float-end me-2">Status: {{ match_item.saved_status|capfirst }}</span>
+                                {% endif %}
+                            </div>
+                            <div class="card-body">
+                                <h6 class="card-subtitle mb-2 text-muted">Location: {{ match_item.job.location|default:"N/A" }} | Level: {{ match_item.job.level|default:"N/A" }}</h6>
+                                <p class="card-text"><strong>Reason for Match:</strong><br>{{ match_item.reason|linebreaksbr }}</p>
+                                
+                                <!-- New Insights Table -->
+                                {% if match_item.parsed_insights_list %}
+                                    <p class="mb-1"><small><strong>Insights:</strong></small></p>
+                                    <table class="table table-sm table-bordered small">
+                                        <thead>
+                                            <tr>
+                                                <th scope="col" class="w-50">Pros</th>
+                                                <th scope="col" class="w-50">Cons</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {% for pro_insight, con_insight in match_item.parsed_insights_list %}
+                                            <tr>
+                                                <td>{% if pro_insight %}{{ pro_insight }}{% endif %}</td>
+                                                <td>{% if con_insight %}{{ con_insight }}{% endif %}</td>
+                                            </tr>
+                                            {% endfor %}
+                                        </tbody>
+                                    </table>
+                                {% endif %}
+
                                 {% if match_item.tips and match_item.tips != 'N/A' %}
                                     <p class="mb-1"><small><strong>Application Tips:</strong><br>{{ match_item.tips|linebreaksbr }}</small></p>
                                 {% endif %}
-                                {% if match_item.saved_status %}
-                                    <p class="mb-1"><small><strong>Status:</strong> <span class="badge bg-info">{{ match_item.saved_status }}</span></small></p>
-                                {% endif %}
-                                {% if match_item.job.level %}
-                                    <p class="mb-1"><small><strong>Level:</strong> {{ match_item.job.level }}</small></p>
-                                {% endif %}
-                                <p class="mb-1"><small>{{ match_item.job.description|truncatewords:30 }}</small></p>
                                 {% if match_item.job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ match_item.job.location }}</span>{% endif %}
                                 {% if match_item.job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ match_item.job.industry }}</span>{% endif %}
+                                <div class="card-footer bg-transparent border-top-0">
+                                    <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="btn btn-outline-primary btn-sm me-2"><i class="fas fa-info-circle"></i> View Details</a>
+                                    {% if match_item.job.application_url %}
+                                    <a href="{{ match_item.job.application_url }}"
+                                       class="btn btn-success btn-sm apply-now-btn-trigger"
+                                       target="_blank" rel="noopener noreferrer"
+                                       data-job-id="{{ match_item.job.id }}"
+                                       data-job-title="{{ match_item.job.job_title }}"
+                                       data-list-type="matched">
+                                        <i class="fas fa-external-link-alt"></i> Apply Now
+                                    </a>
+                                    {% else %}
+                                    <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
+                                        <i class="fas fa-external-link-alt"></i> Apply Now
+                                    </button>
+                                    {% endif %}
+                                </div>
                             </div>
-                            <span class="badge bg-success rounded-pill p-2">{{ match_item.score }}% Match</span>
-                        </li>
+                        </div>
                     {% endfor %}
                 </ul>
             </div>
@@ -135,10 +179,12 @@
                         <div class="col">
                             <div class="card h-100">
                                 <div class="card-body">
-                                    <h5 class="card-title"><a href="{% url 'matcher:job_detail_page' item.job_object.id %}">{{ item.job_object.job_title }}</a></h5>
+                                    <h5 class="card-title"><a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}">{{ item.job_object.job_title }}</a></h5>
                                     <h6 class="card-subtitle mb-2 text-muted">{{ item.job_object.company_name }}</h6>
                                     {% if item.saved_status %}
-                                        <p class="mb-1"><small><strong>Status:</strong> <span class="badge bg-info">{{ item.saved_status }}</span></small></p>
+                                        <p class="mb-1" id="job-status-paragraph-all-{{ item.job_object.id }}"><small><strong>Status:</strong> <span class="badge bg-info" id="job-status-badge-all-{{ item.job_object.id }}">{{ item.saved_status }}</span></small></p>
+                                    {% else %}
+                                        <p class="mb-1" id="job-status-paragraph-all-{{ item.job_object.id }}" style="display: none;"><small><strong>Status:</strong> <span class="badge" id="job-status-badge-all-{{ item.job_object.id }}"></span></small></p>
                                     {% endif %}
                                     {% if item.job_object.level %}
                                         <p class="mb-1"><small><strong>Level:</strong> {{ item.job_object.level }}</small></p>
@@ -147,8 +193,22 @@
                                     {% if item.job_object.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ item.job_object.location }}</span>{% endif %}
                                     {% if item.job_object.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ item.job_object.industry }}</span>{% endif %}
                                 </div>
-                                <div class="card-footer">
-                                     <a href="{% url 'matcher:job_detail_page' item.job_object.id %}" class="btn btn-outline-primary btn-sm">View Details</a>
+                                <div class="card-footer bg-transparent border-top-0">
+                                     <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="btn btn-outline-primary btn-sm me-2"><i class="fas fa-info-circle"></i> View Details</a>
+                                     {% if item.job_object.application_url %}
+                                     <a href="{{ item.job_object.application_url }}"
+                                        class="btn btn-success btn-sm apply-now-btn-trigger"
+                                        target="_blank" rel="noopener noreferrer"
+                                        data-job-id="{{ item.job_object.id }}"
+                                        data-job-title="{{ item.job_object.job_title }}"
+                                        data-list-type="all">
+                                         <i class="fas fa-external-link-alt"></i> Apply Now
+                                     </a>
+                                     {% else %}
+                                     <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
+                                         <i class="fas fa-external-link-alt"></i> Apply Now
+                                     </button>
+                                     {% endif %}
                                 </div>
                             </div>
                         </div>
@@ -160,6 +220,26 @@
             </div>
         </main>
     </div>
+</div>
+
+<!-- Apply Confirmation Modal -->
+<div class="modal fade" id="applyConfirmationModal" tabindex="-1" aria-labelledby="applyConfirmationModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="applyConfirmationModalLabel">Confirm Application</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        The application page for <strong id="modalJobTitle">this job</strong> has opened in a new tab.
+        <br><br>Have you submitted your application?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Not Yet / Cancel</button>
+        <button type="button" class="btn btn-success" id="confirmAppliedButton">Yes, I Applied</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <style>
@@ -296,6 +376,151 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
+    // Apply Confirmation Modal Logic
+    const applyConfirmationModalEl = document.getElementById('applyConfirmationModal');
+    const modalJobTitleEl = document.getElementById('modalJobTitle');
+    const confirmAppliedButton = document.getElementById('confirmAppliedButton');
+    const applyNowButtons = document.querySelectorAll('.apply-now-btn-trigger');
+    let modalInstance = null; // To store the Bootstrap modal instance
+    if (applyConfirmationModalEl) {
+        modalInstance = new bootstrap.Modal(applyConfirmationModalEl);
+    }
+
+    applyNowButtons.forEach(button => {
+        button.addEventListener('click', function (event) {
+            event.preventDefault(); // Prevent default link navigation
+            const jobTitle = this.getAttribute('data-job-title');
+            const jobId = this.getAttribute('data-job-id');
+            const listType = this.getAttribute('data-list-type');
+            const applicationUrl = this.href;
+
+            // Open the application link in a new tab
+            window.open(applicationUrl, '_blank');
+
+            // Store job info in sessionStorage to trigger modal on focus
+            sessionStorage.setItem('pendingApplicationJobId', jobId);
+            sessionStorage.setItem('pendingApplicationJobTitle', jobTitle);
+            sessionStorage.setItem('pendingApplicationListType', listType);
+            
+            // Optionally, give a small visual cue or message that action is pending confirmation
+            // e.g., a toast notification: "Application opened. We'll ask for confirmation when you return."
+        });
+    });
+
+    window.addEventListener('focus', function() {
+        const pendingJobId = sessionStorage.getItem('pendingApplicationJobId');
+        if (pendingJobId && modalInstance) {
+            const pendingJobTitle = sessionStorage.getItem('pendingApplicationJobTitle');
+            const pendingListType = sessionStorage.getItem('pendingApplicationListType');
+
+            if (modalJobTitleEl) {
+                modalJobTitleEl.textContent = pendingJobTitle || 'this job';
+            }
+            // Store data on the modal or confirm button for the click handler
+            if (confirmAppliedButton) {
+                confirmAppliedButton.dataset.jobId = pendingJobId;
+                confirmAppliedButton.dataset.listType = pendingListType;
+            }
+            modalInstance.show();
+        }
+    });
+
+    function clearPendingApplicationState() {
+        sessionStorage.removeItem('pendingApplicationJobId');
+        sessionStorage.removeItem('pendingApplicationJobTitle');
+        sessionStorage.removeItem('pendingApplicationListType');
+        if (confirmAppliedButton) {
+            delete confirmAppliedButton.dataset.jobId;
+            delete confirmAppliedButton.dataset.listType;
+        }
+    }
+
+    if (confirmAppliedButton) {
+        confirmAppliedButton.addEventListener('click', function () {
+            const jobId = this.dataset.jobId;
+            const listType = this.dataset.listType;
+
+            if (jobId && listType) {
+                fetch(`/job/${jobId}/update_status/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': getCookie('csrftoken')
+                    },
+                    body: JSON.stringify({ status: 'applied' })
+                })
+                .then(response => {
+                    if (!response.ok) {
+                        // If response is not ok, try to get text for more detailed error
+                        return response.text().then(text => {
+                            console.error('Server error response text:', text.substring(0, 500)); // Log first 500 chars
+                            try {
+                                // Try to parse as JSON in case it is a JSON error response
+                                const errData = JSON.parse(text);
+                                throw new Error(errData.message || `HTTP error ${response.status}`);
+                            } catch (e) {
+                                // If not JSON, it might be HTML (like a Django error page)
+                                // Throw a generic error, or try to extract info from HTML if needed
+                                throw new Error(`HTTP error ${response.status}. Response not valid JSON.`);
+                            }
+                        });
+                    }
+                    return response.json(); // If response is OK, parse as JSON
+                })
+                .then(data => {
+                    if (data.success) {
+                        console.log('Status updated successfully for job', jobId, 'to', data.new_status);
+                        const statusParagraph = document.getElementById(`job-status-paragraph-${listType}-${jobId}`);
+                        const statusBadge = document.getElementById(`job-status-badge-${listType}-${jobId}`);
+
+                        if (statusParagraph && statusBadge) {
+                            statusBadge.textContent = data.new_status;
+                            statusBadge.className = 'badge bg-success';
+                            statusParagraph.style.display = '';
+                        }
+                        // Optionally, show a success toast notification here.
+                    } else {
+                        console.error('Failed to update status (server-side):', data.message);
+                        alert('Error updating status: ' + data.message);
+                    }
+                })
+                .catch(error => {
+                    console.error('Fetch API Error:', error);
+                    alert('An error occurred: ' + error.message);
+                })
+                .finally(() => {
+                    if (modalInstance) modalInstance.hide();
+                    clearPendingApplicationState();
+                });
+            }
+        });
+    }
+
+    // Also clear pending state if the modal is dismissed without confirming
+    if (applyConfirmationModalEl) {
+        applyConfirmationModalEl.addEventListener('hidden.bs.modal', function () {
+            // Check if the click was not on confirmAppliedButton to avoid double clearing
+            // This check is a bit tricky if `finally` in fetch already cleared it.
+            // Simpler: always clear, but ensure clearPendingApplicationState is idempotent.
+            clearPendingApplicationState();
+        });
+    }
+
+    // Helper function to get CSRF token
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
 });
 </script>
 

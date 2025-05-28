@@ -7,7 +7,7 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home</a></li>
-          <li class="breadcrumb-item"><a href="{% url 'matcher:job_detail_page' job.id %}">Job Detail: {{ job.job_title }}</a></li>
+          <li class="breadcrumb-item"><a href="{% url 'matcher:job_detail_page_no_session' job.id %}">Job Detail: {{ job.job_title }}</a></li>
           <li class="breadcrumb-item active" aria-current="page">Generated Cover Letter</li>
         </ol>
     </nav>

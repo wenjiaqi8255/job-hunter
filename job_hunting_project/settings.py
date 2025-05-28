@@ -30,7 +30,10 @@ DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 # Defaults to True (simulated) if env var is not set or not 'False'
 # Set USE_AI_SIMULATION_ENV=False in your .env or environment to use the real API
 # USE_AI_SIMULATION = os.environ.get('USE_AI_SIMULATION_ENV', 'True').lower() != 'false'
-USE_AI_SIMULATION = True
+USE_AI_SIMULATION_ENV_VAR = os.getenv('USE_SIMULATION_ENV', 'True')  # Default to 'True' (string) if not set
+USE_AI_SIMULATION = USE_AI_SIMULATION_ENV_VAR.lower() != 'false'
+print(f"[SETTINGS.PY] USE_AI_SIMULATION_ENV_VAR: '{USE_AI_SIMULATION_ENV_VAR}'")
+print(f"[SETTINGS.PY] USE_AI_SIMULATION set to: {USE_AI_SIMULATION}")
 ALLOWED_HOSTS = []
 
 
@@ -127,3 +130,18 @@ STATIC_URL = "static/"
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
+
+# Supabase Configuration
+SUPABASE_URL = os.getenv('SUPABASE_URL')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+
+# It's good practice to check if these are set, especially in production
+if not SUPABASE_URL or not SUPABASE_KEY:
+    # In a development environment, you might want to print a warning
+    # or raise an ImproperlyConfigured error if these are critical.
+    print("WARNING: SUPABASE_URL and/or SUPABASE_KEY are not set in environment variables.")
+    # For local development, you can fall back to default values if you wish,
+    # but be careful not to commit sensitive keys to version control.
+    # Example fallback (NOT RECOMMENDED FOR PRODUCTION KEYS):
+    # SUPABASE_URL = "your_local_or_dev_supabase_url"
+    # SUPABASE_KEY = "your_local_or_dev_supabase_anon_key"
