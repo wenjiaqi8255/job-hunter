@@ -1,139 +1,310 @@
 {% extends 'matcher/base.html' %}
 {% load matcher_extras %}
+{% load static %}
 
-{% block title %}Job Matcher - Find Your Fit{% endblock %}
+{% block title %}JobbAI - Your AI Job Copilot{% endblock %}
 
 {% block content %}
-<div class="container-fluid mt-0">
-    <div class="row">
-        <!-- Sidebar: Match History -->
-        <nav id="sidebarMenu" class="col-md-3 col-lg-2 d-md-block bg-light sidebar">
-            <div class="position-sticky pt-3 sidebar-sticky">
-                <div class="d-flex justify-content-between align-items-center px-3 mt-0 mb-2">
-                     <h4 class="mb-0">Match Sessions</h4>
-                     {# Sidebar Toggle Button - will be visible on all screen sizes for now #}
-                     {# For md and up, it's already visible due to d-md-block #}
-                     {# We will hide the main toggle for large screens and use a dedicated one #}
+<div class="jobbAI-main-container container-fluid p-0">
+    <!-- Top Navigation Bar (New) -->
+    <!-- <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top jobbAI-top-nav">
+        <div class="container-fluid px-4">
+            <a class="navbar-brand" href="#">
+                {# Placeholder for logo - will add actual SVG or image later #}
+                <img src="{% static 'matcher/images/logo.svg' %}" alt="JobbAI Logo" style="height: 24px;"> {# TODO: Replace with actual logo asset #}
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbarNav" aria-controls="topNavbarNav" aria-expanded="false" aria-label="Toggle navigation">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="topNavbarNav">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" aria-current="page" href="{% url 'matcher:main_page' %}">Matches</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Applications</a> {# TODO: Link to applications page #}
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="#">Profile</a> {# TODO: Link to profile page #}
+                    </li>
+                </ul>
+                <div class="d-flex align-items-center">
+                    {# Placeholder for User Profile Icon/Dropdown #}
+                    <i class="fas fa-user-circle fa-lg"></i>
                 </div>
+            </div>
+        </div>
+    </nav> -->
 
+    <div class="container-fluid jobbAI-content-wrapper">
+        <div class="row g-0">
+            <!-- Sidebar: Match History & New Match Button -->
+            <nav id="sidebarMenu" class="col-md-3 col-lg-4 d-md-block bg-white border-end jobbAI-sidebar">
+                <div class="position-sticky pt-3 sidebar-sticky">
+                    <div class="px-3 mb-3">
                 <a href="{% url 'matcher:main_page' %}" 
-                   class="btn btn-primary btn-sm d-block mx-3 mb-3 {% if not current_match_session_id %}active{% endif %}">
-                    <i class="fas fa-plus-circle"></i> Start New Match
-                </a>
+                           class="btn btn-primary w-100 {% if not current_match_session_id %}active{% endif %}">
+                            <i class="fas fa-plus-circle me-2"></i>Start New Match
+                        </a>
+                    </div>
+                    
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                        <span>Today's Matches</span>
+                    </h6>
+                    <ul class="nav flex-column mb-2">
+                        {% for session in match_history %}
+                            {% if session.matched_at|date:"Y-m-d" == today_date_str %} {# Assuming today_date_str is passed to context #}
+                            <li class="nav-item">
+                                <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}" 
+                                   href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
+                                    <i class="fas fa-calendar-day me-2"></i>
+                                    <span class="sidebar-text">{{ session.matched_at|date:"H:i" }} - {{ session.skills_text|truncatewords:3 }}</span>
+                                </a>
+                            </li>
+                            {% endif %}
+                        {% empty %}
+                            <li class="nav-item px-3">
+                                <small class="text-muted sidebar-text">No matches today.</small>
+                            </li>
+                        {% endfor %}
+                    </ul>
+
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                        <span>History Matches</span>
+                    </h6>
                 <ul class="nav flex-column">
                     {% for session in match_history %}
+                             {% if session.matched_at|date:"Y-m-d" != today_date_str %}
                         <li class="nav-item">
                             <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}" 
                                href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
                                 <i class="fas fa-history me-2"></i>
-                                <span class="sidebar-text">Skills: {{ session.skills_text|truncatewords:5 }}</span><br>
-                                <small class="text-muted sidebar-text">{{ session.matched_at|date:"Y-m-d H:i" }}</small>
+                                    <span class="sidebar-text">{{ session.matched_at|date:"Y-m-d" }} - {{ session.skills_text|truncatewords:3 }}</span>
                             </a>
                         </li>
+                            {% endif %}
                     {% empty %}
+                            <li class="nav-item px-3">
+                                <small class="text-muted sidebar-text">No past match history.</small>
+                            </li>
+                        {% endfor %}
+                         {% if not match_history %} {# Handle case where match_history itself is empty #}
                         <li class="nav-item px-3">
                             <small class="text-muted sidebar-text">No match history yet.</small>
                         </li>
-                    {% endfor %}
+                        {% endif %}
                 </ul>
             </div>
         </nav>
 
         <!-- Main content -->
-        <main class="col-md-9 ms-sm-auto col-lg-10 px-md-4 main-content-area">
+            <main class="px-md-4 main-content-area jobbAI-main-content">
+                {# Desktop Sidebar Toggle - to be handled by JS, removed from here as it's part of overall page structure not dynamic content #}
+                <!-- <button id="sidebarToggleDesktop" class="btn btn-link d-none d-md-inline-block me-3" type="button" title="Toggle sidebar">
+                    <i class="fas fa-chevron-left"></i>
+                </button>  -->
+
+                <!-- Header section for stats and CV/Preference update -->
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                <div class_="d-flex align-items-center">
-                    <button class="btn btn-link d-md-none me-2" type="button" data-bs-toggle="collapse" data-bs-target="#sidebarMenu" aria-controls="sidebarMenu" aria-expanded="false" aria-label="Toggle sidebar">
-                        <i class="fas fa-bars"></i>
-                    </button>
-                    <button id="sidebarToggleDesktop" class="btn btn-link d-none d-md-inline-block me-3" type="button" title="Toggle sidebar">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <h1 class="h2 mb-0">Job Matcher Dashboard</h1>
+                    <h1 class="h2">
+                        {% if processed_job_matches %}
+                            {{ processed_job_matches|length }} Best Matches, {{ all_jobs_count }} Job Listings
+                        {% else %}
+                            {{ all_jobs_count }} Job Listings
+                        {% endif %}
+                    </h1>
+                    <div class="btn-toolbar mb-2 mb-md-0">
+                        <div class="btn-group me-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
+                        </div>
                 </div>
             </div>
 
-            <!-- Skills Input Form -->
-            <div class="card mt-4">
-                <div class="card-body">
-                    <h5 class="card-title">Enter Your Profile Details</h5>
-                    <form method="POST" action="{% url 'matcher:main_page' %}">
+                <!-- CV and Preferences Input Modals (Moved from direct form) -->
+                <!-- CV Modal -->
+                <div class="modal fade" id="cvModal" tabindex="-1" aria-labelledby="cvModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                            <form method="POST" action="{% url 'matcher:main_page' %}" id="cvForm">
                         {% csrf_token %}
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="cvModalLabel">Update CV/Resume</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
                         <div class="form-group mb-3">
-                            <label for="user_cv_text" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
-                            <textarea name="user_cv_text" id="user_cv_text" class="form-control" rows="8" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
+                                        <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
+                                        <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
+                                    </div>
+                                    {# Keep preferences in its own modal, or decide if one modal is enough #}
+                                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
+                                </div>
+                            </form>
                         </div>
-                        <div class="form-group mb-3">
-                            <label for="user_preferences_text" class="form-label"><strong>Your Preferences:</strong></label>
-                            <textarea name="user_preferences_text" id="user_preferences_text" class="form-control" rows="4" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
-                        </div>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
-                    </form>
+                    </div>
                 </div>
+
+                <!-- Preferences Modal -->
+                <div class="modal fade" id="preferencesModal" tabindex="-1" aria-labelledby="preferencesModalLabel" aria-hidden="true">
+                    <div class="modal-dialog modal-lg">
+                        <div class="modal-content">
+                             <form method="POST" action="{% url 'matcher:main_page' %}" id="preferencesForm">
+                                {% csrf_token %}
+                                <div class="modal-header">
+                                    <h5 class="modal-title" id="preferencesModalLabel">Edit Preferences</h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body">
+                        <div class="form-group mb-3">
+                                        <label for="user_preferences_text_modal" class="form-label"><strong>Your Preferences:</strong></label>
+                                        <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
+                                    </div>
+                                    <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                                </div>
+                                <div class="modal-footer">
+                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Update Preferences & Match Jobs</button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Original Skills Input Form (Now potentially redundant or for initial input if no session) -->
+                {% if not current_match_session_id and not user_cv_text and not user_preferences_text %}
+                <div class="card mt-4 mb-4 bg-light border-dashed">
+                    <!-- <div class="card-body text-center p-5">
+                        <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
+                        <h5 class="card-title">Get Started</h5>
+                        <p class="text-muted">Upload your CV and set your preferences to find job matches.</p>
+                        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#cvModal">
+                            <i class="fas fa-upload me-2"></i> Upload CV & Preferences
+                        </button>
+                </div> -->
             </div>
+                {% endif %}
+
 
             <!-- Matched Job Listings -->
             {% if processed_job_matches %}
-            <div class="mt-5">
-                <h2>Matched Job Listings (Sorted by Score)</h2>
+                <div class="mt-4">
+                    <!-- <h4 class="mb-3">Matched Jobs</h4> -->
                 <p class="text-muted">
                     {% if selected_session_object %}
                         Displaying results for match session from {{ selected_session_object.matched_at|date:"F d, Y, P" }}.
                     {% elif current_match_session_id %}
-                        Displaying results from your latest submission (processing or just submitted).
+                            Displaying results from your latest submission.
                     {% endif %}
                 </p>
-                <ul class="list-group">
+                    <div class="row row-cols-1 g-4">
                     {% for match_item in processed_job_matches %}
-                        <div class="card mb-3">
-                            <div class="card-header">
-                                <!-- Link to job_detail_page, including session_id if available -->
+                            <div class="col">
+                                <div class="card jobbAI-job-card shadow-sm">
+                                    <div class="card-body">
+                                        <div class="d-flex justify-content-between align-items-start mb-2">
+                                            <div>
+                                                <h5 class="card-title mb-0">
                                 {% if current_match_session_id %}
-                                    <a href="{% url 'matcher:job_detail_page' match_item.job.id current_match_session_id %}">
-                                        {{ match_item.job.job_title }} at {{ match_item.job.company_name }}
+                                                        <a href="{% url 'matcher:job_detail_page' match_item.job.id current_match_session_id %}" class="text-decoration-none">
+                                                            {{ match_item.job.job_title }}
                                     </a>
                                 {% else %}
-                                    <a href="{% url 'matcher:job_detail_page_no_session' match_item.job.id %}">
-                                        {{ match_item.job.job_title }} at {{ match_item.job.company_name }}
+                                                        <a href="{% url 'matcher:job_detail_page_no_session' match_item.job.id %}" class="text-decoration-none">
+                                                            {{ match_item.job.job_title }}
                                     </a>
                                 {% endif %}
-                                <span class="badge bg-info float-end">Score: {{ match_item.score|floatformat:2 }}</span>
-                                {% if match_item.saved_status %}
-                                    <span class="badge bg-secondary float-end me-2">Status: {{ match_item.saved_status|capfirst }}</span>
-                                {% endif %}
+                                {% if match_item.saved_status == 'applied' %}
+                                            <span class="badge status-badge status-applied mb-2" id="job-status-badge-matched-{{ match_item.job.id }}">Status: Applied</span>
+                                        {% elif match_item.saved_status == 'viewed' %}
+                                            <span class="badge status-badge status-viewed mb-2" id="job-status-badge-matched-{{ match_item.job.id }}">Status: Viewed</span>
+                                        {% else %} {# Default to not-applied or any other status not explicitly handled #}
+                                            <span class="badge status-badge status-not-applied mb-2" id="job-status-badge-matched-{{ match_item.job.id }}">Status: {% if match_item.saved_status %}{{ match_item.saved_status|capfirst }}{% else %}Not Applied{% endif %}</span>
+                                        {% endif %}
+                                                </h5>
+                                                <small class="text-muted">{{ match_item.job.company_name }}</small>
+                                            </div>
+                                            <div class="text-end">
+                                                <span class="badge bg-primary rounded-pill fs-6">{{ match_item.score|floatformat:0 }}%</span>
+                                                <small class="d-block text-muted">Match</small>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                                <i class="fas fa-briefcase"></i> {{ match_item.job.level|default:"Unknown Level" }} | 
+                                                <i class="fas fa-map-marker-alt"></i> {{ match_item.job.location|default:"Unknown Location" }} | 
+                                                <i class="fas fa-industry"></i> {{ match_item.job.industry|default:"Unknown Industry" }} | 
+                                                <i class="fas fa-clock"></i> {{ match_item.job.flexibility|default:"Unknown flexibility"}} |
+                                                <i class="fas fa-dollar-sign"></i> {{ match_item.job.salary_range|default:"Unknown salary range"}} 
+                                            </small>
                             </div>
-                            <div class="card-body">
-                                <h6 class="card-subtitle mb-2 text-muted">Location: {{ match_item.job.location|default:"N/A" }} | Level: {{ match_item.job.level|default:"N/A" }}</h6>
-                                <p class="card-text"><strong>Reason for Match:</strong><br>{{ match_item.reason|linebreaksbr }}</p>
+
+                                        <p class="card-text small mb-2">
+                                            {{ match_item.reason|truncatewords:20|linebreaksbr }}
+                                        </p>
+                                        
                                 
-                                <!-- New Insights Table -->
+                                
+                                        <!-- Insights Table (Pros/Cons) -->
                                 {% if match_item.parsed_insights_list %}
-                                    <p class="mb-1"><small><strong>Insights:</strong></small></p>
-                                    <table class="table table-sm table-bordered small">
+                                            <div class="accordion accordion-flush accordion-sm mb-2" id="accordionInsights{{ match_item.job.id }}">
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header" id="headingInsights{{ match_item.job.id }}">
+                                                        <button class="accordion-button p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsights{{ match_item.job.id }}" aria-expanded="true" aria-controls="collapseInsights{{ match_item.job.id }}">
+                                                            <small><strong><i class="fas fa-lightbulb me-1"></i> Key Insights</strong></small>
+                                                        </button>
+                                                    </h2>
+                                                    <div id="collapseInsights{{ match_item.job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingInsights{{ match_item.job.id }}">
+                                                        <div class="accordion-body p-0">
+                                                            <table class="table table-sm small table-borderless mb-0">
                                         <thead>
                                             <tr>
-                                                <th scope="col" class="w-50">Pros</th>
-                                                <th scope="col" class="w-50">Cons</th>
+                                                                        <th scope="col" class="w-50 ps-2 text-success"><small>Pros</small></th>
+                                                                        <th scope="col" class="w-50 ps-2 text-danger"><small>Cons</small></th>
                                             </tr>
                                         </thead>
                                         <tbody>
                                             {% for pro_insight, con_insight in match_item.parsed_insights_list %}
                                             <tr>
-                                                <td>{% if pro_insight %}{{ pro_insight }}{% endif %}</td>
-                                                <td>{% if con_insight %}{{ con_insight }}{% endif %}</td>
+                                                                        <td class="ps-2 align-top"><small>{% if pro_insight %}<i class="fas fa-check-circle text-success me-1"></i>{{ pro_insight }}{% endif %}</small></td>
+                                                                        <td class="ps-2 align-top"><small>{% if con_insight %}<i class="fas fa-times-circle text-danger me-1"></i>{{ con_insight }}{% endif %}</small></td>
                                             </tr>
                                             {% endfor %}
                                         </tbody>
                                     </table>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                 {% endif %}
 
                                 {% if match_item.tips and match_item.tips != 'N/A' %}
-                                    <p class="mb-1"><small><strong>Application Tips:</strong><br>{{ match_item.tips|linebreaksbr }}</small></p>
+                                            <div class="accordion accordion-flush accordion-sm mb-3" id="accordionTips{{ match_item.job.id }}">
+                                                <div class="accordion-item">
+                                                    <h2 class="accordion-header" id="headingTips{{ match_item.job.id }}">
+                                                        <button class="accordion-button p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTips{{ match_item.job.id }}" aria-expanded="true" aria-controls="collapseTips{{ match_item.job.id }}">
+                                                             <small><strong><i class="fas fa-bullseye me-1"></i> Application Tips</strong></small>
+                                                        </button>
+                                                    </h2>
+                                                    <div id="collapseTips{{ match_item.job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingTips{{ match_item.job.id }}">
+                                                        <div class="accordion-body p-2">
+                                                            <small>{{ match_item.tips|linebreaksbr }}</small>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
                                 {% endif %}
-                                {% if match_item.job.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ match_item.job.location }}</span>{% endif %}
-                                {% if match_item.job.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ match_item.job.industry }}</span>{% endif %}
-                                <div class="card-footer bg-transparent border-top-0">
-                                    <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="btn btn-outline-primary btn-sm me-2"><i class="fas fa-info-circle"></i> View Details</a>
+                                    </div>
+                                    <div class="card-footer bg-light border-top-0 p-2">
+                                        <div class="d-flex justify-content-end">
+                                            <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="btn btn-outline-secondary btn-sm me-2">
+                                                <i class="fas fa-info-circle me-1"></i> View Details
+                                            </a>
                                     {% if match_item.job.application_url %}
                                     <a href="{{ match_item.job.application_url }}"
                                        class="btn btn-success btn-sm apply-now-btn-trigger"
@@ -141,60 +312,86 @@
                                        data-job-id="{{ match_item.job.id }}"
                                        data-job-title="{{ match_item.job.job_title }}"
                                        data-list-type="matched">
-                                        <i class="fas fa-external-link-alt"></i> Apply Now
+                                                <i class="fas fa-external-link-alt me-1"></i> Apply Now
                                     </a>
                                     {% else %}
                                     <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
-                                        <i class="fas fa-external-link-alt"></i> Apply Now
+                                                <i class="fas fa-external-link-alt me-1"></i> Apply Now
                                     </button>
                                     {% endif %}
+                                        </div>
                                 </div>
                             </div>
                         </div>
                     {% endfor %}
-                </ul>
+                    </div>
             </div>
             {% elif request.method == 'POST' and not processed_job_matches %}
-             <div class="mt-5">
-                <h2>Matched Job Listings</h2>
-                <div class="alert alert-warning" role="alert">
-                    No specific matches found based on your input. You can browse all jobs below or refine your skills input.
-                </div>
+                 <div class="mt-5 text-center">
+                    <i class="fas fa-search fa-3x text-muted mb-3"></i>
+                    <h4>No Specific Matches Found</h4>
+                    <p class="text-muted">
+                        We couldn't find specific matches for your current CV and preferences.
+                        Try updating them or browse all available jobs.
+                    </p>
+                     <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#cvModal">
+                        <i class="fas fa-edit me-1"></i> Update CV/Preferences
+                    </button>
+                    {# Optional: Add button to show all jobs if not already visible #}
             </div>
             {% elif current_match_session_id and not processed_job_matches %}
-             <div class="mt-5">
-                <h2>Matched Job Listings</h2>
-                <div class="alert alert-info" role="alert">
-                    No matches were found for the selected historical session.
-                </div>
+                 <div class="mt-5 text-center">
+                    <i class="fas fa-folder-open fa-3x text-muted mb-3"></i>
+                    <h4>No Matches in This Session</h4>
+                    <p class="text-muted">
+                        The selected historical session does not contain any matched jobs.
+                    </p>
+                     <a href="{% url 'matcher:main_page' %}" class="btn btn-primary">
+                        <i class="fas fa-plus-circle me-1"></i> Start a New Match
+                    </a>
             </div>
             {% endif %}
 
-            <!-- All Available Job Listings -->
+                <!-- All Available Job Listings (Kept for now, styling can be refined based on Figma) -->
             <div class="mt-5 mb-5">
-                <h2>All Available Job Listings <span class="badge bg-secondary">{{ all_jobs_count }}</span></h2>
+                    <h4 class="mb-3">All Available Jobs <span class="badge bg-light text-dark ms-2">{{ all_jobs_count }}</span></h4>
                 {% if all_jobs_annotated %}
-                    <div class="row row-cols-1 row-cols-md-2 row-cols-lg-3 g-4">
+                        <div class="row row-cols-1 g-4">
                         {% for item in all_jobs_annotated %}
                         <div class="col">
-                            <div class="card h-100">
+                                <div class="card jobbAI-job-card-all shadow-sm">
                                 <div class="card-body">
-                                    <h5 class="card-title"><a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}">{{ item.job_object.job_title }}</a></h5>
+                                        <h5 class="card-title">
+                                            <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="text-decoration-none">
+                                                {{ item.job_object.job_title }}
+                                            </a>
+                                        </h5>
                                     <h6 class="card-subtitle mb-2 text-muted">{{ item.job_object.company_name }}</h6>
+                                        
+                                        <div class="mb-2">
+                                            <small class="text-muted">
+                                            {% if item.job_object.level %}{{ item.job_object.level }} | {% endif %}
+                                            {% if item.job_object.location %}{{ item.job_object.location }} | {% endif %}
+                                            {% if item.job_object.industry %}{{ item.job_object.industry }}{% endif %}
+                                            </small>
+                                        </div>
+
                                     {% if item.saved_status %}
-                                        <p class="mb-1" id="job-status-paragraph-all-{{ item.job_object.id }}"><small><strong>Status:</strong> <span class="badge bg-info" id="job-status-badge-all-{{ item.job_object.id }}">{{ item.saved_status }}</span></small></p>
+                                            <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}"><small><strong>Status:</strong>
+                                                <span class="badge status-badge {% if item.saved_status == 'applied' %}status-applied{% elif item.saved_status == 'viewed' %}status-viewed{% else %}status-not-applied{% endif %}" id="job-status-badge-all-{{ item.job_object.id }}">
+                                                    {% if item.saved_status %}{{ item.saved_status|capfirst }}{% else %}Not Applied{% endif %}
+                                                </span></small>
+                                            </p>
                                     {% else %}
-                                        <p class="mb-1" id="job-status-paragraph-all-{{ item.job_object.id }}" style="display: none;"><small><strong>Status:</strong> <span class="badge" id="job-status-badge-all-{{ item.job_object.id }}"></span></small></p>
+                                            <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}" style="display: none;"><small><strong>Status:</strong>
+                                                <span class="badge status-badge status-not-applied" id="job-status-badge-all-{{ item.job_object.id }}">Not Applied</span></small>
+                                            </p>
                                     {% endif %}
-                                    {% if item.job_object.level %}
-                                        <p class="mb-1"><small><strong>Level:</strong> {{ item.job_object.level }}</small></p>
-                                    {% endif %}
-                                    <p class="card-text"><small>{{ item.job_object.description|truncatewords:25 }}</small></p>
-                                    {% if item.job_object.location %}<span class="badge bg-secondary me-1"><i class="fas fa-map-marker-alt"></i> {{ item.job_object.location }}</span>{% endif %}
-                                    {% if item.job_object.industry %}<span class="badge bg-info me-1"><i class="fas fa-industry"></i> {{ item.job_object.industry }}</span>{% endif %}
+                                        <p class="card-text small"><small>{{ item.job_object.description|truncatewords:20 }}</small></p>
                                 </div>
-                                <div class="card-footer bg-transparent border-top-0">
-                                     <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="btn btn-outline-primary btn-sm me-2"><i class="fas fa-info-circle"></i> View Details</a>
+                                    <div class="card-footer bg-light border-top-0 p-2">
+                                        <div class="d-flex justify-content-end">
+                                            <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="btn btn-outline-secondary btn-sm me-2"><i class="fas fa-info-circle me-1"></i> Details</a>
                                      {% if item.job_object.application_url %}
                                      <a href="{{ item.job_object.application_url }}"
                                         class="btn btn-success btn-sm apply-now-btn-trigger"
@@ -202,27 +399,29 @@
                                         data-job-id="{{ item.job_object.id }}"
                                         data-job-title="{{ item.job_object.job_title }}"
                                         data-list-type="all">
-                                         <i class="fas fa-external-link-alt"></i> Apply Now
+                                                 <i class="fas fa-external-link-alt me-1"></i> Apply
                                      </a>
                                      {% else %}
                                      <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
-                                         <i class="fas fa-external-link-alt"></i> Apply Now
+                                                 <i class="fas fa-external-link-alt me-1"></i> Apply
                                      </button>
                                      {% endif %}
+                                        </div>
                                 </div>
                             </div>
                         </div>
                         {% endfor %}
                     </div>
                 {% else %}
-                    <p>No job listings available at the moment.</p>
+                        <p class="text-center text-muted mt-4">No other job listings available at the moment.</p>
                 {% endif %}
             </div>
         </main>
+        </div>
     </div>
 </div>
 
-<!-- Apply Confirmation Modal -->
+<!-- Apply Confirmation Modal (Keep as is) -->
 <div class="modal fade" id="applyConfirmationModal" tabindex="-1" aria-labelledby="applyConfirmationModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-dialog-centered">
     <div class="modal-content">
@@ -243,167 +442,422 @@
 </div>
 
 <style>
-    .sidebar {
-        position: fixed;
-        top: 56px; /* Height of the fixed navbar */
+    body {
+        background-color: #F8FAF8; /* Light gray background as per Figma */
+        font-family: 'Be Vietnam Pro', sans-serif; /* Assuming this font is available or imported */
+    }
+
+    .jobbAI-main-container {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+    }
+    
+    .jobbAI-top-nav {
+        /* Styles from Figma: white background, border */
+        background-color: #FFFFFF;
+        border-bottom: 1px solid #E5E8EB;
+        padding-top: 12px;
+        padding-bottom: 12px;
+    }
+    .jobbAI-top-nav .navbar-brand img {
+        /* Adjust if specific logo dimensions are in Figma */
+    }
+    .jobbAI-top-nav .nav-link {
+        color: #121717; /* Dark text for nav links */
+        font-weight: 500; /* Medium weight */
+        font-size: 14px; /* Figma specified 14px */
+        padding-left: 18px; /* Spacing between nav items */
+        padding-right: 18px;
+    }
+    .jobbAI-top-nav .nav-link.active,
+    .jobbAI-top-nav .nav-link:hover {
+        color: #1098F7; /* Blue for active/hover - assuming from general theme */
+    }
+     .jobbAI-top-nav .fa-user-circle {
+        color: #6B827D; /* User icon color from Figma */
+        /* Add margin if needed */
+    }
+
+
+    .jobbAI-content-wrapper {
+       flex-grow: 1;
+       padding: 0 !important; /* Remove padding for full-width row */
+    }
+    
+    .jobbAI-sidebar {
+        background-color: #FFFFFF; /* White sidebar */
+        border-right: 1px solid #E5E8EB; /* Figma border */
+        padding: 0; /* Reset padding, use sidebar-sticky */
+        width: 320px; /* Figma sidebar width */
+        position: fixed; /* Fixed sidebar */
+        top: 70px; /* Height of top nav, adjust if dynamic */
         bottom: 0;
         left: 0;
-        z-index: 100; /* Behind the navbar but on top of content */
-        padding: 0; /* Remove padding, use .sidebar-sticky for content padding */
-        box-shadow: inset -1px 0 0 rgba(0, 0, 0, .1);
-        transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out;
-        width: 250px; /* Default sidebar width */
-    }
-
-    .sidebar.collapsed {
-        margin-left: -250px; /* Width of sidebar */
-    }
-    
-    .sidebar.collapsed .sidebar-text {
-        display: none;
-    }
-
-    .sidebar-sticky {
-        position: relative;
-        top: 0;
-        height: calc(100vh - 56px); /* Full height minus navbar */
-        padding-top: .5rem;
-        overflow-x: hidden;
-        overflow-y: auto; /* Scrollable contents if viewport is shorter than content. */
-    }
-
-    .main-content-area {
+        z-index: 1000;
+        overflow-y: auto;
         transition: margin-left 0.3s ease-in-out;
-        padding-top: 0; /* Navbar padding is on body */
     }
 
-    .main-content-area.sidebar-collapsed {
-        margin-left: 0 !important; /* Override Bootstrap ms-sm-auto when sidebar is hidden */
+    .jobbAI-sidebar.collapsed {
+        margin-left: -320px; /* Hide sidebar */
     }
     
-    /* Adjust main content margin when sidebar is visible */
-    @media (min-width: 768px) { /* md breakpoint */
-        .main-content-area {
-             margin-left: 250px; /* Default sidebar width */
-        }
-        .main-content-area.sidebar-collapsed {
-            margin-left: 0px !important; 
-        }
-        #sidebarMenu.collapsed + .main-content-area {
-            margin-left: 0px !important;
-        }
-
+    .jobbAI-sidebar .sidebar-sticky {
+        padding-top: 1rem; /* Internal padding */
     }
 
-    /* Styles for the mobile toggle (hamburger) already provided by Bootstrap via d-md-none and data-bs-target */
+    .jobbAI-sidebar .btn-primary {
+        background-color: #DBF2F0; /* Light teal button */
+        border-color: #DBF2F0;
+        color: #121717; /* Dark text */
+        font-weight: bold;
+        font-size: 14px;
+    }
+    .jobbAI-sidebar .btn-primary:hover {
+        background-color: #cce9e6;
+        border-color: #cce9e6;
+        color: #121717;
+    }
+    .jobbAI-sidebar .btn-primary.active {
+         background-color: #0AEDC7; /* Active button color from Figma - primary green/teal */
+         border-color: #0AEDC7;
+         color: #121717;
+    }
 
-    .sidebar .nav-link {
+    .jobbAI-sidebar .sidebar-heading {
+        font-size: 0.85rem;
+        color: #6B827D !important; /* Muted text color */
+    }
+
+    .jobbAI-sidebar .nav-link {
         font-weight: 500;
-        color: var(--bs-emphasis-color);
+        color: #121717; /* Dark text for links */
+        font-size: 14px;
+        padding: 0.5rem 1.5rem; /* px-3 like padding */
+        border-radius: 8px; /* Rounded corners for hover/active state */
+        margin: 0 0.75rem 0.25rem 0.75rem; /* Some margin around items */
+    }
+    .jobbAI-sidebar .nav-link .sidebar-text {
+        /* Styles for text if needed */
+    }
+    .jobbAI-sidebar .nav-link .fa-calendar-day,
+    .jobbAI-sidebar .nav-link .fa-history {
+        color: #6B827D; /* Icon color */
     }
 
-    .sidebar .nav-link .fa-history {
-        margin-right: 8px;
+    .jobbAI-sidebar .nav-link.active,
+    .jobbAI-sidebar .nav-link:hover {
+        background-color: #F2F5F2; /* Light gray background for active/hover */
+        color: #1098F7; /* Blue for active text - or keep dark if preferred */
+    }
+    .jobbAI-sidebar .nav-link.active .fa-calendar-day,
+    .jobbAI-sidebar .nav-link.active .fa-history,
+    .jobbAI-sidebar .nav-link:hover .fa-calendar-day,
+    .jobbAI-sidebar .nav-link:hover .fa-history {
+        color: #1098F7; /* Blue icon on active/hover */
     }
 
-    .sidebar .nav-link.active {
-        color: var(--bs-primary);
+
+    .jobbAI-main-content {
+        background-color: #F8FAF8; /* Main content background */
+        padding-left: 24px !important; /* Figma specified padding */
+        padding-right: 24px !important;
+        padding-top: 20px !important;
+        margin-left: 320px; /* Space for the sidebar */
+        width: calc(100% - 320px); /* Occupy remaining width */
+        box-sizing: border-box; /* Ensure correct width calculation with padding */
+        transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out; /* Add width to transition */
+        min-height: calc(100vh - 70px); /* Full height minus top nav */
+    }
+    .jobbAI-main-content.sidebar-collapsed {
+        margin-left: 0 !important;
     }
 
-    .sidebar .nav-link:hover {
-        color: var(--bs-primary-text-emphasis);
-        background-color: var(--bs-tertiary-bg);
+    /* Header in main content */
+    .jobbAI-main-content .h2 {
+        font-size: 32px; /* Figma font size */
+        font-weight: 700; /* Bold */
+        color: #121717;
     }
+    .jobbAI-main-content .btn-outline-secondary {
+        font-size: 14px;
+        font-weight: 700;
+        color: #121717;
+        border-color: #E5E8EB; /* Light border */
+        background-color: #FFFFFF; /* White background */
+        border-radius: 12px; /* Figma border radius */
+        padding: 8px 16px;
+    }
+    .jobbAI-main-content .btn-outline-secondary:hover {
+        background-color: #f2f2f2;
+    }
+
+    /* Job Card Styling */
+    .jobbAI-job-card, .jobbAI-job-card-all {
+        background-color: #FFFFFF; /* White card background */
+        border-radius: 20px; /* Figma border radius */
+        border: none; /* Remove default bootstrap border if any */
+        box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+        transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+    }
+    .jobbAI-job-card:hover, .jobbAI-job-card-all:hover {
+        transform: translateY(-5px);
+        box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.08);
+    }
+
+    .jobbAI-job-card .card-title a {
+        font-size: 16px; /* Figma "Werkstudent..." text */
+        font-weight: 700;
+        color: #121717;
+    }
+    .jobbAI-job-card .card-title a:hover {
+        color: #1098F7;
+    }
+     .jobbAI-job-card .text-muted {
+        font-size: 14px; /* Figma smaller text */
+        color: #6B827D !important;
+        }
+    .jobbAI-job-card .badge.bg-primary { /* Match score badge */
+        background-color: #0AEDC7 !important; /* Figma green/teal */
+        color: #121717 !important;
+        font-size: 20px !important; /* Larger score text */
+        font-weight: 700;
+        padding: .4em .6em .3em;
+    }
+    .jobbAI-job-card .badge.bg-primary + small { /* "Match" text below score */
+        font-size: 12px;
+        color: #6B827D !important;
+    }
+
+    /* NEW Status-specific badge styles */
+    .jobbAI-job-card .status-badge { /* Common styles for all our status badges */
+        font-size: 12px;
+        font-weight: 500;
+        border-radius: 10px;
+        padding: 0.4em 0.7em;
+        /* margin-bottom: 0.5rem; /* mb-2 is on the span itself if needed */
+        /* display: inline-block; /* Badges are inline-block by default */
+    }
+
+    .jobbAI-job-card .badge.status-applied {
+        background-color: #D1FAE5; /* Light green for Applied */
+        color: #121717; /* Dark text for Applied (as per your last CSS change) */
+    }
+
+    .jobbAI-job-card .badge.status-not-applied {
+        background-color: #EBEBEB; /* Grey for Not Applied */
+        color: #121717; /* Dark text */
+    }
+
+    .jobbAI-job-card .badge.status-viewed { /* Example for a 'viewed' status */
+        background-color: #BFDBFE; /* Light blue */
+        color: #1E40AF; /* Dark blue text */
+    }
+    /* Add more .status-xxx classes here if you have other statuses */
+
+
+    .jobbAI-job-card .accordion-sm .accordion-button {
+        font-size: 0.8rem;
+        background-color: transparent;
+        border-bottom: 1px solid #eee;
+    }
+    .jobbAI-job-card .accordion-sm .accordion-button:not(.collapsed) {
+        box-shadow: none;
+        background-color: #f8f9fa;
+    }
+    .jobbAI-job-card .accordion-sm .accordion-button::after {
+        width: 0.8rem;
+        height: 0.8rem;
+        background-size: 0.8rem;
+    }
+    .jobbAI-job-card .table-sm th, .jobbAI-job-card .table-sm td {
+        padding: 0.25rem 0.1rem; /* Reduced padding for table cells */
+    }
+    .jobbAI-job-card .table-borderless th, .jobbAI-job-card .table-borderless td {
+        border: 0;
+    }
+    .jobbAI-job-card .text-success { color: #10B981 !important; }
+    .jobbAI-job-card .text-danger { color: #EF4444 !important; }
+
+
+    .jobbAI-job-card .card-footer .btn-outline-secondary {
+        background-color: #DBF2F0; /* Figma "View Details" button */
+        border-color: #DBF2F0;
+        color: #121717;
+        font-weight: 700;
+        font-size: 14px;
+        border-radius: 20px; /* Fully rounded */
+    }
+    .jobbAI-job-card .card-footer .btn-outline-secondary:hover {
+        background-color: #cce9e6;
+    }
+    .jobbAI-job-card .card-footer .btn-success { /* Apply Now button */
+        background-color: #0AEDC7; /* Figma primary green/teal */
+        border-color: #0AEDC7;
+        color: #121717;
+        font-weight: 700;
+        font-size: 14px;
+        border-radius: 20px; /* Fully rounded */
+    }
+    .jobbAI-job-card .card-footer .btn-success:hover {
+        background-color: #09dcb5;
+        border-color: #09dcb5;
+    }
+    .jobbAI-job-card .card-footer .btn-success i.fa-external-link-alt {
+        /* Figma shows an icon for apply now, ensure it's styled if different */
+    }
+    
+    /* Styling for "All Jobs" cards for consistency, can be less detailed than matched */
+    .jobbAI-job-card-all .card-title a {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #333;
+    }
+     .jobbAI-job-card-all .card-footer .btn-outline-secondary,
+     .jobbAI-job-card-all .card-footer .btn-success {
+        font-size: 0.8rem;
+        padding: 0.3rem 0.6rem;
+     }
+
+
+    /* Dashed border for initial input card */
+    .border-dashed {
+        border: 2px dashed #d1d5db; /* Example: gray-300 from Tailwind */
+    }
+
+    /* Small accordion styling */
+    .accordion-sm .accordion-button {
+        padding: 0.5rem 0.75rem;
+        font-size: 0.9rem;
+    }
+    .accordion-sm .accordion-body {
+        padding: 0.75rem;
+        font-size: 0.85rem;
+    }
+    .accordion-sm .accordion-button::after {
+        width: 1rem;
+        height: 1rem;
+        background-size: 1rem;
+    }
+
+
+    /* Ensure modals have a higher z-index than the fixed sidebar */
+    .modal {
+        z-index: 1060; /* Bootstrap default is 1055, sidebar is 1000 or 1030 */
+    }
+    .modal-backdrop {
+        z-index: 1050; /* Bootstrap default, ensure it's below modal but above other content */
+    }
+
+
+    /* Responsive adjustments for sidebar and main content */
+    @media (max-width: 767.98px) { /* Below md breakpoint */
+        .jobbAI-sidebar {
+            position: fixed; /* Ensure it's fixed for collapse behavior */
+            top: 69px; /* Adjust if top nav height changes on mobile */
+            height: calc(100vh - 69px);
+            margin-left: -320px; /* Start collapsed */
+            z-index: 1030; /* Ensure it's above content but can be toggled */
+        }
+        .jobbAI-sidebar.show { /* Bootstrap 'show' class for collapsed elements */
+            margin-left: 0;
+        }
+        .jobbAI-main-content {
+            margin-left: 0; /* Reset margin for mobile when sidebar is hidden */
+            width: 100%; /* Ensure it takes full width */
+            padding-top: 1rem !important; /* Reset padding for mobile */
+            box-sizing: border-box; /* Consistent box sizing */
+        }
+        .jobbAI-sidebar.show + .jobbAI-main-content {
+            margin-left: 320px; /* Push main content to the right when sidebar is shown */
+            width: calc(100% - 320px); /* Adjust width to fit */
+            box-sizing: border-box; /* Consistent box sizing */
+        }
+        .jobbAI-top-nav .navbar-nav { /* Center nav items on mobile when toggler is active */
+            align-items: center;
+        }
+    }
+
+    /* Previous sidebar styles - assess if needed or if new ones cover all */
+    /* .sidebar { ... } */
+    /* .sidebar.collapsed { ... } */
+    /* .sidebar.collapsed .sidebar-text { ... } */
+    /* .sidebar-sticky { ... } */
+    /* .main-content-area { ... } */
+    /* .main-content-area.sidebar-collapsed { ... } */
+
+
+    /* Hide original Bootstrap sidebar toggle button, we use a new structure */
+    button[data-bs-target="#sidebarMenu"] {
+        /* This was the hamburger for the old sidebar, might not be needed if top nav has its own toggler */
+        /* display: none !important; */ /* Let Bootstrap handle it, or integrate with new top nav toggler */
+    }
+    #sidebarToggleDesktop {
+        /* This was the desktop toggle, it's removed from HTML, ensure JS doesn't error */
+        /* Consider a new toggle mechanism if Figma has one, or use top-nav toggler for mobile*/
+    }
+
 </style>
 
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const sidebar = document.getElementById('sidebarMenu');
-    const mainContent = document.querySelector('.main-content-area');
-    const sidebarToggleDesktop = document.getElementById('sidebarToggleDesktop');
-    const sidebarToggleMobile = document.querySelector('button[data-bs-target="#sidebarMenu"]'); // Hamburger
+    const mainContent = document.querySelector('.jobbAI-main-content');
+    // For mobile, the navbar-toggler in jobbAI-top-nav will handle the #sidebarMenu
+    // For desktop, we need a new toggle if the design implies one, or it's always open.
+    // The Figma design shows sidebar always present on larger screens, and main content next to it.
+    // Let's assume no explicit desktop toggle button for now, sidebar is either there or not based on screen.
 
-    // Function to toggle sidebar for desktop
-    function toggleDesktopSidebar() {
-        sidebar.classList.toggle('collapsed');
-        mainContent.classList.toggle('sidebar-collapsed');
-        // Adjust col-md-9 and col-lg-10 on mainContent if sidebar is collapsed
-        if (sidebar.classList.contains('collapsed')) {
-            mainContent.classList.remove('col-md-9', 'ms-sm-auto', 'col-lg-10');
-            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right"></i>';
-        } else {
-            mainContent.classList.add('col-md-9', 'ms-sm-auto', 'col-lg-10');
-            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left"></i>';
+    // The Bootstrap collapse for mobile sidebar is tied to the navbar-toggler with data-bs-target="#sidebarMenu"
+    // We need to ensure the main content adjusts if the mobile sidebar becomes visible (overlays)
+    // or if we want a push behavior. Figma implies overlay for mobile if sidebar is triggered.
+
+    // Handle CV and Preferences form submissions within modals to keep page state
+    // This is a simplified example; you might want to use AJAX for a smoother experience
+    // or ensure the page reloads correctly showing the modal again if there are errors.
+
+    const cvForm = document.getElementById('cvForm');
+    if (cvForm) {
+        // If you want to submit via AJAX to avoid full page reload:
+        // cvForm.addEventListener('submit', function(event) {
+        //     event.preventDefault();
+        //     // AJAX submission logic here
+        //     // On success, potentially close modal and refresh parts of the page
+        // });
+    }
+    const preferencesForm = document.getElementById('preferencesForm');
+    if (preferencesForm) {
+        // preferencesForm.addEventListener('submit', function(event) {
+        //     event.preventDefault();
+        //     // AJAX submission logic here
+        // });
         }
-    }
 
-    if (sidebarToggleDesktop) {
-        sidebarToggleDesktop.addEventListener('click', toggleDesktopSidebar);
-        // Initialize desktop sidebar state (e.g. based on localStorage if you want persistence)
-        // For now, default to expanded
-        if (window.innerWidth < 768) { // If mobile, start collapsed unless toggled by Bootstrap
-             if (!sidebar.classList.contains('show')) { // Check if BS has not shown it
-                // No, we don't want to force collapse on desktop toggle for mobile state
-             }
-        } else {
-            // Default state for desktop: expanded
-             mainContent.classList.add('col-md-9', 'ms-sm-auto', 'col-lg-10');
-        }
-    }
 
-    // Mobile toggle is handled by Bootstrap's collapse plugin.
-    // We might want to sync the desktop icon if mobile toggle is used.
-    if (sidebar && sidebarToggleMobile) {
-        sidebar.addEventListener('shown.bs.collapse', function () {
-            // When mobile sidebar opens, ensure desktop toggle icon is for collapsing
-            if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left"></i>';
-            // And ensure main content has its margins (though this might not be needed if it's full width on mobile)
-        });
-        sidebar.addEventListener('hidden.bs.collapse', function () {
-            // When mobile sidebar closes, ensure desktop toggle icon is for expanding
-            if (sidebarToggleDesktop) sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right"></i>';
-        });
-    }
-
-    // Initial state for desktop toggle icon based on sidebar visibility (for larger screens)
-    if (window.innerWidth >= 768 && sidebarToggleDesktop) {
-        if (sidebar.classList.contains('collapsed')) {
-            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-right"></i>';
-             mainContent.classList.remove('col-md-9', 'ms-sm-auto', 'col-lg-10');
-        } else {
-            sidebarToggleDesktop.innerHTML = '<i class="fas fa-chevron-left"></i>';
-             mainContent.classList.add('col-md-9', 'ms-sm-auto', 'col-lg-10');
-        }
-    }
-
-    // Apply Confirmation Modal Logic
+    // Apply Confirmation Modal Logic (Keep as is, assuming it works with new structure)
     const applyConfirmationModalEl = document.getElementById('applyConfirmationModal');
     const modalJobTitleEl = document.getElementById('modalJobTitle');
     const confirmAppliedButton = document.getElementById('confirmAppliedButton');
     const applyNowButtons = document.querySelectorAll('.apply-now-btn-trigger');
-    let modalInstance = null; // To store the Bootstrap modal instance
+    let modalInstance = null; 
     if (applyConfirmationModalEl) {
         modalInstance = new bootstrap.Modal(applyConfirmationModalEl);
     }
 
     applyNowButtons.forEach(button => {
         button.addEventListener('click', function (event) {
-            event.preventDefault(); // Prevent default link navigation
+            event.preventDefault(); 
             const jobTitle = this.getAttribute('data-job-title');
             const jobId = this.getAttribute('data-job-id');
             const listType = this.getAttribute('data-list-type');
             const applicationUrl = this.href;
 
-            // Open the application link in a new tab
             window.open(applicationUrl, '_blank');
 
-            // Store job info in sessionStorage to trigger modal on focus
             sessionStorage.setItem('pendingApplicationJobId', jobId);
             sessionStorage.setItem('pendingApplicationJobTitle', jobTitle);
             sessionStorage.setItem('pendingApplicationListType', listType);
-            
-            // Optionally, give a small visual cue or message that action is pending confirmation
-            // e.g., a toast notification: "Application opened. We'll ask for confirmation when you return."
         });
     });
 
@@ -416,7 +870,6 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modalJobTitleEl) {
                 modalJobTitleEl.textContent = pendingJobTitle || 'this job';
             }
-            // Store data on the modal or confirm button for the click handler
             if (confirmAppliedButton) {
                 confirmAppliedButton.dataset.jobId = pendingJobId;
                 confirmAppliedButton.dataset.listType = pendingListType;
@@ -451,34 +904,59 @@ document.addEventListener('DOMContentLoaded', function () {
                 })
                 .then(response => {
                     if (!response.ok) {
-                        // If response is not ok, try to get text for more detailed error
                         return response.text().then(text => {
-                            console.error('Server error response text:', text.substring(0, 500)); // Log first 500 chars
+                            console.error('Server error response text:', text.substring(0, 500)); 
                             try {
-                                // Try to parse as JSON in case it is a JSON error response
                                 const errData = JSON.parse(text);
                                 throw new Error(errData.message || `HTTP error ${response.status}`);
                             } catch (e) {
-                                // If not JSON, it might be HTML (like a Django error page)
-                                // Throw a generic error, or try to extract info from HTML if needed
                                 throw new Error(`HTTP error ${response.status}. Response not valid JSON.`);
                             }
                         });
                     }
-                    return response.json(); // If response is OK, parse as JSON
+                    return response.json(); 
                 })
                 .then(data => {
                     if (data.success) {
                         console.log('Status updated successfully for job', jobId, 'to', data.new_status);
-                        const statusParagraph = document.getElementById(`job-status-paragraph-${listType}-${jobId}`);
-                        const statusBadge = document.getElementById(`job-status-badge-${listType}-${jobId}`);
+                        
+                        let statusBadge = null;
+                        let statusParagraph = null;
 
-                        if (statusParagraph && statusBadge) {
-                            statusBadge.textContent = data.new_status;
-                            statusBadge.className = 'badge bg-success';
-                            statusParagraph.style.display = '';
+                        if (listType === 'matched') {
+                            statusBadge = document.getElementById(`job-status-badge-matched-${jobId}`);
+                        } else if (listType === 'all') {
+                            statusBadge = document.getElementById(`job-status-badge-all-${jobId}`);
+                            statusParagraph = document.getElementById(`job-status-paragraph-all-${jobId}`);
                         }
-                        // Optionally, show a success toast notification here.
+
+                        if (statusBadge) {
+                            // Update text content
+                            statusBadge.textContent = `Status: ${data.new_status_display || data.new_status}`;
+                            
+                            // Define a list of all possible status classes we use
+                            const allStatusClasses = ['status-applied', 'status-not-applied', 'status-viewed']; // Add any other status slugs here
+
+                            // Remove any existing status class
+                            allStatusClasses.forEach(cls => statusBadge.classList.remove(cls));
+
+                            // Add the new status class based on data.new_status
+                            // Assuming data.new_status is a slug like 'applied', 'not_applied', 'viewed'
+                            let newStatusClass = `status-${data.new_status.toLowerCase().replace('_', '-')}`;
+                            if (allStatusClasses.includes(newStatusClass)) {
+                                statusBadge.classList.add(newStatusClass);
+                            } else {
+                                statusBadge.classList.add('status-not-applied'); // Fallback to not-applied
+                                console.warn(`Unknown status slug: ${data.new_status}, falling back to status-not-applied`);
+                            }
+                            
+                            if (statusParagraph) { 
+                                statusParagraph.style.display = ''; 
+                            }
+                        } else {
+                            console.warn('Could not find status badge for job', jobId, 'listType', listType);
+                        }
+                        
                     } else {
                         console.error('Failed to update status (server-side):', data.message);
                         alert('Error updating status: ' + data.message);
@@ -496,17 +974,12 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Also clear pending state if the modal is dismissed without confirming
     if (applyConfirmationModalEl) {
         applyConfirmationModalEl.addEventListener('hidden.bs.modal', function () {
-            // Check if the click was not on confirmAppliedButton to avoid double clearing
-            // This check is a bit tricky if `finally` in fetch already cleared it.
-            // Simpler: always clear, but ensure clearPendingApplicationState is idempotent.
             clearPendingApplicationState();
         });
     }
 
-    // Helper function to get CSRF token
     function getCookie(name) {
         let cookieValue = null;
         if (document.cookie && document.cookie !== '') {
@@ -521,6 +994,29 @@ document.addEventListener('DOMContentLoaded', function () {
         }
         return cookieValue;
     }
+
+    // Add a class to body to indicate new layout is active, for specific global overrides if needed
+    document.body.classList.add('jobbAI-layout-active');
+
+    // Logic for mobile sidebar toggle if needed, beyond Bootstrap's default
+    // Example: When mobile sidebar (#sidebarMenu) is shown/hidden by Bootstrap,
+    // we might want to change an icon in the main top navbar toggler.
+    const mobileSidebarToggler = document.querySelector('.navbar-toggler[data-bs-target="#sidebarMenu"]');
+    if (sidebar && mobileSidebarToggler) {
+        const bsCollapse = new bootstrap.Collapse(sidebar, { toggle: false });
+        // Listen to Bootstrap's events
+        sidebar.addEventListener('shown.bs.collapse', function () {
+            // Mobile sidebar is now open
+            // mobileSidebarToggler.innerHTML = '<i class="fas fa-times"></i>'; // Change to close icon
+            // CSS handles the main content push now via sibling selector
+        });
+        sidebar.addEventListener('hidden.bs.collapse', function () {
+            // Mobile sidebar is now closed
+            // mobileSidebarToggler.innerHTML = '<i class="fas fa-bars"></i>'; // Change back to hamburger
+            // CSS handles the main content margin reset now
+        });
+    }
+
 });
 </script>
 

@@ -8,7 +8,7 @@ import uuid # For validating UUID from GET param
 from django.utils import timezone
 from django.contrib import messages
 import json # For storing profile as JSON
-from django.db.models import Prefetch, OuterRef, Subquery, Exists, Q
+from django.db.models import Prefetch, OuterRef, Subquery, Exists, Q, Count # Added Count
 from uuid import UUID # For validating UUIDs
 import random # Added for random sampling
 import os # Added for environment variables
@@ -453,29 +453,65 @@ def generate_cover_letter_page(request, job_id):
 def my_applications_page(request):
     session_key = request.session.session_key
     if not session_key:
-        # If there's no session key, there are no applications to show for this anonymous user.
-        # You might want to prompt them to interact with the site first or handle this case gracefully.
-        return render(request, 'matcher/my_applications.html', {'saved_jobs_with_forms_and_letters': [], 'page_title': "My Applications"})
+        request.session.create() # Create session if not exists
+        session_key = request.session.session_key
+        # If session_key is still None after create(), no applications can be shown.
+        # This scenario is unlikely with standard Django session backends.
+        if not session_key:
+            return render(request, 'matcher/my_applications.html', {
+                'saved_jobs_with_forms_and_letters': [],
+                'status_choices': [('', 'All')] + list(SavedJob.STATUS_CHOICES),
+                'selected_status': '',
+                'status_counts': {'': 0},
+                'page_title': "My Applications",
+                'message': "Could not establish a session. Please try again."
+            })
 
-    # Fetch SavedJob instances for the current user_session_key
-    # Pre-fetch related JobListing and CoverLetter to avoid N+1 queries
-    saved_jobs = SavedJob.objects.filter(user_session_key=session_key)\
-                                .select_related('job_listing')\
-                                .prefetch_related(Prefetch('cover_letter', queryset=CoverLetter.objects.all()))\
-                                .order_by('-updated_at')
+    selected_status = request.GET.get('status')
+
+    # Prepare status choices for tabs, including an "All" option.
+    # The value for "All" is an empty string for cleaner URLs (e.g., /my_applications/?status=)
+    tab_status_choices = [('', 'All')] + list(SavedJob.STATUS_CHOICES)
+
+    # Fetch all saved jobs for the user to calculate counts for each status
+    all_user_saved_jobs = SavedJob.objects.filter(user_session_key=session_key)
+
+    # Calculate counts for each status
+    status_counts_data = all_user_saved_jobs.values('status').annotate(count=Count('id'))
+    status_counts = {item['status']: item['count'] for item in status_counts_data}
+    status_counts[''] = all_user_saved_jobs.count() # Total count for the 'All' tab
+
+    # Filter jobs based on selected_status
+    # If selected_status is None (no query param) or an empty string (from 'All' tab), show all.
+    # If selected_status is a specific status, filter by it.
+    if selected_status and selected_status in [s[0] for s in SavedJob.STATUS_CHOICES]:
+        saved_jobs_query = all_user_saved_jobs.filter(status=selected_status)
+    else:
+        # If selected_status is not a valid status string (e.g. None, empty, or invalid),
+        # default to showing all. And ensure selected_status reflects 'All' for the template.
+        selected_status = '' 
+        saved_jobs_query = all_user_saved_jobs
+
+    # Apply prefetching and ordering to the (potentially filtered) queryset
+    saved_jobs_filtered = saved_jobs_query.select_related('job_listing')\
+                                       .prefetch_related(Prefetch('cover_letter', queryset=CoverLetter.objects.all()))\
+                                       .order_by('-updated_at')
 
     saved_jobs_with_forms_and_letters = []
-    for saved_job in saved_jobs:
-        form = SavedJobForm(instance=saved_job) # Form for each saved job to allow updates
-        cover_letter = getattr(saved_job, 'cover_letter', None) # Safely get cover_letter
+    for saved_job_instance in saved_jobs_filtered:
+        form = SavedJobForm(instance=saved_job_instance)
+        cover_letter = getattr(saved_job_instance, 'cover_letter', None)
         saved_jobs_with_forms_and_letters.append({
-            'saved_job': saved_job,
+            'saved_job': saved_job_instance,
             'form': form,
             'cover_letter': cover_letter
         })
 
     context = {
         'saved_jobs_with_forms_and_letters': saved_jobs_with_forms_and_letters,
+        'status_choices': tab_status_choices,
+        'selected_status': selected_status,
+        'status_counts': status_counts,
         'page_title': "My Applications"
     }
     return render(request, 'matcher/my_applications.html', context)
