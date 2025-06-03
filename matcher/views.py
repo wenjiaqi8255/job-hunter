@@ -1,3 +1,5 @@
+import tempfile
+
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse # Import reverse for redirect
 from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter # Added CoverLetter
@@ -19,6 +21,8 @@ from django.http import JsonResponse # Added for JSON response
 from django.views.decorators.http import require_POST # Added for POST requests only
 from django.views.decorators.csrf import csrf_exempt # Consider CSRF implications, ensure frontend sends token
 import itertools # Added for zip_longest
+from django.shortcuts import render
+from django.views.decorators.csrf import csrf_exempt
 
 # Create your views here.
 
@@ -108,6 +112,9 @@ def fetch_todays_job_listings_from_supabase():
         return []
 
 def main_page(request):
+    import tempfile
+    from .services import pdf_parser
+
     session_key = request.session.session_key
     if not session_key:
         request.session.create()
@@ -119,10 +126,38 @@ def main_page(request):
     user_preferences_text_from_session = "" # New
     processed_job_matches = []
     selected_session_object = None
+    parsed_data = None
 
     if request.method == 'POST':
-        user_cv_text_input = request.POST.get('user_cv_text', '')
+        uploaded_file = request.FILES.get('user_cv_file')
+        if uploaded_file:
+            with tempfile.NamedTemporaryFile(delete=False, suffix='.pdf') as temp_file:
+                for chunk in uploaded_file.chunks():
+                    temp_file.write(chunk)
+                temp_file_path = temp_file.name
+            user_cv_text_input = pdf_parser.extract_text_from_pdf(temp_file_path)
+        else:
+            user_cv_text_input = request.POST.get('user_cv_text', '')
+
+        # Always use extracted text (from file or form) to repopulate textarea
+        skills_text_from_session = user_cv_text_input
+
         user_preferences_text_input = request.POST.get('user_preferences_text', '')
+
+        parsed_data = {
+            'name': pdf_parser.extract_name(user_cv_text_input),
+            'email': pdf_parser.extract_email_from_resume(user_cv_text_input),
+            'contact_number': pdf_parser.extract_contact_number_from_resume(user_cv_text_input),
+            'skills': pdf_parser.extract_skills_from_resume(user_cv_text_input, skills_list=[
+                'Python', 'Data Analysis', 'Machine Learning', 'Communication',
+                'Project Management', 'Deep Learning', 'SQL', 'Tableau'
+            ]),
+            'education': pdf_parser.extract_education_from_resume(user_cv_text_input),
+        }
+
+
+        #user_cv_text_input = request.POST.get('user_cv_text', '')
+        #user_preferences_text_input = request.POST.get('user_preferences_text', '')
 
         # Phase 4.1: Extract structured user profile
         structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text_input, user_preferences_text_input)
@@ -239,10 +274,26 @@ def main_page(request):
                     tips=match_item.get('tips')    
                 )
         # Redirect to the same page with the new session_id in GET to show results
-        return redirect(f"{reverse('matcher:main_page')}?session_id={current_match_session_id_str}")
+        #return redirect(f"{reverse('matcher:main_page')}?session_id={current_match_session_id_str}")
+
+        selected_session_object = new_match_session
+
+        matched_jobs_for_session = new_match_session.matched_jobs.select_related('job_listing').order_by('-score')
+        for mj in matched_jobs_for_session:
+            saved_status_result = SavedJob.objects.filter(job_listing=mj.job_listing,
+                                                          user_session_key=session_key).values('status').first()
+            parsed_insights_for_table = parse_and_prepare_insights_for_template(mj.insights)
+            processed_job_matches.append({
+                'job': mj.job_listing,
+                'score': mj.score,
+                'reason': mj.reason,
+                'parsed_insights_list': parsed_insights_for_table,
+                'tips': mj.tips,
+                'saved_status': saved_status_result['status'] if saved_status_result else None
+            })
 
     # Handling GET request or if POST didn't redirect (e.g. initial load)
-    if current_match_session_id_str:
+    if current_match_session_id_str and not selected_session_object:
         try:
             current_match_session_id_uuid = UUID(current_match_session_id_str)
             current_match_session = get_object_or_404(MatchSession, id=current_match_session_id_uuid)
@@ -309,6 +360,7 @@ def main_page(request):
         'match_history': match_history,
         'current_match_session_id': current_match_session_id_str,
         'selected_session_object': selected_session_object,
+        'parsed_data': parsed_data,
     }
     return render(request, 'matcher/main_page.html', context)
 

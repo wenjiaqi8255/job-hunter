@@ -94,8 +94,8 @@
                         </li>
                         {% endif %}
                 </ul>
-            </div>
-        </nav>
+                </div>
+            </nav>
 
         <!-- Main content -->
             <main class="px-md-4 main-content-area jobbAI-main-content">
@@ -133,6 +133,20 @@
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
+
+                                    {% if parsed_data %}
+                                        <div class="card mb-3">
+                                            <div class="card-header"><h5>Extracted Information</h5></div>
+                                            <div class="card-body">
+                                                {% if parsed_data.name %}<p><strong>Name:</strong> {{ parsed_data.name }}</p>{% endif %}
+                                                {% if parsed_data.email %}<p><strong>Email:</strong> {{ parsed_data.email }}</p>{% endif %}
+                                                {% if parsed_data.contact_number %}<p><strong>Contact Number:</strong> {{ parsed_data.contact_number }}</p>{% endif %}
+                                                {% if parsed_data.skills %}<p><strong>Skills:</strong> {{ parsed_data.skills|join:', ' }}</p>{% endif %}
+                                                {% if parsed_data.education %}<p><strong>Education:</strong> {{ parsed_data.education|join:', ' }}</p>{% endif %}
+                                            </div>
+                                        </div>
+                                    {% endif %}
+
                         <div class="form-group mb-3">
                                         <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
                                         <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
@@ -147,6 +161,48 @@
                             </form>
                         </div>
                     </div>
+                </div>
+
+            <!-- CV Modal -->
+                <!-- Place this snippet above or below the existing modal code in main_page.html, depending on where you want the parsed results displayed. A good place would be immediately below the modal. -->
+                <div class="modal fade" id="cvModal" tabindex="-1" aria-labelledby="cvModalLabel" aria-hidden="true">
+                    ... (existing modal code) ...
+                    <form method="POST" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        ...
+                        <input type="file" name="user_cv_file">
+                        <button type="submit">Extract</button>
+                    </form>
+                </div>
+                <!-- Display Parsed Data Block -->
+                {% if parsed_data %}
+                    <div class="card mt-4">
+                        <div class="card-header">
+                            <h5>Extracted Information</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if parsed_data.name %}<p><strong>Name:</strong> {{ parsed_data.name }}</p>{% endif %}
+                            {% if parsed_data.email %}<p><strong>Email:</strong> {{ parsed_data.email }}</p>{% endif %}
+                            {% if parsed_data.contact_number %}<p><strong>Contact Number:</strong> {{ parsed_data.contact_number }}</p>{% endif %}
+                            {% if parsed_data.skills %}<p><strong>Skills:</strong> {{ parsed_data.skills|join:", " }}</p>{% endif %}
+                            {% if parsed_data.education %}<p><strong>Education:</strong> {{ parsed_data.education|join:", " }}</p>{% endif %}
+                        </div>
+                    </div>
+                {% endif %}
+                <div class="modal-body">
+                    <div class="form-group mb-3">
+                        <label for="user_cv_file_modal" class="form-label"><strong>Upload your CV (PDF):</strong></label>
+                        <input type="file" name="user_cv_file" id="user_cv_file_modal" class="form-control" accept="application/pdf">
+                    </div>
+                    <div class="form-group mb-3">
+                        <label for="user_cv_text_modal" class="form-label"><strong>OR Paste your CV / Resume:</strong></label>
+                        <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
+                    </div>
+                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
                 </div>
 
                 <!-- Preferences Modal -->
@@ -174,7 +230,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <!-- Original Skills Input Form (Now potentially redundant or for initial input if no session) -->
                 {% if not current_match_session_id and not user_cv_text and not user_preferences_text %}
                 <div class="card mt-4 mb-4 bg-light border-dashed">
@@ -234,23 +290,23 @@
                                                 <small class="d-block text-muted mt-0">Match Score</small>
                                             </div>
                                         </div>
-                                        
+
                                         <div class="mb-2">
                                             <small class="text-muted">
-                                                <i class="fas fa-briefcase"></i> {{ match_item.job.level|default:"Unknown Level" }} | 
-                                                <i class="fas fa-map-marker-alt"></i> {{ match_item.job.location|default:"Unknown Location" }} | 
-                                                <i class="fas fa-industry"></i> {{ match_item.job.industry|default:"Unknown Industry" }} | 
+                                                <i class="fas fa-briefcase"></i> {{ match_item.job.level|default:"Unknown Level" }} |
+                                                <i class="fas fa-map-marker-alt"></i> {{ match_item.job.location|default:"Unknown Location" }} |
+                                                <i class="fas fa-industry"></i> {{ match_item.job.industry|default:"Unknown Industry" }} |
                                                 <i class="fas fa-clock"></i> {{ match_item.job.flexibility|default:"Unknown flexibility"}} |
-                                                <i class="fas fa-dollar-sign"></i> {{ match_item.job.salary_range|default:"Unknown salary range"}} 
+                                                <i class="fas fa-dollar-sign"></i> {{ match_item.job.salary_range|default:"Unknown salary range"}}
                                             </small>
                             </div>
 
                                         <p class="card-text small mb-2">
                                             {{ match_item.reason|truncatewords:20|linebreaksbr }}
                                         </p>
-                                        
-                                
-                                
+
+
+
                                         <!-- Insights Table (Pros/Cons) -->
                                 {% if match_item.parsed_insights_list %}
                                             <div class="accordion accordion-flush accordion-sm mb-2" id="accordionInsights{{ match_item.job.id }}">
@@ -371,7 +427,7 @@
                                             </a>
                                         </h5>
                                     <h6 class="card-subtitle mb-2 text-muted">{{ item.job_object.company_name }}</h6>
-                                        
+
                                         <div class="mb-2">
                                             <small class="text-muted">
                                             {% if item.job_object.level %}{{ item.job_object.level }} | {% endif %}
@@ -485,14 +541,14 @@ document.addEventListener('DOMContentLoaded', function () {
     const modalJobTitleEl = document.getElementById('modalJobTitle');
     const confirmAppliedButton = document.getElementById('confirmAppliedButton');
     const applyNowButtons = document.querySelectorAll('.apply-now-btn-trigger');
-    let modalInstance = null; 
+    let modalInstance = null;
     if (applyConfirmationModalEl) {
         modalInstance = new bootstrap.Modal(applyConfirmationModalEl);
     }
 
     applyNowButtons.forEach(button => {
         button.addEventListener('click', function (event) {
-            event.preventDefault(); 
+            event.preventDefault();
             const jobTitle = this.getAttribute('data-job-title');
             const jobId = this.getAttribute('data-job-id');
             const listType = this.getAttribute('data-list-type');
@@ -550,7 +606,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 .then(response => {
                     if (!response.ok) {
                         return response.text().then(text => {
-                            console.error('Server error response text:', text.substring(0, 500)); 
+                            console.error('Server error response text:', text.substring(0, 500));
                             try {
                                 const errData = JSON.parse(text);
                                 throw new Error(errData.message || `HTTP error ${response.status}`);
@@ -559,12 +615,12 @@ document.addEventListener('DOMContentLoaded', function () {
                             }
                         });
                     }
-                    return response.json(); 
+                    return response.json();
                 })
                 .then(data => {
                     if (data.success) {
                         console.log('Status updated successfully for job', jobId, 'to', data.new_status);
-                        
+
                         let statusBadge = null;
                         let statusParagraph = null;
 
@@ -578,7 +634,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         if (statusBadge) {
                             // Update text content
                             statusBadge.textContent = `Status: ${data.new_status_display || data.new_status}`;
-                            
+
                             // Define a list of all possible status classes we use
                             const allStatusClasses = ['status-applied', 'status-not-applied', 'status-viewed']; // Add any other status slugs here
 
@@ -594,14 +650,14 @@ document.addEventListener('DOMContentLoaded', function () {
                                 statusBadge.classList.add('status-not-applied'); // Fallback to not-applied
                                 console.warn(`Unknown status slug: ${data.new_status}, falling back to status-not-applied`);
                             }
-                            
-                            if (statusParagraph) { 
-                                statusParagraph.style.display = ''; 
+
+                            if (statusParagraph) {
+                                statusParagraph.style.display = '';
                             }
                         } else {
                             console.warn('Could not find status badge for job', jobId, 'listType', listType);
                         }
-                        
+
                     } else {
                         console.error('Failed to update status (server-side):', data.message);
                         alert('Error updating status: ' + data.message);
@@ -661,8 +717,14 @@ document.addEventListener('DOMContentLoaded', function () {
             // CSS handles the main content margin reset now
         });
     }
+    document.addEventListener('DOMContentLoaded', function () {
+    {% if parsed_data %}
+      var modal = new bootstrap.Modal(document.getElementById('cvModal'));
+      modal.show();
+    {% endif %}
+  });
 
 });
 </script>
 
-{% endblock %} 
+{% endblock %}
