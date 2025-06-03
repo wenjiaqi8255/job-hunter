@@ -228,9 +228,10 @@
                                                 </h5>
                                                 <small class="text-muted">{{ match_item.job.company_name }}</small>
                                             </div>
-                                            <div class="text-end">
-                                                <span class="badge bg-primary rounded-pill fs-6">{{ match_item.score|floatformat:0 }}%</span>
-                                                <small class="d-block text-muted">Match</small>
+                                            <div class="text-center">
+                                                <!-- <span class="badge bg-primary rounded-pill fs-6">{{ match_item.score|floatformat:0 }}%</span> -->
+                                                <h2 class="h2 mb-1">{{ match_item.score|floatformat:0 }}%</h2>
+                                                <small class="d-block text-muted mt-0">Match Score</small>
                                             </div>
                                         </div>
                                         
@@ -302,12 +303,13 @@
                                     </div>
                                     <div class="card-footer bg-light border-top-0 p-2">
                                         <div class="d-flex justify-content-end">
-                                            <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="btn btn-outline-secondary btn-sm me-2">
+                                            <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" 
+                                            class="btn btn-outline-secondary btn-sm me-2">
                                                 <i class="fas fa-info-circle me-1"></i> View Details
                                             </a>
                                     {% if match_item.job.application_url %}
                                     <a href="{{ match_item.job.application_url }}"
-                                       class="btn btn-success btn-sm apply-now-btn-trigger"
+                                       class="btn btn-success btn-sm ms-2 apply-now-btn-trigger"
                                        target="_blank" rel="noopener noreferrer"
                                        data-job-id="{{ match_item.job.id }}"
                                        data-job-title="{{ match_item.job.job_title }}"
@@ -315,7 +317,9 @@
                                                 <i class="fas fa-external-link-alt me-1"></i> Apply Now
                                     </a>
                                     {% else %}
-                                    <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
+                                    <button type="button" 
+                                    class="btn btn-success btn-sm ms-2" 
+                                    disabled title="No application link available">
                                                 <i class="fas fa-external-link-alt me-1"></i> Apply Now
                                     </button>
                                     {% endif %}

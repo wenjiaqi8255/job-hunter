@@ -349,10 +349,22 @@ def profile_page(request):
         # If you have more complex logic (like actual profile processing), consider redirecting.
         # return redirect('matcher:profile_page') # Uncomment if you prefer to redirect
 
+    application_count = 0
+    already_saved_minutes = 0
+    # 获取所有申请的总数 (当前阶段的模拟)
+    try:
+        # 尝试从 Application 模型获取总数
+        application_count = SavedJob.objects.count()
+    except Exception: 
+        # 如果 Application 模型不存在或有其他问题，则使用占位符
+        application_count = 5 # Fallback to placeholder if model doesn't exist or query fails
+
+    already_saved_minutes = application_count * 20
+
     context = {
         'username': username,
-        'job_matches_count': 0, # Replace with actual data
-        'already_saved_minutes': 0, # Replace with actual data
+        'job_matches_count': application_count, # Replace with actual data
+        'already_saved_minutes': already_saved_minutes, # Replace with actual data
         'application_count': 0, # Replace with actual data
         'tips_to_improve_count': 0, # Replace with actual data
         'user_cv_text': user_cv_text,

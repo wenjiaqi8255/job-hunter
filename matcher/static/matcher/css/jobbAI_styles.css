@@ -44,7 +44,7 @@ body {
     padding: 0; /* Reset padding, use sidebar-sticky */
     width: 320px; /* Figma sidebar width */
     position: fixed; /* Fixed sidebar */
-    top: 70px; /* Height of top nav, adjust if dynamic */
+    top: 56px; /* Height of top nav, adjust if dynamic */
     bottom: 0;
     left: 0;
     z-index: 1000;
