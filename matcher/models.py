@@ -1,8 +1,25 @@
 from django.db import models
 import uuid # Import uuid for UUIDField default
 import json # For storing structured profile as JSON
+import os
 
 # Create your models here.
+
+def user_cv_path(instance, filename):
+    # file will be uploaded to MEDIA_ROOT/user_cvs/<session_key>/<filename>
+    return f'user_cvs/{instance.session_key}/{filename}'
+
+class UserProfile(models.Model):
+    session_key = models.CharField(max_length=40, primary_key=True, editable=False)
+    user_cv_text = models.TextField(blank=True, null=True)
+    cv_file = models.FileField(upload_to=user_cv_path, blank=True, null=True)
+    user_preferences_text = models.TextField(blank=True, null=True)
+    user_email = models.EmailField(blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"Profile for session {self.session_key}"
 
 class JobListing(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
@@ -96,3 +113,15 @@ class CoverLetter(models.Model):
 
     def __str__(self):
         return f"Cover Letter for {self.saved_job.job_listing.job_title} (SavedJob ID: {self.saved_job.id})"
+
+class Experience(models.Model):
+    # This is a placeholder model. The actual data is in Supabase.
+    # This model helps avoid migration errors if other parts of the app
+    # have temporary foreign key relationships or content type dependencies.
+    # The fields can be defined based on the Supabase schema if direct
+    # Django integration is ever needed.
+    class Meta:
+        # By setting managed to False, Django's migrate command will not
+        # create, modify, or delete the database table for this model.
+        # This is ideal when the table is managed by an external service like Supabase.
+        managed = False

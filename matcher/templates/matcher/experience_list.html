@@ -1,0 +1,120 @@
+{% extends 'matcher/base.html' %}
+
+{% block title %}My Experience Pool - JobbAI{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="mb-0">My Experience Pool</h2>
+            <p class="text-muted">Manage your professional stories in one place.</p>
+        </div>
+        <div>
+            <a href="{% url 'matcher:profile_page' %}" class="btn btn-outline-secondary ms-2">Back to Profile</a>
+            <button type="button" class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#experienceModal">
+                <i class="fas fa-plus-circle me-2"></i>Build New Experience
+            </button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if experiences %}
+    <div class="row">
+        {% for exp in experiences %}
+        <div class="col-md-6 mb-4">
+            <div class="card h-100 shadow-sm">
+                <div class="card-header d-flex justify-content-between align-items-start bg-light">
+                    <h6 class="mb-0">{{ exp.original_input|truncatewords:10 }}</h6>
+                    <small class="text-muted">{{ exp.created_at|date:"Y-m-d H:i" }}</small>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <strong>Structured Story (STAR):</strong>
+                        <div class="mt-2 p-3 bg-light rounded" style="max-height: 200px; overflow-y: auto; white-space: pre-wrap; font-family: monospace; font-size: 0.9em;">{{ exp.structured_story }}</div>
+                    </div>
+                    <div class="mb-3">
+                        <strong>Interview Narrative:</strong>
+                        <div class="mt-2 p-3 bg-light rounded" style="max-height: 150px; overflow-y: auto; white-space: pre-wrap;">{{ exp.narrative_story }}</div>
+                    </div>
+                </div>
+                <div class="card-footer bg-white d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="fas fa-sync-alt me-1"></i>{{ exp.total_rounds }} rounds · 
+                        <i class="fas fa-text-width me-1"></i>{{ exp.story_length }} chars
+                    </small>
+                    <form action="{% url 'matcher:experience_delete' exp.id %}" method="post" class="d-inline" onsubmit="return confirm('Are you sure? This action cannot be undone.');">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-sm btn-outline-danger">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="fas fa-briefcase fa-3x text-muted mb-3"></i>
+        <h4>Your Experience Pool is Empty</h4>
+        <p class="text-muted">Start by building your first work experience using our AI assistant.</p>
+        <button type="button" class="btn btn-primary btn-lg mt-3" data-bs-toggle="modal" data-bs-target="#experienceModal">
+            <i class="fas fa-plus-circle me-2"></i>Build Your First Experience
+        </button>
+    </div>
+    {% endif %}
+</div>
+
+<!-- N8N Chat Modal -->
+<div class="modal fade" id="experienceModal" tabindex="-1" aria-labelledby="experienceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="experienceModalLabel"><i class="fas fa-robot me-2"></i>AI Experience Builder</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe 
+            id="n8nChatFrame"
+            src="{{ n8n_chat_url }}"
+            width="100%" 
+            height="600px" 
+            frameborder="0"
+            style="border-radius: 0 0 .25rem .25rem;">
+        </iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Listen for a message from the N8n iframe
+window.addEventListener('message', function(event) {
+    // IMPORTANT: Add a check for the event origin for security
+    // if (event.origin !== 'http://localhost:5678') return;
+
+    if (event.data && event.data.type === 'experience_completed') {
+        console.log('Received experience_completed message. Hiding modal and reloading.');
+        
+        var experienceModalElement = document.getElementById('experienceModal');
+        var experienceModal = bootstrap.Modal.getInstance(experienceModalElement);
+        if (experienceModal) {
+            experienceModal.hide();
+        }
+
+        // Reload the page to display the new data from Supabase
+        setTimeout(function() {
+            location.reload();
+        }, 300);
+    }
+});
+</script>
+{% endblock %} 

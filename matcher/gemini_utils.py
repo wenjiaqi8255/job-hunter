@@ -92,8 +92,8 @@ def _execute_ai_task(
         api_response_text = api_response_object.text
         # print(f"DEBUG API Response Text for {task_name} (first 500 chars):\n{api_response_text[:500]}...")
 
-        parser_all_args = (api_response_text, api_response_object) if pass_full_response_to_parser else (api_response_text,)
-        parser_all_args += response_parser_args # Add any other specific args for the parser
+        # 统一传递 (api_response_text, api_response_object, ...) 给 parser
+        parser_all_args = (api_response_text, api_response_object) + response_parser_args
 
         return response_parser_func(*parser_all_args)
 
@@ -447,4 +447,54 @@ def generate_cover_letter(skills_text, job):
         simulation_func=simulate_generate_cover_letter,
         simulation_args=(skills_text, job),
         pass_full_response_to_parser=True # Parser needs the full response for feedback checks
+    )
+
+# --- Resume Customization ---
+
+def _generate_custom_resume_prompt(user_cv_text, job):
+    return f"""
+    You are an expert career consultant and resume writer. Your task is to optimize the user's resume for a specific job, keeping the original structure and formatting as much as possible, but improving the content expression, clarity, and relevance for the target job.
+
+    User Resume (Original):
+    ---
+    {user_cv_text}
+    ---
+
+    Target Job Details:
+    ---
+    Job Title: {job.get('job_title')}
+    Company: {job.get('company_name')}
+    Level: {job.get('level', 'Not specified')}
+    Description: {job.get('description')}
+    ---
+
+    Instructions:
+    - Analyze the user's resume and the job description.
+    - Identify the structure (sections, headings, bullet points, etc.) of the original resume.
+    - Rewrite and optimize the content of each section to better match the target job, using more impactful and relevant language, but do NOT invent experience or skills not present in the original.
+    - Keep the formatting and structure (sections, order, bullet points, etc.) as close as possible to the original.
+    - Only improve the expression, clarity, and relevance for the target job.
+    - Output ONLY the improved resume text, with no extra explanation or commentary.
+    """
+
+def _parse_custom_resume_response(api_response_text, api_response_object=None):
+    return api_response_text.strip()
+
+def simulate_generate_custom_resume(user_cv_text, job, error_message=None):
+    print(f"INFO: Executing SIMULATED custom resume generation for job: {job.get('job_title')}")
+    sim_text = f"(Simulated Custom Resume for {job.get('job_title')} at {job.get('company_name')})\n" + user_cv_text[:500] + "...\n[Resume optimized for target job. Simulated output.]"
+    if error_message:
+        sim_text += f" (SimError: {error_message})"
+    return sim_text
+
+def generate_custom_resume(user_cv_text, job):
+    return _execute_ai_task(
+        task_name="custom resume generation",
+        prompt_generator_func=_generate_custom_resume_prompt,
+        prompt_generator_args=(user_cv_text, job),
+        response_parser_func=_parse_custom_resume_response,
+        response_parser_args=(),
+        simulation_func=simulate_generate_custom_resume,
+        simulation_args=(user_cv_text, job),
+        pass_full_response_to_parser=False
     ) 

@@ -12,6 +12,9 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 
 from pathlib import Path
 import os
+import dotenv
+dotenv.load_dotenv()
+print("ENV VAR:", os.environ.get('USE_SIMULATION_ENV'))
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -34,7 +37,7 @@ USE_AI_SIMULATION_ENV_VAR = os.getenv('USE_SIMULATION_ENV', 'True')  # Default t
 USE_AI_SIMULATION = USE_AI_SIMULATION_ENV_VAR.lower() != 'false'
 print(f"[SETTINGS.PY] USE_AI_SIMULATION_ENV_VAR: '{USE_AI_SIMULATION_ENV_VAR}'")
 print(f"[SETTINGS.PY] USE_AI_SIMULATION set to: {USE_AI_SIMULATION}")
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['*']
 
 
 # Application definition
@@ -47,11 +50,13 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
     "matcher",
+    "corsheaders",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
@@ -125,6 +130,13 @@ USE_TZ = True
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
 STATIC_URL = "static/"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Added for project-level static files directory
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -145,3 +157,10 @@ if not SUPABASE_URL or not SUPABASE_KEY:
     # Example fallback (NOT RECOMMENDED FOR PRODUCTION KEYS):
     # SUPABASE_URL = "your_local_or_dev_supabase_url"
     # SUPABASE_KEY = "your_local_or_dev_supabase_anon_key"
+
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:5678", # For N8N chat
+]
+
+# N8N Integration
+N8N_CHAT_URL = "http://localhost:5678/webhook/bddbcab4-7cb3-4b64-ab9c-70321bbbda7d/chat"

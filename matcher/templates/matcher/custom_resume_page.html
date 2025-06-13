@@ -1,6 +1,6 @@
 {% extends 'matcher/base.html' %}
 
-{% block title %}Cover Letter for {{ job.job_title }}{% endblock %}
+{% block title %}Custom Resume for {{ job.job_title }}{% endblock %}
 
 {% block content %}
 <div class="container py-4">
@@ -8,50 +8,55 @@
         <ol class="breadcrumb">
           <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home</a></li>
           <li class="breadcrumb-item"><a href="{% url 'matcher:job_detail_page_no_session' job.id %}">Job Detail: {{ job.job_title }}</a></li>
-          <li class="breadcrumb-item active" aria-current="page">Generated Cover Letter</li>
+          <li class="breadcrumb-item active" aria-current="page">Customize CV</li>
         </ol>
     </nav>
 
-    <h2>Cover Letter for: {{ job.job_title }} at {{ job.company_name }}</h2>
+    <h2>Customize CV for: {{ job.job_title }} at {{ job.company_name }}</h2>
     <p class="text-muted">Based on your skills: "{{ skills_text|truncatechars:100 }}"</p>
     
     <div class="card mt-3">
         <div class="card-header">
-            Generated Cover Letter Content
+            AI-Customized CV
         </div>
         <div class="card-body">
             {% if generation_error %}
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    {{ cover_letter_content }}
+                    {{ custom_resume_content }}
                     <a href="{{ profile_url }}" class="btn btn-sm btn-primary mt-2">
                         <i class="fas fa-edit me-1"></i> Go to Profile to Edit CV
                     </a>
                 </div>
             {% else %}
-                <textarea id="coverLetterContent" class="form-control" rows="15" readonly>{{ cover_letter_content }}</textarea>
+                <textarea id="customResumeContent" class="form-control" rows="20" readonly>{{ custom_resume_content }}</textarea>
             {% endif %}
         </div>
         <div class="card-footer">
             {% if not generation_error %}
-            <button class="btn btn-secondary" onclick="copyCoverLetter()"><i class="fas fa-copy"></i> Copy Full Text</button>
+            <button class="btn btn-secondary" onclick="copyCustomResume()"><i class="fas fa-copy"></i> Copy Full Text</button>
+            <button class="btn btn-primary ms-2" onclick="downloadCustomResumePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
             {% endif %}
         </div>
     </div>
 </div>
 
 <script>
-function copyCoverLetter() {
-    var copyText = document.getElementById("coverLetterContent");
+function copyCustomResume() {
+    var copyText = document.getElementById("customResumeContent");
     copyText.select();
     copyText.setSelectionRange(0, 99999); /* For mobile devices */
     navigator.clipboard.writeText(copyText.value)
         .then(() => {
-            alert("Cover letter copied to clipboard!");
+            alert("Custom resume copied to clipboard!");
         })
         .catch(err => {
             alert("Failed to copy text. Please try selecting and copying manually. Error: " + err);
         });
+}
+
+function downloadCustomResumePDF() {
+    window.location.href = "{% url 'matcher:download_custom_resume_pdf' job.id %}";
 }
 </script>
 {% endblock %} 

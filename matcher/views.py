@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse # Import reverse for redirect
-from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter # Added CoverLetter
-from .forms import SavedJobForm # Corrected import: JobSearchForm and UserProfileForm were not in forms.py
+from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter, UserProfile
+from .forms import SavedJobForm
 from . import gemini_utils
 from django.db import transaction
 import uuid # For validating UUID from GET param
@@ -15,10 +15,27 @@ import os # Added for environment variables
 from django.conf import settings # Added for Supabase settings
 from supabase import create_client, Client # Added for Supabase
 from datetime import datetime, date, time # Added for date calculations
-from django.http import JsonResponse # Added for JSON response
+from django.http import JsonResponse, FileResponse, HttpResponse # Added for JSON response and FileResponse
 from django.views.decorators.http import require_POST # Added for POST requests only
 from django.views.decorators.csrf import csrf_exempt # Consider CSRF implications, ensure frontend sends token
 import itertools # Added for zip_longest
+import fitz # PyMuPDF
+from io import BytesIO
+from reportlab.lib.pagesizes import A4
+from reportlab.pdfgen import canvas
+from reportlab.lib.units import mm
+# import logging # Temporarily replaced with print for debugging
+
+from .services.experience_service import get_user_experiences, delete_experience as delete_experience_from_supabase
+from .services.supabase_saved_job_service import (
+    get_supabase_saved_job,
+    create_supabase_saved_job,
+    update_supabase_saved_job_status,
+    list_supabase_saved_jobs,
+)
+
+# # Configure logging
+# logger = logging.getLogger(__name__)
 
 # Create your views here.
 
@@ -113,16 +130,42 @@ def main_page(request):
         request.session.create()
         session_key = request.session.session_key
 
+    # Fetch UserProfile, which holds the single source of truth for CV and preferences
+    user_profile, created = UserProfile.objects.get_or_create(session_key=session_key)
+    print(f"--- [GET] Initial UserProfile CV for session {session_key}: '{user_profile.user_cv_text[:70] if user_profile.user_cv_text else 'Empty'}' ---")
+
     current_match_session_id_str = request.GET.get('session_id')
-    current_match_session = None
-    skills_text_from_session = "" # Will become user_cv_text
-    user_preferences_text_from_session = "" # New
     processed_job_matches = []
     selected_session_object = None
+    no_match_reason = None  # 新增变量
+
+    # 一次性查出所有 Supabase 申请记录，构建 {job_id: status} 字典
+    supa_saved_jobs = list_supabase_saved_jobs(session_key)
+    supa_status_map = {sj['original_job_id']: sj['status'] for sj in supa_saved_jobs}
 
     if request.method == 'POST':
+        print(f"--- [POST] Request received for session {session_key}. ---")
+        # The form is submitted from the modal on the main page.
+        # We update the profile with this data first, then run the match.
+        
+        # 如果profile为空，重定向到profile页面
+        if not user_profile.user_cv_text:
+            messages.info(request, "Please complete your profile before finding matches.")
+            return redirect('matcher:profile_page')
+        
         user_cv_text_input = request.POST.get('user_cv_text', '')
         user_preferences_text_input = request.POST.get('user_preferences_text', '')
+        
+        # Update the UserProfile with the latest data from the form
+        user_profile.user_cv_text = user_cv_text_input
+        user_profile.user_preferences_text = user_preferences_text_input
+        user_profile.save()
+        print(f"--- [POST] UserProfile updated. New CV: '{user_profile.user_cv_text[:70]}' ---")
+
+        # Check if the profile is empty
+        if not user_cv_text_input:
+            messages.error(request, "Your CV is empty. Please update your profile before matching jobs.")
+            return redirect('matcher:profile_page') # Redirect to profile to add CV
 
         # Phase 4.1: Extract structured user profile
         structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text_input, user_preferences_text_input)
@@ -131,17 +174,8 @@ def main_page(request):
         job_listings_for_api = fetch_todays_job_listings_from_supabase()
         
         if not job_listings_for_api:
-            # Handle case where no jobs were fetched for today
-            # You might want to display a message to the user
-            messages.info(request, "No new job listings found for today. Matching cannot proceed with current day's data.")
-            # Option 1: Redirect back or render with a message (current approach)
-            # To redirect and show the message, we need to ensure messages are displayed on the target template
-            # Or, pass a specific context variable to indicate this state.
-            # For now, we'll let it proceed to match_jobs with an empty list,
-            # which should result in 'No specific matches found'.
-            # Or, redirect to avoid unnecessary API calls if gemini_utils.match_jobs can't handle empty list
-            # return redirect(reverse('matcher:main_page')) # This might clear POST data.
-
+            no_match_reason = "No new job listings found for today. Matching cannot proceed with current day's data."
+            # 继续后续逻辑，match_jobs会处理空列表
         # The sampling logic might not be necessary if Supabase query is efficient
         # and if the number of daily jobs isn't excessively large.
         # For now, I'm removing the random sampling as we are already filtering by day.
@@ -152,7 +186,7 @@ def main_page(request):
         #     job_listings_for_api = all_job_listings
         
         # If job_listings_for_api is empty, gemini_utils.match_jobs should ideally handle this gracefully.
-        max_jobs_for_testing = 5 # Define the maximum number of jobs for testing
+        max_jobs_for_testing = 10 # Define the maximum number of jobs for testing #find_max_jobs_to_process
         job_matches_from_api = gemini_utils.match_jobs(
             structured_profile_dict, 
             job_listings_for_api,
@@ -165,6 +199,7 @@ def main_page(request):
             structured_user_profile_json=structured_profile_dict # Storing structured profile
         )
         current_match_session_id_str = str(new_match_session.id)
+        print(f"--- [POST] New MatchSession '{current_match_session_id_str}' created. ---")
         request.session['last_match_session_id'] = current_match_session_id_str
 
         # When saving MatchedJob, ensure the 'job_listing' foreign key can handle
@@ -239,44 +274,40 @@ def main_page(request):
                     tips=match_item.get('tips')    
                 )
         # Redirect to the same page with the new session_id in GET to show results
+        # 通过session传递no_match_reason
+        if no_match_reason:
+            request.session['no_match_reason'] = no_match_reason
+        else:
+            request.session.pop('no_match_reason', None)
         return redirect(f"{reverse('matcher:main_page')}?session_id={current_match_session_id_str}")
 
     # Handling GET request or if POST didn't redirect (e.g. initial load)
     if current_match_session_id_str:
+        print(f"--- [GET] Request with session_id '{current_match_session_id_str}' received. ---")
         try:
             current_match_session_id_uuid = UUID(current_match_session_id_str)
             current_match_session = get_object_or_404(MatchSession, id=current_match_session_id_uuid)
             selected_session_object = current_match_session # For displaying session date
-            
-            # Populate textareas with data from this selected session
-            skills_text_from_session = current_match_session.skills_text # This is user_cv_text
-            user_preferences_text_from_session = current_match_session.user_preferences_text
-            
-            # Fetch related MatchedJob instances, prefetching JobListing
+            user_profile.user_cv_text = current_match_session.skills_text
+            user_profile.user_preferences_text = current_match_session.user_preferences_text
+            user_profile.save()
+            print(f"--- [GET] UserProfile updated from MatchSession. New CV: '{user_profile.user_cv_text[:70]}' ---")
             matched_jobs_for_session = current_match_session.matched_jobs.select_related('job_listing').order_by('-score')
-            
-            # Annotate with saved status
-            saved_job_subquery = SavedJob.objects.filter(
-                job_listing_id=OuterRef('job_listing_id'),
-                user_session_key=session_key
-            ).values('status')[:1]
-
-            for mj in matched_jobs_for_session: # mj is a MatchedJob instance
-                saved_status_result = SavedJob.objects.filter(job_listing=mj.job_listing, user_session_key=session_key).values('status').first()
-                
+            for mj in matched_jobs_for_session:
                 parsed_insights_for_table = parse_and_prepare_insights_for_template(mj.insights)
-
+                # 用 Supabase 状态
+                supa_status = supa_status_map.get(mj.job_listing.id)
                 processed_job_matches.append({
                     'job': mj.job_listing,
                     'score': mj.score, 
                     'reason': mj.reason, 
                     'parsed_insights_list': parsed_insights_for_table, # New field for structured insights
                     'tips': mj.tips,       # Now directly accessing from model
-                    'saved_status': saved_status_result['status'] if saved_status_result else None
+                    'saved_status': supa_status or None
                 })
-
+            if not processed_job_matches:
+                no_match_reason = request.session.pop('no_match_reason', None)
         except (ValueError, MatchSession.DoesNotExist):
-            # Invalid UUID or session not found, redirect to main page without session_id
             return redirect(reverse('matcher:main_page'))
     
     # If no specific session is selected via GET (i.e., current_match_session_id_str is None),
@@ -291,98 +322,119 @@ def main_page(request):
     # Prepare a list of dictionaries or custom objects for `all_jobs_annotated`
     all_jobs_annotated = []
     for job in all_jobs:
-        saved_status_result = SavedJob.objects.filter(job_listing=job, user_session_key=session_key).values('status').first()
+        supa_status = supa_status_map.get(job.id)
         all_jobs_annotated.append({
             'job_object': job,
-            'saved_status': saved_status_result['status'] if saved_status_result else None
+            'saved_status': supa_status or None
         })
 
     # Fetch match history
     match_history = MatchSession.objects.order_by('-matched_at')[:10] # Last 10 sessions
 
     context = {
-        'user_cv_text': skills_text_from_session, # Pass CV text to template
-        'user_preferences_text': user_preferences_text_from_session, # Pass preferences text
         'processed_job_matches': processed_job_matches,
+        'user_cv_text': user_profile.user_cv_text, 
+        'user_preferences_text': user_profile.user_preferences_text,
+        'current_match_session_id': current_match_session_id_str,
+        'selected_session_object': selected_session_object,
         'all_jobs_annotated': all_jobs_annotated,
         'all_jobs_count': all_jobs.count(),
         'match_history': match_history,
-        'current_match_session_id': current_match_session_id_str,
-        'selected_session_object': selected_session_object,
+        'no_match_reason': no_match_reason,  # 传递到模板
     }
+
+    print(f"--- Final context for render. CV: '{context.get('user_cv_text', '')[:70]}' ---")
     return render(request, 'matcher/main_page.html', context)
 
 def profile_page(request):
-    # Placeholder values, replace with actual logic to retrieve these
-    # For example, from a UserProfile model or session
-    username = request.user.username if request.user.is_authenticated else "Guest"
-    user_cv_text = request.session.get('user_cv_text', '')
-    user_preferences_text = request.session.get('user_preferences_text', '')
-    user_email_text = request.session.get('user_email_text', '') # Retrieve email from session
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+
+    # Get or create the UserProfile for the current session
+    profile, created = UserProfile.objects.get_or_create(session_key=session_key)
 
     if request.method == 'POST':
         form_type = request.POST.get('form_type')
 
-        # Always update all three from the POST data, as hidden fields carry them over
-        user_cv_text = request.POST.get('user_cv_text', user_cv_text) # Keep existing if not in POST
-        user_preferences_text = request.POST.get('user_preferences_text', user_preferences_text)
-        user_email_text = request.POST.get('user_email_text', user_email_text)
-
-        # Save to session
-        request.session['user_cv_text'] = user_cv_text
-        request.session['user_preferences_text'] = user_preferences_text
-        request.session['user_email_text'] = user_email_text
-
         if form_type == 'cv_form':
-            # Specific logic for CV form if any, e.g., messages.success(request, "CV updated!")
-            # The profile extraction and matching might be better handled in a separate view 
-            # or triggered explicitly by a button within this form's modal if it's heavy.
-            # For now, just updating session and re-rendering.
-            messages.success(request, "CV text updated in session.")
+            # Handle CV text and file upload
+            profile.user_cv_text = request.POST.get('user_cv_text', profile.user_cv_text)
+            if 'cv_file' in request.FILES:
+                uploaded_file = request.FILES['cv_file']
+                profile.cv_file = uploaded_file
+                # Extract text from PDF
+                try:
+                    with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
+                        text = ""
+                        for page in doc:
+                            text += page.get_text()
+                        profile.user_cv_text = text
+                    messages.success(request, 'Successfully uploaded and extracted text from your CV.')
+                except Exception as e:
+                    messages.error(request, f'Error processing PDF file: {e}')
+            
+            # This is a bit redundant if file is uploaded, but good for text-only update
+            elif request.POST.get('user_cv_text'):
+                 messages.success(request, 'Your CV text has been updated.')
+
         elif form_type == 'preferences_form':
-            messages.success(request, "Preferences updated in session.")
+            profile.user_preferences_text = request.POST.get('user_preferences_text', profile.user_preferences_text)
+            messages.success(request, 'Your preferences have been updated.')
+
         elif form_type == 'email_form':
-            messages.success(request, "Email updated in session.")
-        
-        # It's generally good practice to redirect after a POST to prevent re-submission
-        # However, if you're just updating session and re-rendering the same page, this might be acceptable.
-        # If you have more complex logic (like actual profile processing), consider redirecting.
-        # return redirect('matcher:profile_page') # Uncomment if you prefer to redirect
+            # Assuming the field name for email is 'user_email_text' in the form
+            profile.user_email = request.POST.get('user_email_text', profile.user_email)
+            messages.success(request, 'Your email has been updated.')
 
-    application_count = 0
-    already_saved_minutes = 0
-    # 获取所有申请的总数 (当前阶段的模拟)
-    try:
-        # 尝试从 Application 模型获取总数
-        application_count = SavedJob.objects.count()
-    except Exception: 
-        # 如果 Application 模型不存在或有其他问题，则使用占位符
-        application_count = 5 # Fallback to placeholder if model doesn't exist or query fails
+        profile.save()
+        return redirect('matcher:profile_page')
 
+    # Fetch work experiences from Supabase
+    experiences = get_user_experiences()
+    experience_count = len(experiences) if experiences else 0
+
+    application_count = SavedJob.objects.filter(user_session_key=session_key).count()
     already_saved_minutes = application_count * 20
+    
+    n8n_chat_url = settings.N8N_CHAT_URL
+    full_n8n_url = f"{n8n_chat_url}?session_id={session_key}" if n8n_chat_url else ""
 
     context = {
-        'username': username,
-        'job_matches_count': application_count, # Replace with actual data
-        'already_saved_minutes': already_saved_minutes, # Replace with actual data
-        'application_count': 0, # Replace with actual data
-        'tips_to_improve_count': 0, # Replace with actual data
-        'user_cv_text': user_cv_text,
-        'user_preferences_text': user_preferences_text,
-        'user_email_text': user_email_text, # Add email to context
+        'username': 'Guest',
+        'job_matches_count': application_count,
+        'already_saved_minutes': already_saved_minutes,
+        'application_count': application_count,
+        'user_cv_text': profile.user_cv_text,
+        'user_preferences_text': profile.user_preferences_text,
+        'user_email_text': profile.user_email,
+        'experiences': experiences,
+        'experience_count': experience_count,
+        'tips_to_improve_count': experience_count,
+        'n8n_chat_url': full_n8n_url,
     }
     return render(request, 'matcher/profile_page.html', context)
 
 def job_detail_page(request, job_id, match_session_id=None):
     job = get_object_or_404(JobListing, id=job_id)
-    skills_text = request.session.get('skills_text', '')
-    saved_job_instance = None
+    # 获取当前session的UserProfile
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+    user_profile, _ = UserProfile.objects.get_or_create(session_key=session_key)
+    user_cv_text = user_profile.user_cv_text or ""
+    saved_job_instance = None  # 不再用本地模型实例
     parsed_insights = [] # Initialize parsed_insights
     
     # Ensure session key exists
     if not request.session.session_key:
         request.session.create()
     user_session_key = request.session.session_key
+
+    # 获取 Supabase 申请记录
+    supa_saved_job = get_supabase_saved_job(user_session_key, job.id)
 
     # Attempt to fetch the specific match details for this job and session
     job_match_analysis = None
@@ -424,43 +476,66 @@ def job_detail_page(request, job_id, match_session_id=None):
             session_id_to_use = None # Catch if session_id_to_use couldn't be cast to UUID
             active_match_session = None
 
-    try:
-        saved_job_instance = SavedJob.objects.get(job_listing=job, user_session_key=user_session_key)
-    except SavedJob.DoesNotExist:
-        # If it doesn't exist, we might want to create one with default 'interested' status
-        # Or let the form create it on first POST with a specific action like "Save for later"
-        pass # Form will be unbound if instance is None
-
+    # POST: 保存/更新 Supabase 申请记录
     if request.method == 'POST':
-        # If saved_job_instance is None, a new SavedJob will be created by the form if commit=False is handled correctly
-        form = SavedJobForm(request.POST, instance=saved_job_instance)
-        if form.is_valid():
-            saved_job = form.save(commit=False)
-            saved_job.job_listing = job
-            saved_job.user_session_key = user_session_key
-            # If it's a new instance and status wasn't explicitly set by user, 
-            # but they submitted the form, we can default to 'applied' or keep 'interested'
-            # For now, the form's default or user's choice will prevail.
-            saved_job.save()
-            # Optionally, add a success message with Django messages framework
-            # Redirect to the correct URL (with or without session_id) based on how the page was accessed
-            if match_session_id: # match_session_id is the one passed to the view from URL
-                return redirect('matcher:job_detail_page', job_id=job.id, match_session_id=match_session_id)
-            else:
-                return redirect('matcher:job_detail_page_no_session', job_id=job.id)
-    else:
-        form = SavedJobForm(instance=saved_job_instance)
+        new_status = request.POST.get('status')
+        notes = request.POST.get('notes')
+        if supa_saved_job:
+            # 更新
+            update_supabase_saved_job_status(user_session_key, job.id, new_status, notes)
+        else:
+            # 创建
+            data = {
+                "user_session_key": user_session_key,
+                "status": new_status or 'not_applied',
+                "notes": notes,
+                "original_job_id": job.id,
+                "company_name": job.company_name,
+                "job_title": job.job_title,
+                "job_description": job.description,
+                "application_url": job.application_url,
+                "location": job.location,
+                "salary_range": job.salary_range,
+                "industry": job.industry,
+                # created_at/updated_at 由 Supabase 默认生成
+            }
+            create_supabase_saved_job(data)
+        # 重定向
+        if match_session_id:
+            return redirect('matcher:job_detail_page', job_id=job.id, match_session_id=match_session_id)
+        else:
+            return redirect('matcher:job_detail_page_no_session', job_id=job.id)
 
-    # If job_match_analysis was not found, but job object itself might have insights_for_match
-    # (e.g. from a different source or default value), try parsing that.
+    # 构造表单初始值（用 dict 模拟 ModelForm）
+    class DummySavedJob:
+        def __init__(self, d):
+            self.status = d.get('status', 'not_applied') if d else 'not_applied'
+            self.notes = d.get('notes', '') if d else ''
+            self.updated_at = d.get('updated_at') if d else None
+        def get_status_display(self):
+            # 模拟 Django choices 显示
+            mapping = dict(SavedJob.STATUS_CHOICES)
+            return mapping.get(self.status, self.status)
+    dummy_saved_job = DummySavedJob(supa_saved_job)
+
+    # 用原有表单类渲染，但用 initial/dummy instance
+    from .forms import SavedJobForm
+    form = SavedJobForm(initial={
+        'status': dummy_saved_job.status,
+        'notes': dummy_saved_job.notes,
+    })
+    # 兼容模板对 saved_job_instance 的访问
+    saved_job_instance = dummy_saved_job
+
+    # If job_match_analysis was not found,但 job object 可能有 insights_for_match
     if not parsed_insights and hasattr(job, 'insights_for_match') and job.insights_for_match:
         parsed_insights = parse_and_prepare_insights_for_template(job.insights_for_match)
 
     context = {
         'job': job,
-        'skills_text': skills_text,
+        'skills_text': user_cv_text,
         'saved_job_form': form,
-        'saved_job_instance': saved_job_instance, # For displaying current status if needed outside form
+        'saved_job_instance': saved_job_instance, # 用 dummy 替代
         'status_choices': SavedJob.STATUS_CHOICES, # Pass choices for direct iteration if needed
         'job_match_analysis': job_match_analysis,
         'current_match_session_id_for_url': session_id_to_use, 
@@ -471,62 +546,171 @@ def job_detail_page(request, job_id, match_session_id=None):
 
 def generate_cover_letter_page(request, job_id):
     job = get_object_or_404(JobListing, id=job_id)
-    skills_text = request.session.get('skills_text', '')
+    # 获取当前session的UserProfile
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+    user_profile, _ = UserProfile.objects.get_or_create(session_key=session_key)
+    user_cv_text = user_profile.user_cv_text or ""
     cover_letter_content = ""
     generation_error = False
 
-    if not skills_text:
-        cover_letter_content = "Please enter your skills on the main page first to generate a more personalized cover letter."
+    if not user_cv_text:
+        cover_letter_content = "Please complete your CV in your profile before generating a cover letter."
         generation_error = True
     else:
-        cover_letter_content = gemini_utils.generate_cover_letter(skills_text, job)
+        cover_letter_content = gemini_utils.generate_cover_letter(user_cv_text, job)
         if not cover_letter_content.startswith("(Error generating") and \
            not cover_letter_content.startswith("Could not generate") and \
            not cover_letter_content.startswith("Please enter your skills"):
-            
             if not request.session.session_key:
                 request.session.create()
             user_session_key = request.session.session_key
 
-            # First, ensure SavedJob instance exists or create it, and set status to 'applied'
-            try:
-                saved_job = SavedJob.objects.get(job_listing=job, user_session_key=user_session_key)
-            except SavedJob.DoesNotExist:
-                saved_job = SavedJob(job_listing=job, user_session_key=user_session_key)
-            
-            saved_job.status = 'applied' # Explicitly set status
-            new_note = f'Cover letter generated on {timezone.now().strftime("%Y-%m-%d %H:%M")}.'
-            if saved_job.notes:
-                saved_job.notes += f"\n{new_note}"
+            # Supabase: 先查，有则更新，无则插入
+            supa_saved_job = get_supabase_saved_job(user_session_key, job.id)
+            new_note = f'Cover letter generated on {timezone.now().strftime("%Y-%m-%d %H:%M")}. '
+            if supa_saved_job:
+                # 更新状态和 notes
+                notes = (supa_saved_job.get('notes') or '') + f"\n{new_note}"
+                update_supabase_saved_job_status(user_session_key, job.id, new_status='applied', notes=notes)
             else:
-                saved_job.notes = new_note
-            saved_job.save() # Save SavedJob instance first
-
-            # Now, create or update the CoverLetter instance
-            CoverLetter.objects.update_or_create(
-                saved_job=saved_job,
-                defaults={'content': cover_letter_content}
-            )
-            # from django.contrib import messages
-            # messages.success(request, f"Cover letter generated and saved. Job status updated to 'Applied'.")
+                # 创建
+                data = {
+                    "user_session_key": user_session_key,
+                    "status": 'applied',
+                    "notes": new_note,
+                    "original_job_id": job.id,
+                    "company_name": job.company_name,
+                    "job_title": job.job_title,
+                    "job_description": job.description,
+                    "application_url": job.application_url,
+                    "location": job.location,
+                    "salary_range": job.salary_range,
+                    "industry": job.industry,
+                }
+                create_supabase_saved_job(data)
         else:
             generation_error = True
-            # Further error logging or specific user messages could be added here
-    
+
+    from django.urls import reverse
     context = {
         'job': job,
         'cover_letter_content': cover_letter_content,
-        'skills_text': skills_text,
-        'generation_error': generation_error
+        'skills_text': user_cv_text,
+        'generation_error': generation_error,
+        'profile_url': reverse('matcher:profile_page'),
     }
     return render(request, 'matcher/cover_letter_page.html', context)
+
+def generate_custom_resume_page(request, job_id):
+    job = get_object_or_404(JobListing, id=job_id)
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+    user_profile, _ = UserProfile.objects.get_or_create(session_key=session_key)
+    user_cv_text = user_profile.user_cv_text or ""
+    custom_resume_content = ""
+    generation_error = False
+
+    # Prepare job dict for AI (mimic fetch_todays_job_listings_from_supabase structure)
+    job_dict = {
+        'id': job.id,
+        'company_name': job.company_name,
+        'job_title': job.job_title,
+        'description': job.description,
+        'application_url': job.application_url,
+        'location': job.location,
+        'industry': job.industry,
+        'flexibility': job.flexibility,
+        'salary_range': job.salary_range,
+        'level': job.level,
+    }
+
+    if not user_cv_text:
+        custom_resume_content = "Please complete your CV in your profile before generating a custom resume."
+        generation_error = True
+    else:
+        custom_resume_content = gemini_utils.generate_custom_resume(user_cv_text, job_dict)
+        if not custom_resume_content or custom_resume_content.startswith("(Error generating") or custom_resume_content.startswith("Could not generate"):
+            generation_error = True
+
+    from django.urls import reverse
+    context = {
+        'job': job,
+        'custom_resume_content': custom_resume_content,
+        'skills_text': user_cv_text,
+        'generation_error': generation_error,
+        'profile_url': reverse('matcher:profile_page'),
+    }
+    return render(request, 'matcher/custom_resume_page.html', context)
+
+def download_custom_resume_pdf(request, job_id):
+    job = get_object_or_404(JobListing, id=job_id)
+    session_key = request.session.session_key
+    if not session_key:
+        request.session.create()
+        session_key = request.session.session_key
+    user_profile, _ = UserProfile.objects.get_or_create(session_key=session_key)
+    user_cv_text = user_profile.user_cv_text or ""
+
+    # Prepare job dict for AI
+    job_dict = {
+        'id': job.id,
+        'company_name': job.company_name,
+        'job_title': job.job_title,
+        'description': job.description,
+        'application_url': job.application_url,
+        'location': job.location,
+        'industry': job.industry,
+        'flexibility': job.flexibility,
+        'salary_range': job.salary_range,
+        'level': job.level,
+    }
+
+    if not user_cv_text:
+        return HttpResponse("No CV found. Please complete your profile.", status=400)
+
+    custom_resume_content = gemini_utils.generate_custom_resume(user_cv_text, job_dict)
+    if not custom_resume_content:
+        return HttpResponse("Failed to generate custom resume.", status=500)
+
+    # Generate PDF
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+    left_margin = 20 * mm
+    top_margin = height - 20 * mm
+    line_height = 12
+    max_width = width - 2 * left_margin
+    y = top_margin
+    p.setFont("Helvetica", 11)
+
+    # Split content into lines, wrap if needed
+    import textwrap
+    for paragraph in custom_resume_content.split('\n'):
+        lines = textwrap.wrap(paragraph, width=90) if paragraph.strip() else ['']
+        for line in lines:
+            if y < 20 * mm:
+                p.showPage()
+                y = top_margin
+                p.setFont("Helvetica", 11)
+            p.drawString(left_margin, y, line)
+            y -= line_height
+        y -= 4  # extra space between paragraphs
+
+    p.save()
+    buffer.seek(0)
+    filename = f"custom_resume_{job.id}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=filename)
+
 def my_applications_page(request):
     session_key = request.session.session_key
     if not session_key:
         request.session.create() # Create session if not exists
         session_key = request.session.session_key
-        # If session_key is still None after create(), no applications can be shown.
-        # This scenario is unlikely with standard Django session backends.
         if not session_key:
             return render(request, 'matcher/my_applications.html', {
                 'saved_jobs_with_forms_and_letters': [],
@@ -538,41 +722,51 @@ def my_applications_page(request):
             })
 
     selected_status = request.GET.get('status')
-
-    # Prepare status choices for tabs, including an "All" option.
-    # The value for "All" is an empty string for cleaner URLs (e.g., /my_applications/?status=)
     tab_status_choices = [('', 'All')] + list(SavedJob.STATUS_CHOICES)
 
-    # Fetch all saved jobs for the user to calculate counts for each status
-    all_user_saved_jobs = SavedJob.objects.filter(user_session_key=session_key)
-
-    # Calculate counts for each status
-    status_counts_data = all_user_saved_jobs.values('status').annotate(count=Count('id'))
-    status_counts = {item['status']: item['count'] for item in status_counts_data}
-    status_counts[''] = all_user_saved_jobs.count() # Total count for the 'All' tab
-
-    # Filter jobs based on selected_status
-    # If selected_status is None (no query param) or an empty string (from 'All' tab), show all.
-    # If selected_status is a specific status, filter by it.
+    # Supabase 查询所有申请记录
+    all_user_saved_jobs = list_supabase_saved_jobs(session_key)
+    # 统计各状态数量
+    status_counts = {s[0]: 0 for s in SavedJob.STATUS_CHOICES}
+    status_counts[''] = len(all_user_saved_jobs)
+    for sj in all_user_saved_jobs:
+        if sj['status'] in status_counts:
+            status_counts[sj['status']] += 1
+    # 过滤
     if selected_status and selected_status in [s[0] for s in SavedJob.STATUS_CHOICES]:
-        saved_jobs_query = all_user_saved_jobs.filter(status=selected_status)
+        saved_jobs_filtered = [sj for sj in all_user_saved_jobs if sj['status'] == selected_status]
     else:
-        # If selected_status is not a valid status string (e.g. None, empty, or invalid),
-        # default to showing all. And ensure selected_status reflects 'All' for the template.
-        selected_status = '' 
-        saved_jobs_query = all_user_saved_jobs
+        selected_status = ''
+        saved_jobs_filtered = all_user_saved_jobs
 
-    # Apply prefetching and ordering to the (potentially filtered) queryset
-    saved_jobs_filtered = saved_jobs_query.select_related('job_listing')\
-                                       .prefetch_related(Prefetch('cover_letter', queryset=CoverLetter.objects.all()))\
-                                       .order_by('-updated_at')
-
+    # 构造表单和 cover_letter（cover_letter 仍查本地）
+    from .forms import SavedJobForm
     saved_jobs_with_forms_and_letters = []
-    for saved_job_instance in saved_jobs_filtered:
-        form = SavedJobForm(instance=saved_job_instance)
-        cover_letter = getattr(saved_job_instance, 'cover_letter', None)
+    for sj in saved_jobs_filtered:
+        # DummySavedJob 用于兼容模板
+        class DummySavedJob:
+            def __init__(self, d):
+                self.status = d.get('status', 'not_applied')
+                self.notes = d.get('notes', '')
+                self.updated_at = d.get('updated_at')
+                self.job_listing = get_object_or_404(JobListing, id=d['original_job_id'])
+                self.pk = d.get('id')
+            def get_status_display(self):
+                mapping = dict(SavedJob.STATUS_CHOICES)
+                return mapping.get(self.status, self.status)
+        dummy_saved_job = DummySavedJob(sj)
+        form = SavedJobForm(initial={
+            'status': dummy_saved_job.status,
+            'notes': dummy_saved_job.notes,
+        })
+        # cover_letter 仍查本地
+        cover_letter = None
+        try:
+            cover_letter = CoverLetter.objects.get(saved_job__job_listing=dummy_saved_job.job_listing, saved_job__user_session_key=session_key)
+        except CoverLetter.DoesNotExist:
+            pass
         saved_jobs_with_forms_and_letters.append({
-            'saved_job': saved_job_instance,
+            'saved_job': dummy_saved_job,
             'form': form,
             'cover_letter': cover_letter
         })
@@ -591,42 +785,80 @@ def my_applications_page(request):
 def update_job_application_status(request, job_id):
     session_key = request.session.session_key
     if not session_key:
-        return JsonResponse({'success': False, 'message': 'Session not found. Please interact with the site first.'}, status=401)
-
-    try:
-        data = json.loads(request.body)
-        new_status = data.get('status')
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'message': 'Invalid JSON payload.'}, status=400)
-
-    if not new_status:
-        return JsonResponse({'success': False, 'message': 'Status not provided.'}, status=400)
-
-    # Validate if the new_status is a valid choice in SavedJob.STATUS_CHOICES
-    valid_statuses = [choice[0] for choice in SavedJob.STATUS_CHOICES]
-    if new_status not in valid_statuses:
-        return JsonResponse({'success': False, 'message': f'Invalid status value: {new_status}.'}, status=400)
-
-    try:
-        job_listing = get_object_or_404(JobListing, id=job_id)
-        
-        saved_job, created = SavedJob.objects.update_or_create(
-            job_listing=job_listing,
-            user_session_key=session_key,
-            defaults={'status': new_status}
-        )
-        
-        if created:
-            message = f"Status for job '{job_listing.job_title}' set to '{saved_job.get_status_display()}'."
+        return JsonResponse({'success': False, 'error': 'No session found.'}, status=400)
+    
+    # Supabase: 先查，有则更新，无则插入
+    supa_saved_job = get_supabase_saved_job(session_key, job_id)
+    new_status = request.POST.get('status')
+    if new_status in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
+        if supa_saved_job:
+            update_supabase_saved_job_status(session_key, job_id, new_status=new_status)
+            # 获取 display
+            mapping = dict(SavedJob.STATUS_CHOICES)
+            return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status)})
         else:
-            message = f"Status for job '{job_listing.job_title}' updated to '{saved_job.get_status_display()}'."
-            
-        return JsonResponse({'success': True, 'message': message, 'new_status': saved_job.get_status_display(), 'job_id': job_id})
+            # 没有则插入
+            job = get_object_or_404(JobListing, id=job_id)
+            data = {
+                "user_session_key": session_key,
+                "status": new_status,
+                "original_job_id": job.id,
+                "company_name": job.company_name,
+                "job_title": job.job_title,
+                "job_description": job.description,
+                "application_url": job.application_url,
+                "location": job.location,
+                "salary_range": job.salary_range,
+                "industry": job.industry,
+            }
+            create_supabase_saved_job(data)
+            mapping = dict(SavedJob.STATUS_CHOICES)
+            return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status)})
+    else:
+        return JsonResponse({'success': False, 'error': 'Invalid status value.'}, status=400)
 
-    except JobListing.DoesNotExist:
-        return JsonResponse({'success': False, 'message': 'Job listing not found.'}, status=404)
+
+# --- Work Experience Views ---
+
+def experience_list(request):
+    """Lists all work experiences for the current user session from Supabase."""
+    session_key = request.session.session_key
+    if not session_key:
+        return redirect('matcher:profile_page')
+
+    experiences = get_user_experiences()
+    n8n_chat_url = settings.N8N_CHAT_URL
+    full_n8n_url = f"{n8n_chat_url}?session_id={session_key}" if n8n_chat_url else ""
+    
+    context = {
+        'experiences': experiences,
+        'n8n_chat_url': full_n8n_url,
+    }
+    return render(request, 'matcher/experience_list.html', context)
+
+@require_POST
+def experience_delete(request, experience_id):
+    """Deletes a work experience from Supabase."""
+    try:
+        # Deletion no longer requires session_key for authorization.
+        delete_experience_from_supabase(experience_id)
+        messages.success(request, 'Work experience deleted successfully!')
     except Exception as e:
-        # Log the exception e for server-side review
-        print(f"Error updating job status: {e}") # Basic logging
-        return JsonResponse({'success': False, 'message': 'An unexpected error occurred while updating status.'}, status=500)
+        messages.error(request, f'Failed to delete experience: {e}')
+    
+    return redirect('matcher:experience_list')
+
+@csrf_exempt
+@require_POST
+def experience_completed_callback(request):
+    """
+    N8n calls this webhook when an experience has been successfully created.
+    This can be used to trigger frontend updates, like showing a notification.
+    For now, it just returns a success response.
+    """
+    # We could potentially use this to clear a cache or send a push notification
+    # to the user via websockets in a more advanced implementation.
+    data = json.loads(request.body)
+    print(f"Received callback from N8n for session_id: {data.get('session_id')}")
+    return JsonResponse({'success': True, 'message': 'Callback received.'})
 

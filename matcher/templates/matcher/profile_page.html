@@ -78,7 +78,7 @@
         <div class="col-md-12">
             <div class="placeholder-section">
                 <h4>CV/Resume</h4>
-                <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}Anya_CV.pdf (Placeholder){% endif %}</strong></p>
+                <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}No CV uploaded.{% endif %}</strong></p>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
             </div>
         </div>
@@ -94,12 +94,54 @@
         </div>
     </div>
 
+    <!-- Experience Pool Section -->
+    <div class="row mt-3">
+        <div class="col-md-12">
+            <div class="placeholder-section">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h4>My Experience Pool</h4>
+                        <p class="mb-0">You have <strong>{{ experience_count }}</strong> saved work experience{{ experience_count|pluralize }}.</p>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#experienceModal">
+                            <i class="fas fa-plus-circle me-2"></i>Build New Experience
+                        </button>
+                        {% if experience_count > 0 %}
+                        <a href="{% url 'matcher:experience_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-list me-2"></i>Manage Experiences
+                        </a>
+                        {% endif %}
+                    </div>
+                </div>
+
+                {% if experiences %}
+                <div class="row mt-3">
+                    {% for exp in experiences|slice:":3" %}
+                    <div class="col-md-4 mb-2">
+                        <div class="card shadow-sm">
+                            <div class="card-body p-3">
+                                <h6 class="card-title">{{ exp.original_input|truncatewords:6 }}</h6>
+                                <p>{{ exp.structured_story|truncatewords:50 }}</p>
+                                <small class="text-muted">
+                                    Added: {{ exp.created_at }}
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
     <!-- CV and Preferences Input Modals (Moved from direct form) -->
                 <!-- CV Modal -->
                 <div class="modal fade" id="cvModal" tabindex="-1" aria-labelledby="cvModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
-                            <form method="POST" action="{% url 'matcher:profile_page' %}" id="cvForm">
+                            <form method="POST" action="{% url 'matcher:profile_page' %}" id="cvForm" enctype="multipart/form-data">
                         {% csrf_token %}
                                 <input type="hidden" name="form_type" value="cv_form">
                                 <div class="modal-header">
@@ -108,7 +150,11 @@
                                 </div>
                                 <div class="modal-body">
                         <div class="form-group mb-3">
-                                        <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
+                                        <label for="cv_file" class="form-label"><strong>Upload CV (PDF only):</strong></label>
+                                        <input type="file" name="cv_file" id="cv_file" class="form-control" accept=".pdf">
+                                    </div>
+                        <div class="form-group mb-3">
+                                        <label for="user_cv_text_modal" class="form-label"><strong>Or Paste CV / Resume / Key Skills:</strong></label>
                                         <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
                                     </div>
                                     {# Keep preferences in its own modal, or decide if one modal is enough #}
@@ -117,7 +163,7 @@
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
+                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Save CV & Update Profile</button>
                                 </div>
                             </form>
                         </div>
@@ -156,7 +202,7 @@
         <div class="col-md-12">
             <div class="placeholder-section">
                 <h4>Newsletter</h4>
-                <p>You'll get an actionable email at 8:00am: <strong>{% if user_email_text %}{{ user_email_text }}{% else %}{{ username|lower|slice:":5" }}@example.com (Placeholder){% endif %}</strong></p>
+                <p>You'll get an actionable email at 8:00am: <strong>{% if user_email %}{{ user_email }}{% else %}No email set.{% endif %}</strong></p>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#emailModal">Edit Email</button>
             </div>
         </div>
@@ -176,14 +222,14 @@
                     <div class="modal-body">
             <div class="form-group mb-3">
                             <label for="user_email_text_modal" class="form-label"><strong>Your Email:</strong></label>
-                            <textarea name="user_email_text" id="user_email_text_modal" class="form-control" rows="1" placeholder="We'll send you an actionable email at 8:00am">{{ user_email_text }}</textarea>
+                            <input type="email" name="user_email_text" id="user_email_text_modal" class="form-control" placeholder="We'll send you an actionable email at 8:00am" value="{{ user_email }}">
                         </div>
                         <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
                         <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                        <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Update Email & Match Jobs</button>
+                        <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Update Email</button>
                     </div>
                 </form>
             </div>
@@ -191,4 +237,51 @@
     </div>
 
 </div>
+
+<!-- N8N Chat Modal (Shared) -->
+<div class="modal fade" id="experienceModal" tabindex="-1" aria-labelledby="experienceModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="experienceModalLabel"><i class="fas fa-robot me-2"></i>AI Experience Builder</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body p-0">
+        <iframe 
+            id="n8nChatFrame"
+            src="{{ n8n_chat_url }}"
+            width="100%" 
+            height="600px" 
+            frameborder="0"
+            style="border-radius: 0 0 .25rem .25rem;">
+        </iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// Listen for a message from the N8n iframe
+window.addEventListener('message', function(event) {
+    // IMPORTANT: Add a check for the event origin to ensure messages are from a trusted source
+    // For example: if (event.origin !== 'http://localhost:5678') return;
+
+    if (event.data && event.data.type === 'experience_completed') {
+        console.log('Received experience_completed message from N8n. Reloading page.');
+        
+        // Find the modal and hide it
+        var experienceModalElement = document.getElementById('experienceModal');
+        var experienceModal = bootstrap.Modal.getInstance(experienceModalElement);
+        if (experienceModal) {
+            experienceModal.hide();
+        }
+
+        // Reload the page to show the new experience
+        // A small delay can sometimes improve user experience
+        setTimeout(function() {
+            location.reload();
+        }, 300); // 300ms delay
+    }
+});
+</script>
 {% endblock content %} 

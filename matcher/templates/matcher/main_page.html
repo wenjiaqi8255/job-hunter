@@ -6,35 +6,7 @@
 
 {% block content %}
 <div class="jobbAI-main-container container-fluid p-0">
-    <!-- Top Navigation Bar (New) -->
-    <!-- <nav class="navbar navbar-expand-lg navbar-light bg-white border-bottom sticky-top jobbAI-top-nav">
-        <div class="container-fluid px-4">
-            <a class="navbar-brand" href="#">
-                {# Placeholder for logo - will add actual SVG or image later #}
-                <img src="{% static 'matcher/images/logo.svg' %}" alt="JobbAI Logo" style="height: 24px;"> {# TODO: Replace with actual logo asset #}
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#topNavbarNav" aria-controls="topNavbarNav" aria-expanded="false" aria-label="Toggle navigation">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="topNavbarNav">
-                <ul class="navbar-nav mx-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" aria-current="page" href="{% url 'matcher:main_page' %}">Matches</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Applications</a> {# TODO: Link to applications page #}
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="#">Profile</a> {# TODO: Link to profile page #}
-                    </li>
-                </ul>
-                <div class="d-flex align-items-center">
-                    {# Placeholder for User Profile Icon/Dropdown #}
-                    <i class="fas fa-user-circle fa-lg"></i>
-                </div>
-            </div>
-        </div>
-    </nav> -->
+    
 
     <div class="container-fluid jobbAI-content-wrapper">
         <div class="row g-0">
@@ -42,8 +14,7 @@
             <nav id="sidebarMenu" class="col-md-3 col-lg-4 d-md-block bg-white border-end jobbAI-sidebar">
                 <div class="position-sticky pt-3 sidebar-sticky">
                     <div class="px-3 mb-3">
-                <a href="{% url 'matcher:main_page' %}" 
-                           class="btn btn-primary w-100 {% if not current_match_session_id %}active{% endif %}">
+                        <a href="{% url 'matcher:main_page' %}" type="button" class="btn btn-primary w-100" >
                             <i class="fas fa-plus-circle me-2"></i>Start New Match
                         </a>
                     </div>
@@ -106,69 +77,89 @@
 
                 <!-- Header section for stats and CV/Preference update -->
             <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
-                    <h1 class="h2">
-                        {% if processed_job_matches %}
-                            {{ processed_job_matches|length }} Best Matches, {{ all_jobs_count }} Job Listings
-                        {% else %}
-                            {{ all_jobs_count }} Job Listings
+                    <div>
+                        <h1 class="h2">
+                            {% if processed_job_matches %}
+                                {{ processed_job_matches|length }} Best Matches, {{ all_jobs_count }} Job Listings
+                            {% else %}
+                                {{ all_jobs_count }} Job Listings
+                            {% endif %}
+                        </h1>
+                        {% if user_preferences_text %}
+                        <p class="text-muted mb-0 small">Based on preferences: {{ user_preferences_text|truncatewords:20 }}</p>
                         {% endif %}
-                    </h1>
-                    <div class="btn-toolbar mb-2 mb-md-0">
+                    </div>
+                    <!-- <div class="btn-toolbar mb-2 mb-md-0">
                         <div class="btn-group me-2">
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
                             <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
                         </div>
-                </div>
+                </div> -->
             </div>
 
                 <!-- CV and Preferences Input Modals (Moved from direct form) -->
-                <!-- CV Modal -->
-                <div class="modal fade" id="cvModal" tabindex="-1" aria-labelledby="cvModalLabel" aria-hidden="true">
+                <!-- Combined Match Modal -->
+                <div class="modal fade" id="matchModal" tabindex="-1" aria-labelledby="matchModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
-                            <form method="POST" action="{% url 'matcher:main_page' %}" id="cvForm">
-                        {% csrf_token %}
-                                <div class="modal-header">
-                                    <h5 class="modal-title" id="cvModalLabel">Update CV/Resume</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                </div>
-                                <div class="modal-body">
-                        <div class="form-group mb-3">
-                                        <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
-                                        <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
-                                    </div>
-                                    {# Keep preferences in its own modal, or decide if one modal is enough #}
-                                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
-                                </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Extract Profile & Match Jobs</button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Preferences Modal -->
-                <div class="modal fade" id="preferencesModal" tabindex="-1" aria-labelledby="preferencesModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                             <form method="POST" action="{% url 'matcher:main_page' %}" id="preferencesForm">
+                             <form method="POST" action="{% url 'matcher:main_page' %}" id="cvForm">
                                 {% csrf_token %}
                                 <div class="modal-header">
-                                    <h5 class="modal-title" id="preferencesModalLabel">Edit Preferences</h5>
+                                    <!-- <h5 class="modal-title" id="matchModalLabel">Start a New Match</h5> -->
+                                    <h5 class="modal-title" id="matchModalLabel">Review Your Profile & Start Match</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
                                 <div class="modal-body">
-                        <div class="form-group mb-3">
-                                        <label for="user_preferences_text_modal" class="form-label"><strong>Your Preferences:</strong></label>
-                                        <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
+                                    <div class="form-group mb-3">
+                                        <!-- <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
+                                        <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea> -->
+                                        <label class="form-label"><strong>Your Current CV:</strong></label>
+                                        {% if user_cv_text %}
+                                            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                                <small class="text-muted">{{ user_cv_text|linebreaksbr }}</small>
+                                            </div>
+                                            <div class="mt-2">
+                                                <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-edit me-1"></i> Edit CV in Profile
+                                                </a>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                No CV found. Please <a href="{% url 'matcher:profile_page' %}" class="alert-link">complete your profile</a> first.
+                                            </div>
+                                        {% endif %}
+                                        <!-- 隐藏字段，保持表单数据传递 -->
+                                        <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
                                     </div>
-                                    <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                                    <div class="form-group mb-3">
+                                        <!-- <label for="user_preferences_text_modal" class="form-label"><strong>Your Preferences:</strong></label>
+                                        <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea> -->
+                                        <label class="form-label"><strong>Your Preferences:</strong></label>
+                                        {% if user_preferences_text %}
+                                            <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                                <small class="text-muted">{{ user_preferences_text|linebreaksbr }}</small>
+                                            </div>
+                                            <div class="mt-2">
+                                                <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-edit me-1"></i> Edit Preferences in Profile
+                                                </a>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                No preferences set. <a href="{% url 'matcher:profile_page' %}" class="alert-link">Add preferences</a> for better matching.
+                                            </div>
+                                        {% endif %}
+                                        <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                                    </div>
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Update Preferences & Match Jobs</button>
+                                    <!-- <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Find My Matches</button> -->
+                                    <button type="submit" class="btn btn-primary" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
+                                        <i class="fas fa-search me-1"></i> Find Matches with Current Profile
+                                    </button>
                                 </div>
                             </form>
                         </div>
@@ -176,16 +167,16 @@
                 </div>
                 
                 <!-- Original Skills Input Form (Now potentially redundant or for initial input if no session) -->
-                {% if not current_match_session_id and not user_cv_text and not user_preferences_text %}
+                {% if not current_match_session_id  %}
                 <div class="card mt-4 mb-4 bg-light border-dashed">
-                    <!-- <div class="card-body text-center p-5">
+                    <div class="card-body text-center p-5">
                         <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
                         <h5 class="card-title">Get Started</h5>
                         <p class="text-muted">Upload your CV and set your preferences to find job matches.</p>
-                        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#cvModal">
+                        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#matchModal">
                             <i class="fas fa-upload me-2"></i> Upload CV & Preferences
                         </button>
-                </div> -->
+                </div>
             </div>
                 {% endif %}
 
@@ -330,15 +321,19 @@
                     {% endfor %}
                     </div>
             </div>
-            {% elif request.method == 'POST' and not processed_job_matches %}
+            {% elif not processed_job_matches and current_match_session_id %}
                  <div class="mt-5 text-center">
                     <i class="fas fa-search fa-3x text-muted mb-3"></i>
                     <h4>No Specific Matches Found</h4>
                     <p class="text-muted">
-                        We couldn't find specific matches for your current CV and preferences.
-                        Try updating them or browse all available jobs.
+                        {% if no_match_reason %}
+                            {{ no_match_reason }}
+                        {% else %}
+                            We couldn't find specific matches for your current CV and preferences.
+                            Try updating them or browse all available jobs.
+                        {% endif %}
                     </p>
-                     <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#cvModal">
+                     <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#matchModal">
                         <i class="fas fa-edit me-1"></i> Update CV/Preferences
                     </button>
                     {# Optional: Add button to show all jobs if not already visible #}
@@ -465,11 +460,13 @@ document.addEventListener('DOMContentLoaded', function () {
     const cvForm = document.getElementById('cvForm');
     if (cvForm) {
         // If you want to submit via AJAX to avoid full page reload:
-        // cvForm.addEventListener('submit', function(event) {
-        //     event.preventDefault();
-        //     // AJAX submission logic here
-        //     // On success, potentially close modal and refresh parts of the page
-        // });
+        cvForm.addEventListener('submit', function(event) {
+            console.log('Form submission event triggered for cvForm.');
+            // We are not using AJAX for now, allowing default form submission.
+            // event.preventDefault();
+            // AJAX submission logic here
+            // On success, potentially close modal and refresh parts of the page
+        });
     }
     const preferencesForm = document.getElementById('preferencesForm');
     if (preferencesForm) {
