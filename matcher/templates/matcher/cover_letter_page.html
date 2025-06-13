@@ -36,6 +36,12 @@
             {% if not generation_error %}
             <button class="btn btn-secondary" onclick="copyCoverLetter()"><i class="fas fa-copy"></i> Copy Full Text</button>
             {% endif %}
+            {% if has_existing_cover_letter and not generation_error %}
+            <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning ms-2"><i class="fas fa-sync-alt"></i> Regenerate</button>
+            </form>
+            {% endif %}
         </div>
     </div>
 </div>

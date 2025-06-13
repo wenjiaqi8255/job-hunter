@@ -430,8 +430,8 @@ def _parse_cover_letter_response(api_response_text, api_response_object):
 
 def simulate_generate_cover_letter(skills_text, job, error_message=None):
     """Simulates cover letter generation."""
-    print(f"INFO: Executing SIMULATED cover letter generation for job: {job.job_title}")
-    sim_text = f"(Simulated Cover Letter for {job.job_title} at {job.company_name}) Based on your skills in {skills_text[:50]}..., this job seems like a good fit because... (simulated reason)."
+    print(f"INFO: Executing SIMULATED cover letter generation for job: {job['job_title']}")
+    sim_text = f"(Simulated Cover Letter for {job['job_title']} at {job['company_name']}) Based on your skills in {skills_text[:50]}..., this job seems like a good fit because... (simulated reason)."
     if error_message:
         sim_text += f" (SimError: {error_message})"
     return sim_text

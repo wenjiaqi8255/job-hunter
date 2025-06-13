@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse # Import reverse for redirect
-from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter, UserProfile
+from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter, UserProfile, CustomResume
 from .forms import SavedJobForm
 from . import gemini_utils
 from django.db import transaction
@@ -546,7 +546,6 @@ def job_detail_page(request, job_id, match_session_id=None):
 
 def generate_cover_letter_page(request, job_id):
     job = get_object_or_404(JobListing, id=job_id)
-    # 获取当前session的UserProfile
     session_key = request.session.session_key
     if not session_key:
         request.session.create()
@@ -555,52 +554,76 @@ def generate_cover_letter_page(request, job_id):
     user_cv_text = user_profile.user_cv_text or ""
     cover_letter_content = ""
     generation_error = False
+    has_existing_cover_letter = False
 
-    if not user_cv_text:
-        cover_letter_content = "Please complete your CV in your profile before generating a cover letter."
-        generation_error = True
-    else:
-        cover_letter_content = gemini_utils.generate_cover_letter(user_cv_text, job)
-        if not cover_letter_content.startswith("(Error generating") and \
-           not cover_letter_content.startswith("Could not generate") and \
-           not cover_letter_content.startswith("Please enter your skills"):
-            if not request.session.session_key:
-                request.session.create()
-            user_session_key = request.session.session_key
+    # 获取或创建 SavedJob
+    saved_job, _ = SavedJob.objects.get_or_create(
+        job_listing=job,
+        user_session_key=session_key,
+        defaults={"status": "not_applied"}
+    )
 
-            # Supabase: 先查，有则更新，无则插入
-            supa_saved_job = get_supabase_saved_job(user_session_key, job.id)
-            new_note = f'Cover letter generated on {timezone.now().strftime("%Y-%m-%d %H:%M")}. '
-            if supa_saved_job:
-                # 更新状态和 notes
-                notes = (supa_saved_job.get('notes') or '') + f"\n{new_note}"
-                update_supabase_saved_job_status(user_session_key, job.id, new_status='applied', notes=notes)
-            else:
-                # 创建
-                data = {
-                    "user_session_key": user_session_key,
-                    "status": 'applied',
-                    "notes": new_note,
-                    "original_job_id": job.id,
-                    "company_name": job.company_name,
-                    "job_title": job.job_title,
-                    "job_description": job.description,
-                    "application_url": job.application_url,
-                    "location": job.location,
-                    "salary_range": job.salary_range,
-                    "industry": job.industry,
-                }
-                create_supabase_saved_job(data)
-        else:
-            generation_error = True
+    # 构造 job dict
+    job_dict = {
+        'id': job.id,
+        'company_name': job.company_name,
+        'job_title': job.job_title,
+        'description': job.description,
+        'application_url': job.application_url,
+        'location': job.location,
+        'industry': job.industry,
+        'flexibility': job.flexibility,
+        'salary_range': job.salary_range,
+        'level': job.level,
+    }
 
     from django.urls import reverse
+    if request.method == 'POST':
+        if not user_cv_text:
+            cover_letter_content = "Please complete your CV in your profile before generating a cover letter."
+            generation_error = True
+        else:
+            cover_letter_content = gemini_utils.generate_cover_letter(user_cv_text, job_dict)
+            if cover_letter_content.startswith("(Error generating") or \
+               cover_letter_content.startswith("Could not generate") or \
+               cover_letter_content.startswith("Please enter your skills"):
+                generation_error = True
+            else:
+                CoverLetter.objects.update_or_create(
+                    saved_job=saved_job,
+                    defaults={"content": cover_letter_content}
+                )
+                has_existing_cover_letter = True
+    else:
+        # GET: 优先查历史
+        try:
+            cover_letter_obj = CoverLetter.objects.get(saved_job=saved_job)
+            cover_letter_content = cover_letter_obj.content
+            has_existing_cover_letter = True
+        except CoverLetter.DoesNotExist:
+            if not user_cv_text:
+                cover_letter_content = "Please complete your CV in your profile before generating a cover letter."
+                generation_error = True
+            else:
+                cover_letter_content = gemini_utils.generate_cover_letter(user_cv_text, job_dict)
+                if cover_letter_content.startswith("(Error generating") or \
+                   cover_letter_content.startswith("Could not generate") or \
+                   cover_letter_content.startswith("Please enter your skills"):
+                    generation_error = True
+                else:
+                    CoverLetter.objects.create(
+                        saved_job=saved_job,
+                        content=cover_letter_content
+                    )
+                    has_existing_cover_letter = True
+
     context = {
         'job': job,
         'cover_letter_content': cover_letter_content,
         'skills_text': user_cv_text,
         'generation_error': generation_error,
         'profile_url': reverse('matcher:profile_page'),
+        'has_existing_cover_letter': has_existing_cover_letter,
     }
     return render(request, 'matcher/cover_letter_page.html', context)
 
@@ -614,6 +637,7 @@ def generate_custom_resume_page(request, job_id):
     user_cv_text = user_profile.user_cv_text or ""
     custom_resume_content = ""
     generation_error = False
+    has_existing_resume = False
 
     # Prepare job dict for AI (mimic fetch_todays_job_listings_from_supabase structure)
     job_dict = {
@@ -629,21 +653,53 @@ def generate_custom_resume_page(request, job_id):
         'level': job.level,
     }
 
-    if not user_cv_text:
-        custom_resume_content = "Please complete your CV in your profile before generating a custom resume."
-        generation_error = True
-    else:
-        custom_resume_content = gemini_utils.generate_custom_resume(user_cv_text, job_dict)
-        if not custom_resume_content or custom_resume_content.startswith("(Error generating") or custom_resume_content.startswith("Could not generate"):
-            generation_error = True
-
     from django.urls import reverse
+    # POST: 重新生成
+    if request.method == 'POST':
+        if not user_cv_text:
+            custom_resume_content = "Please complete your CV in your profile before generating a custom resume."
+            generation_error = True
+        else:
+            custom_resume_content = gemini_utils.generate_custom_resume(user_cv_text, job_dict)
+            if not custom_resume_content or custom_resume_content.startswith("(Error generating") or custom_resume_content.startswith("Could not generate"):
+                generation_error = True
+            else:
+                # 覆盖或新建
+                CustomResume.objects.update_or_create(
+                    user_session_key=session_key,
+                    job_listing=job,
+                    defaults={"content": custom_resume_content}
+                )
+                has_existing_resume = True
+    else:
+        # GET: 优先查历史
+        try:
+            custom_resume_obj = CustomResume.objects.get(user_session_key=session_key, job_listing=job)
+            custom_resume_content = custom_resume_obj.content
+            has_existing_resume = True
+        except CustomResume.DoesNotExist:
+            if not user_cv_text:
+                custom_resume_content = "Please complete your CV in your profile before generating a custom resume."
+                generation_error = True
+            else:
+                custom_resume_content = gemini_utils.generate_custom_resume(user_cv_text, job_dict)
+                if not custom_resume_content or custom_resume_content.startswith("(Error generating") or custom_resume_content.startswith("Could not generate"):
+                    generation_error = True
+                else:
+                    CustomResume.objects.create(
+                        user_session_key=session_key,
+                        job_listing=job,
+                        content=custom_resume_content
+                    )
+                    has_existing_resume = True
+
     context = {
         'job': job,
         'custom_resume_content': custom_resume_content,
         'skills_text': user_cv_text,
         'generation_error': generation_error,
         'profile_url': reverse('matcher:profile_page'),
+        'has_existing_resume': has_existing_resume,
     }
     return render(request, 'matcher/custom_resume_page.html', context)
 

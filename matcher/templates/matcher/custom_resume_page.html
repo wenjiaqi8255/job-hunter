@@ -37,6 +37,12 @@
             <button class="btn btn-secondary" onclick="copyCustomResume()"><i class="fas fa-copy"></i> Copy Full Text</button>
             <button class="btn btn-primary ms-2" onclick="downloadCustomResumePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
             {% endif %}
+            {% if has_existing_resume and not generation_error %}
+            <form method="post" style="display:inline;">
+                {% csrf_token %}
+                <button type="submit" class="btn btn-warning ms-2"><i class="fas fa-sync-alt"></i> Regenerate</button>
+            </form>
+            {% endif %}
         </div>
     </div>
 </div>

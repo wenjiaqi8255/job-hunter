@@ -125,3 +125,17 @@ class Experience(models.Model):
         # create, modify, or delete the database table for this model.
         # This is ideal when the table is managed by an external service like Supabase.
         managed = False
+
+class CustomResume(models.Model):
+    user_session_key = models.CharField(max_length=40, db_index=True)
+    job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name='custom_resumes')
+    content = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        unique_together = ('user_session_key', 'job_listing')
+        ordering = ['-updated_at']
+
+    def __str__(self):
+        return f"Custom Resume for {self.job_listing.job_title} (Session: {self.user_session_key})"
