@@ -1,7 +1,154 @@
-Django~=5.0.4
-google-generativeai~=0.5.0 # Or the latest version available
-supabase>=2.0,<3.0
-python-dotenv
-PyMuPDF~=1.24.1
-django-cors-headers~=4.3.1
-reportlab~=4.0.0 
+# ------------------------------
+# Django and Core
+# ------------------------------
+Django==4.2.21
+asgiref==3.8.1
+sqlparse==0.5.3
+django-cors-headers==4.7.0
+python-dotenv==1.1.0
+
+# ------------------------------
+# Async and Networking
+# ------------------------------
+aiohttp==3.12.4
+aiohappyeyeballs==2.6.1
+aiosignal==1.3.2
+async-timeout==5.0.1
+httpx==0.28.1
+httpcore==1.0.9
+h11==0.16.0
+websockets==14.2
+multidict==6.4.4
+yarl==1.20.0
+sniffio==1.3.1
+h2==4.2.0
+hpack==4.1.0
+hyperframe==6.1.0
+
+# ------------------------------
+# Django and Core
+# ------------------------------
+Django==4.2.21
+asgiref==3.8.1
+sqlparse==0.5.3
+django-cors-headers==4.7.0
+python-dotenv==1.1.0
+
+# ------------------------------
+# Async and Networking
+# ------------------------------
+aiohttp==3.12.4
+aiohappyeyeballs==2.6.1
+aiosignal==1.3.2
+async-timeout==5.0.1
+httpx==0.28.1
+httpcore==1.0.9
+h11==0.16.0
+websockets==14.2
+multidict==6.4.4
+yarl==1.20.0
+sniffio==1.3.1
+h2==4.2.0
+hpack==4.1.0
+hyperframe==6.1.0
+
+# ------------------------------
+# Supabase and Auth
+# ------------------------------
+supabase==2.15.2
+storage3==0.11.3
+realtime==2.4.3
+gotrue==2.12.0
+postgrest==1.0.2
+PyJWT==2.10.1
+
+# ------------------------------
+# AI and NLP
+# ------------------------------
+spacy==3.6.1
+en-core-web-sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.6.0/en_core_web_sm-3.6.0-py3-none-any.whl#sha256=83276fc78a70045627144786b52e1f2728ad5e29e5e43916ec37ea9c26a11212
+spacy-legacy==3.0.12
+spacy-loggers==1.0.5
+blis==0.7.11
+cymem==2.0.11
+murmurhash==1.0.13
+preshed==3.0.10
+thinc==8.1.12
+wasabi==1.1.3
+srsly==2.5.1
+catalogue==2.0.10
+confection==0.1.5
+langcodes==3.5.0
+language_data==1.3.0
+pathy==0.11.0
+smart-open==6.4.0
+marisa-trie==1.2.1
+
+# ------------------------------
+# Google AI and APIs
+# ------------------------------
+google-generativeai==0.8.5
+google-ai-generativelanguage==0.6.15
+google-api-python-client==2.170.0
+google-api-core==2.25.0rc1
+google-auth==2.40.2
+google-auth-httplib2==0.2.0
+httplib2==0.22.0
+googleapis-common-protos==1.70.0
+proto-plus==1.26.1
+protobuf==5.29.4
+rsa==4.9.1
+pyasn1==0.6.1
+pyasn1_modules==0.4.2
+
+# ------------------------------
+# PDF and Document Parsing
+# ------------------------------
+PyMuPDF==1.26.1
+pdfminer.six==20250506
+reportlab==4.4.1
+
+# ------------------------------
+# Testing and Dev Tools
+# ------------------------------
+pytest==8.3.5
+pytest-mock==3.14.1
+iniconfig==2.1.0
+tomli==2.2.1
+
+# ------------------------------
+# Pydantic and Typing
+# ------------------------------
+pydantic==2.11.5
+pydantic_core==2.33.2
+annotated-types==0.7.0
+typing-inspection==0.4.1
+typing_extensions==4.13.2
+StrEnum==0.4.15
+
+# ------------------------------
+# Utilities and Misc
+# ------------------------------
+numpy==1.23.5
+pillow==11.2.1
+tqdm==4.67.1
+click==8.1.8
+deprecation==2.1.0
+charset-normalizer==3.4.2
+chardet==5.2.0
+certifi==2025.4.26
+idna==3.10
+six==1.17.0
+cachetools==5.5.2
+setuptools
+packaging==25.0
+pyparsing==3.2.3
+MarkupSafe==3.0.2
+Jinja2==3.1.6
+cryptography==45.0.3
+cffi==1.17.1
+pycparser==2.22
+propcache==0.3.1
+language_data==1.3.0
+pathlib_abc==0.1.1
+exceptiongroup==1.3.0
