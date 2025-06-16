@@ -137,9 +137,9 @@ def main_page(request):
     current_match_session_id_str = request.GET.get('session_id')
     processed_job_matches = []
     selected_session_object = None
-    no_match_reason = None  # 新增变量
+    no_match_reason = None  # 新增变量 (new variable)
 
-    # 一次性查出所有 Supabase 申请记录，构建 {job_id: status} 字典
+    # 一次性查出所有 Supabase 申请记录，构建 {job_id: status} 字典 (Find out all Supabase application records at once and build a {job_id:status} dictionary)
     supa_saved_jobs = list_supabase_saved_jobs(session_key)
     supa_status_map = {sj['original_job_id']: sj['status'] for sj in supa_saved_jobs}
 
@@ -148,7 +148,7 @@ def main_page(request):
         # The form is submitted from the modal on the main page.
         # We update the profile with this data first, then run the match.
         
-        # 如果profile为空，重定向到profile页面
+        # 如果profile为空，重定向到profile页面 (If the profile is empty, redirect to the profile page)
         if not user_profile.user_cv_text:
             messages.info(request, "Please complete your profile before finding matches.")
             return redirect('matcher:profile_page')
@@ -175,7 +175,7 @@ def main_page(request):
         
         if not job_listings_for_api:
             no_match_reason = "No new job listings found for today. Matching cannot proceed with current day's data."
-            # 继续后续逻辑，match_jobs会处理空列表
+            # 继续后续逻辑，match_jobs会处理空列表 (# Continue the follow-up logic, match_jobs will process the empty list)
         # The sampling logic might not be necessary if Supabase query is efficient
         # and if the number of daily jobs isn't excessively large.
         # For now, I'm removing the random sampling as we are already filtering by day.
@@ -343,7 +343,9 @@ def main_page(request):
         'no_match_reason': no_match_reason,  # 传递到模板
     }
 
-    print(f"--- Final context for render. CV: '{context.get('user_cv_text', '')[:70]}' ---")
+    user_cv_preview = context.get('user_cv_text') or ''
+    print(f"--- Final context for render. CV: '{user_cv_preview[:70]}' ---")
+    #print(f"--- Final context for render. CV: '{context.get('user_cv_text', '')[:70]}' ---")
     return render(request, 'matcher/main_page.html', context)
 
 def profile_page(request):
