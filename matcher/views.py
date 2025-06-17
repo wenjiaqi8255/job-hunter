@@ -343,7 +343,9 @@ def main_page(request):
         'no_match_reason': no_match_reason,  # 传递到模板
     }
 
-    print(f"--- Final context for render. CV: '{context.get('user_cv_text', '')[:70]}' ---")
+    #print(f"--- Final context for render. CV: '{context.get('user_cv_text', '')[:70]}' ---")
+    user_cv_preview = context.get('user_cv_text') or ''
+    print(f"--- Final context for render. CV: '{user_cv_preview[:70]}' ---")
     return render(request, 'matcher/main_page.html', context)
 
 def profile_page(request):
