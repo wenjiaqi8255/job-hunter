@@ -81,6 +81,21 @@
                 <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}No CV uploaded.{% endif %}</strong></p>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
             </div>
+            {% if user_profile.cv_file %}
+                <div class="placeholder-section">
+                    <h4>CV Preview</h4>
+                    <div style="border: 1px solid #ccc; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);">
+                        <iframe
+                                src="{{ user_profile.cv_file.url }}"
+                                width="100%"
+                                height="700px"
+                                style="border: none;">
+                            <p>Your browser does not support this preview. <a href="{{ user_profile.cv_file.url }}">Download CV</a></p>
+                        </iframe>
+                    </div>
+                </div>
+            {% endif %}
+
         </div>
     </div>
 
@@ -148,6 +163,21 @@
                                     <h5 class="modal-title" id="cvModalLabel">Update CV/Resume</h5>
                                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                                 </div>
+                                {% if user_profile.cv_file %}
+                                    <div class="form-group mb-3">
+                                        <label class="form-label"><strong>CV Preview<strong></label>
+                                        <div class="cv-preview-container mx-auto shadow-sm rounded" style="max-width: 600px; border: 1px solid #ddd; overflow: hidden;">
+                                            <iframe
+                                                    src="{{ user_profile.cv_file.url }}"
+                                                    width="100%"
+                                                    height="300px"
+                                                    style="border: none; display: block;">
+                                            </iframe>
+                                            {% else %}
+                                            <p>No CV uploaded yet</p>
+                                        </div>
+                                    </div>
+                                {% endif %}
                                 <div class="modal-body">
                         <div class="form-group mb-3">
                                         <label for="cv_file" class="form-label"><strong>Upload CV (PDF only):</strong></label>

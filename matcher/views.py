@@ -415,6 +415,7 @@ def profile_page(request):
         'experience_count': experience_count,
         'tips_to_improve_count': experience_count,
         'n8n_chat_url': full_n8n_url,
+        'user_profile': profile, #iframe preview
     }
     return render(request, 'matcher/profile_page.html', context)
 
