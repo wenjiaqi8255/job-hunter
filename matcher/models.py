@@ -26,6 +26,7 @@ class JobListing(models.Model):
     company_name = models.CharField(max_length=200)
     job_title = models.CharField(max_length=200)
     description = models.TextField(null=True, blank=True)
+    translated_description = models.TextField(null=True, blank=True)
     application_url = models.URLField(null=True, blank=True)
     location = models.CharField(max_length=200, null=True, blank=True)
     industry = models.CharField(max_length=100) 
