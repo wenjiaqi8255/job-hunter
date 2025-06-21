@@ -108,6 +108,7 @@ def fetch_todays_job_listings_from_supabase():
                     'company_name': job_data.get('company_name'),
                     'job_title': job_data.get('job_title'),
                     'description': job_data.get('description'),
+                    'translated_description': job_data.get('translated_description'),
                     'application_url': job_data.get('application_url'),
                     'location': job_data.get('location'),
                     'industry': job_data.get('industry'),
@@ -249,6 +250,7 @@ def main_page(request):
                         'company_name': job_data_from_api.get('company_name', 'N/A'),
                         'job_title': job_data_from_api.get('job_title', 'N/A'),
                         'description': job_data_from_api.get('description'),
+                        'translated_description': job_data_from_api.get('translated_description'),
                         'application_url': job_data_from_api.get('application_url'),
                         'location': job_data_from_api.get('location'),
                         'industry': job_data_from_api.get('industry', 'Unknown'), # Provide default if mandatory
@@ -919,4 +921,36 @@ def experience_completed_callback(request):
     data = json.loads(request.body)
     print(f"Received callback from N8n for session_id: {data.get('session_id')}")
     return JsonResponse({'success': True, 'message': 'Callback received.'})
+
+from django.utils.translation import activate
+from django.urls import translate_url
+
+def set_language(request):
+    if request.method == 'POST':
+        language = request.POST.get('language')
+        if language:
+            request.session[settings.LANGUAGE_SESSION_KEY] = language
+            # The referrer is the URL of the page the user was on before clicking the language switch link
+            referer = request.META.get('HTTP_REFERER')
+            if referer:
+                # We need to translate the URL path to the new language
+                # This is a bit more complex. For now, let's redirect to home.
+                # A more robust solution might involve parsing the referer and rebuilding the URL
+                # with the new language code.
+                # Let's try a simpler redirect to the main page with language prefix.
+                # A better approach
+                from django.utils.translation import get_language
+                current_language = get_language()
+                try:
+                    # This function helps convert a URL from one language to another
+                    url = translate_url(referer, language)
+                    return redirect(url)
+                except Exception:
+                     # Fallback to home page if translation fails
+                    return redirect(reverse('matcher:main_page'))
+            else:
+                 # Fallback if no referer
+                return redirect(reverse('matcher:main_page'))
+    # If not a POST request, just redirect to the main page
+    return redirect(reverse('matcher:main_page'))
 

@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 from pathlib import Path
 import os
 import dotenv
+from django.utils.translation import gettext_lazy as _
 dotenv.load_dotenv()
 print("ENV VAR:", os.environ.get('USE_SIMULATION_ENV'))
 
@@ -62,6 +63,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "django.middleware.locale.LocaleMiddleware",
 ]
 
 ROOT_URLCONF = "job_hunting_project.urls"
@@ -118,6 +120,15 @@ AUTH_PASSWORD_VALIDATORS = [
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
 
 LANGUAGE_CODE = "en-us"
+
+LANGUAGES = [
+    ('en', _('English')),
+    ('de', _('German')),
+]
+
+LOCALE_PATHS = [
+    BASE_DIR / 'locale/',
+]
 
 TIME_ZONE = "UTC"
 
