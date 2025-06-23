@@ -59,7 +59,7 @@
                 {% get_current_language as CURRENT_LANGUAGE_CODE %}
                 <form action="{% url 'set_language' %}" method="post" class="d-flex ms-lg-2">
                     {% csrf_token %}
-                    <input name="next" type="hidden" value="{{ request.get_full_path|slice:'3:' }}">
+                    <input name="next" type="hidden" value="{{ request.get_full_path }}">
                     <select name="language" class="form-select form-select-sm" onchange="this.form.submit()">
                         {% get_available_languages as LANGUAGES %}
                         {% for lang_code, lang_name in LANGUAGES %}

@@ -187,7 +187,7 @@ def main_page(request):
         #     job_listings_for_api = all_job_listings
         
         # If job_listings_for_api is empty, gemini_utils.match_jobs should ideally handle this gracefully.
-        max_jobs_for_testing = 10 # Define the maximum number of jobs for testing #find_max_jobs_to_process
+        max_jobs_for_testing = 36 # Define the maximum number of jobs for testing #find_max_jobs_to_process
         job_matches_from_api = gemini_utils.match_jobs(
             structured_profile_dict, 
             job_listings_for_api,
@@ -921,36 +921,4 @@ def experience_completed_callback(request):
     data = json.loads(request.body)
     print(f"Received callback from N8n for session_id: {data.get('session_id')}")
     return JsonResponse({'success': True, 'message': 'Callback received.'})
-
-from django.utils.translation import activate
-from django.urls import translate_url
-
-def set_language(request):
-    if request.method == 'POST':
-        language = request.POST.get('language')
-        if language:
-            request.session[settings.LANGUAGE_SESSION_KEY] = language
-            # The referrer is the URL of the page the user was on before clicking the language switch link
-            referer = request.META.get('HTTP_REFERER')
-            if referer:
-                # We need to translate the URL path to the new language
-                # This is a bit more complex. For now, let's redirect to home.
-                # A more robust solution might involve parsing the referer and rebuilding the URL
-                # with the new language code.
-                # Let's try a simpler redirect to the main page with language prefix.
-                # A better approach
-                from django.utils.translation import get_language
-                current_language = get_language()
-                try:
-                    # This function helps convert a URL from one language to another
-                    url = translate_url(referer, language)
-                    return redirect(url)
-                except Exception:
-                     # Fallback to home page if translation fails
-                    return redirect(reverse('matcher:main_page'))
-            else:
-                 # Fallback if no referer
-                return redirect(reverse('matcher:main_page'))
-    # If not a POST request, just redirect to the main page
-    return redirect(reverse('matcher:main_page'))
 

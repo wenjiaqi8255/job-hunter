@@ -20,10 +20,9 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls.i18n import i18n_patterns
-from matcher import views as matcher_views
 
 urlpatterns = [
-    path('set_language/', matcher_views.set_language, name='set_language'),
+    path('i18n/', include('django.conf.urls.i18n')),
     path("admin/", admin.site.urls),
 ]
 
