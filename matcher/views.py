@@ -849,13 +849,19 @@ def update_job_application_status(request, job_id):
     
     # Supabase: 先查，有则更新，无则插入
     supa_saved_job = get_supabase_saved_job(session_key, job_id)
-    new_status = request.POST.get('status')
-    if new_status in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
+    
+    try:
+        data = json.loads(request.body)
+        new_status = data.get('status')
+    except json.JSONDecodeError:
+        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+
+    if new_status and new_status in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
         if supa_saved_job:
             update_supabase_saved_job_status(session_key, job_id, new_status=new_status)
             # 获取 display
             mapping = dict(SavedJob.STATUS_CHOICES)
-            return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status)})
+            return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status), 'new_status': new_status})
         else:
             # 没有则插入
             job = get_object_or_404(JobListing, id=job_id)
@@ -873,7 +879,7 @@ def update_job_application_status(request, job_id):
             }
             create_supabase_saved_job(data)
             mapping = dict(SavedJob.STATUS_CHOICES)
-            return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status)})
+            return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status), 'new_status': new_status})
     else:
         return JsonResponse({'success': False, 'error': 'Invalid status value.'}, status=400)
 
