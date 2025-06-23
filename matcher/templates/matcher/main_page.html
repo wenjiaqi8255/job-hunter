@@ -97,87 +97,65 @@
                 </div> -->
             </div>
 
-                <!-- CV and Preferences Input Modals (Moved from direct form) -->
-                <!-- Combined Match Modal -->
-                <div class="modal fade" id="matchModal" tabindex="-1" aria-labelledby="matchModalLabel" aria-hidden="true">
-                    <div class="modal-dialog modal-lg">
-                        <div class="modal-content">
-                             <form method="POST" action="{% url 'matcher:main_page' %}" id="cvForm">
-                                {% csrf_token %}
-                                <div class="modal-header">
-                                    <!-- <h5 class="modal-title" id="matchModalLabel">Start a New Match</h5> -->
-                                    <h5 class="modal-title" id="matchModalLabel">Review Your Profile & Start Match</h5>
-                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <!-- CV and Preferences Input Modals have been removed and integrated directly into the page flow below -->
+                
+                <!-- Profile Preview and Start Match Action -->
+                {% if not current_match_session_id  %}
+                <div class="card mt-4 mb-4">
+                    <div class="card-header">
+                        <h5 class="mb-0">Review Your Profile & Start Match</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="{% url 'matcher:main_page' %}" id="startMatchForm">
+                            {% csrf_token %}
+                            <div class="row">
+                                <div class="col-lg-6 mb-3 mb-lg-0">
+                                    <label class="form-label"><strong>Your Current CV:</strong></label>
+                                    {% if user_cv_text %}
+                                        <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                            <small class="text-muted">{{ user_cv_text|truncatewords:50|linebreaksbr }}</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-edit me-1"></i> Edit CV in Profile
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-warning">
+                                            <i class="fas fa-exclamation-triangle me-2"></i>
+                                            No CV found. Please <a href="{% url 'matcher:profile_page' %}" class="alert-link">complete your profile</a> first.
+                                        </div>
+                                    {% endif %}
+                                    <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
                                 </div>
-                                <div class="modal-body">
-                                    <div class="form-group mb-3">
-                                        <!-- <label for="user_cv_text_modal" class="form-label"><strong>CV / Resume / Key Skills:</strong></label>
-                                        <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea> -->
-                                        <label class="form-label"><strong>Your Current CV:</strong></label>
-                                        {% if user_cv_text %}
-                                            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
-                                                <small class="text-muted">{{ user_cv_text|linebreaksbr }}</small>
-                                            </div>
-                                            <div class="mt-2">
-                                                <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
-                                                    <i class="fas fa-edit me-1"></i> Edit CV in Profile
-                                                </a>
-                                            </div>
-                                        {% else %}
-                                            <div class="alert alert-warning">
-                                                <i class="fas fa-exclamation-triangle me-2"></i>
-                                                No CV found. Please <a href="{% url 'matcher:profile_page' %}" class="alert-link">complete your profile</a> first.
-                                            </div>
-                                        {% endif %}
-                                        <!-- 隐藏字段，保持表单数据传递 -->
-                                        <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
-                                    </div>
-                                    <div class="form-group mb-3">
-                                        <!-- <label for="user_preferences_text_modal" class="form-label"><strong>Your Preferences:</strong></label>
-                                        <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea> -->
-                                        <label class="form-label"><strong>Your Preferences:</strong></label>
-                                        {% if user_preferences_text %}
-                                            <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
-                                                <small class="text-muted">{{ user_preferences_text|linebreaksbr }}</small>
-                                            </div>
-                                            <div class="mt-2">
-                                                <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
-                                                    <i class="fas fa-edit me-1"></i> Edit Preferences in Profile
-                                                </a>
-                                            </div>
-                                        {% else %}
-                                            <div class="alert alert-info">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                No preferences set. <a href="{% url 'matcher:profile_page' %}" class="alert-link">Add preferences</a> for better matching.
-                                            </div>
-                                        {% endif %}
-                                        <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
-                                    </div>
+                                <div class="col-lg-6">
+                                    <label class="form-label"><strong>Your Preferences:</strong></label>
+                                    {% if user_preferences_text %}
+                                        <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                            <small class="text-muted">{{ user_preferences_text|linebreaksbr }}</small>
+                                        </div>
+                                        <div class="mt-2">
+                                            <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
+                                                <i class="fas fa-edit me-1"></i> Edit Preferences in Profile
+                                            </a>
+                                        </div>
+                                    {% else %}
+                                        <div class="alert alert-info">
+                                            <i class="fas fa-info-circle me-2"></i>
+                                            No preferences set. <a href="{% url 'matcher:profile_page' %}" class="alert-link">Add preferences</a> for better matching.
+                                        </div>
+                                    {% endif %}
+                                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
                                 </div>
-                                <div class="modal-footer">
-                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
-                                    <!-- <button type="submit" class="btn btn-primary"><i class="fas fa-cogs"></i> Find My Matches</button> -->
-                                    <button type="submit" class="btn btn-primary" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
-                                        <i class="fas fa-search me-1"></i> Find Matches with Current Profile
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="card-footer text-end">
+                        <button type="submit" form="startMatchForm" class="btn btn-primary btn-lg" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
+                            <i class="fas fa-search me-1"></i> Find Matches with Current Profile
+                        </button>
                     </div>
                 </div>
-                
-                <!-- Original Skills Input Form (Now potentially redundant or for initial input if no session) -->
-                {% if not current_match_session_id  %}
-                <div class="card mt-4 mb-4 bg-light border-dashed">
-                    <div class="card-body text-center p-5">
-                        <i class="fas fa-file-alt fa-3x text-primary mb-3"></i>
-                        <h5 class="card-title">Get Started</h5>
-                        <p class="text-muted">Upload your CV and set your preferences to find job matches.</p>
-                        <button type="button" class="btn btn-primary btn-lg" data-bs-toggle="modal" data-bs-target="#matchModal">
-                            <i class="fas fa-upload me-2"></i> Upload CV & Preferences
-                        </button>
-                </div>
-            </div>
                 {% endif %}
 
 
@@ -434,7 +412,7 @@
       </div>
       <div class="modal-footer">
         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Not Yet / Cancel</button>
-        <button type="button" class="btn btn-success" id="confirmAppliedButton">Yes, I Applied</button>
+        <button type="button" class="btn btn-success" id="confirmAppliedButton" data-url-template="{% url 'matcher:update_job_application_status' job_id='0' %}">Yes, I Applied</button>
       </div>
     </div>
   </div>
@@ -493,6 +471,7 @@ document.addEventListener('DOMContentLoaded', function () {
             const jobTitle = this.getAttribute('data-job-title');
             const jobId = this.getAttribute('data-job-id');
             const listType = this.getAttribute('data-list-type');
+            const urlTemplate = this.getAttribute('data-url-template');
             const applicationUrl = this.href;
 
             window.open(applicationUrl, '_blank');
@@ -534,9 +513,11 @@ document.addEventListener('DOMContentLoaded', function () {
         confirmAppliedButton.addEventListener('click', function () {
             const jobId = this.dataset.jobId;
             const listType = this.dataset.listType;
+            const urlTemplate = this.dataset.urlTemplate;
 
-            if (jobId && listType) {
-                fetch(`/job/${jobId}/update_status/`, {
+            if (jobId && listType && urlTemplate) {
+                const url = urlTemplate.replace('0', jobId);
+                fetch(url, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
