@@ -140,3 +140,20 @@ class CustomResume(models.Model):
 
     def __str__(self):
         return f"Custom Resume for {self.job_listing.job_title} (Session: {self.user_session_key})"
+
+class JobAnomalyAnalysis(models.Model):
+    job_listing = models.OneToOneField(
+        JobListing,
+        on_delete=models.DO_NOTHING,
+        primary_key=True,
+        db_column='job_id',
+        related_name='anomaly_analysis'
+    )
+    analysis_data = models.JSONField()
+
+    class Meta:
+        managed = False
+        db_table = 'job_anomaly_analysis'
+
+    def __str__(self):
+        return f"Anomaly Analysis for {self.job_listing.job_title}"

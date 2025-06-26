@@ -145,6 +145,21 @@
             <p class="small">{{ job.tips_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
+
+          {% if job_anomalies %}
+          <div class="mt-4">
+            <h5 class="h6 mb-2"><i class="fas fa-shield-alt me-2 text-primary"></i> Anomaly Detection</h5>
+            <ul class="list-group">
+              {% for anomaly in job_anomalies %}
+                <li class="list-group-item">
+                  <span class="badge bg-warning text-dark me-2">{{ anomaly.type }}</span>
+                  {{ anomaly.chunk }}
+                </li>
+              {% endfor %}
+            </ul>
+          </div>
+          {% endif %}
+
         </div>
         <div class="card-footer bg-light text-muted small py-2 px-4">
             Source: {{ job.source|default:"N/A" }} | Posted: {{ job.created_at|date:"Y-m-d H:i" }}

@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.urls import reverse # Import reverse for redirect
-from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter, UserProfile, CustomResume
+from .models import JobListing, MatchSession, MatchedJob, SavedJob, CoverLetter, UserProfile, CustomResume, JobAnomalyAnalysis
 from .forms import SavedJobForm
 from . import gemini_utils
 from django.db import transaction
@@ -75,6 +75,42 @@ def parse_and_prepare_insights_for_template(insights_str):
         return []
 
     return list(itertools.zip_longest(pros, cons, fillvalue=None))
+
+
+# Helper to parse anomaly analysis data
+def parse_anomaly_analysis(analysis_data):
+    if not analysis_data or 'semantic_anomalies' not in analysis_data:
+        return []
+    
+    anomalies = analysis_data.get('semantic_anomalies', [])
+    if not isinstance(anomalies, list):
+        return []
+        
+    return anomalies
+
+
+# Helper to fetch job anomaly analysis from Supabase
+def fetch_anomaly_analysis_for_jobs_from_supabase(job_ids: list):
+    supabase = get_supabase_client()
+    if not supabase or not job_ids:
+        return {}
+    
+    try:
+        # Assuming 'job_anomaly_analysis' table and 'job_listing_id', 'analysis_data' columns
+        response = (supabase.table('job_anomaly_analysis')
+                           .select('job_listing_id, analysis_data')
+                           .in_('job_listing_id', job_ids)
+                           .execute())
+        
+        if response.data:
+            # Create a map of job_id -> analysis_data
+            return {item['job_listing_id']: item.get('analysis_data') for item in response.data}
+        else:
+            return {}
+    except Exception as e:
+        print(f"Error fetching job anomaly analysis from Supabase: {e}")
+        return {}
+
 
 # Helper to fetch today's jobs from Supabase
 def fetch_todays_job_listings_from_supabase():
@@ -187,7 +223,7 @@ def main_page(request):
         #     job_listings_for_api = all_job_listings
         
         # If job_listings_for_api is empty, gemini_utils.match_jobs should ideally handle this gracefully.
-        max_jobs_for_testing = 36 # Define the maximum number of jobs for testing #find_max_jobs_to_process
+        max_jobs_for_testing = 10 # Define the maximum number of jobs for testing #find_max_jobs_to_process
         job_matches_from_api = gemini_utils.match_jobs(
             structured_profile_dict, 
             job_listings_for_api,
@@ -240,6 +276,15 @@ def main_page(request):
                 if not job_data_from_api or 'id' not in job_data_from_api:
                     print(f"Skipping match item due to missing job data or ID: {match_item}")
                     continue
+
+                # Store anomaly analysis if present in simulated data
+                if 'anomaly_analysis' in job_data_from_api:
+                    print(f"DEBUG: Found anomaly_analysis in job data for job {job_data_from_api['id']}")
+                    # In simulation mode, we store this temporarily (could be in session or cache)
+                    # For now, we'll add it to a global dict for this request
+                    if not hasattr(request, '_temp_anomaly_data'):
+                        request._temp_anomaly_data = {}
+                    request._temp_anomaly_data[job_data_from_api['id']] = job_data_from_api['anomaly_analysis']
 
                 # Get or create the JobListing instance in the local Django DB
                 # This ensures that MatchedJob.job_listing can point to a valid local record.
@@ -295,17 +340,35 @@ def main_page(request):
             user_profile.save()
             print(f"--- [GET] UserProfile updated from MatchSession. New CV: '{user_profile.user_cv_text[:70]}' ---")
             matched_jobs_for_session = current_match_session.matched_jobs.select_related('job_listing').order_by('-score')
+
+            # Fetch anomaly data from Supabase for all matched jobs at once
+            job_ids_for_anomaly_check = [mj.job_listing.id for mj in matched_jobs_for_session]
+            anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(job_ids_for_anomaly_check)
+            
+            # Check if we have temporary anomaly data from simulation mode
+            temp_anomaly_data = getattr(request, '_temp_anomaly_data', {})
+            
             for mj in matched_jobs_for_session:
                 parsed_insights_for_table = parse_and_prepare_insights_for_template(mj.insights)
                 # 用 Supabase 状态
                 supa_status = supa_status_map.get(mj.job_listing.id)
+                
+                # Parse anomaly data from Supabase data or temp simulation data
+                job_anomalies = []
+                analysis_data = anomaly_data_map.get(mj.job_listing.id) or temp_anomaly_data.get(mj.job_listing.id)
+                print(f"DEBUG: Job ID {mj.job_listing.id}, analysis_data: {analysis_data}")
+                if analysis_data:
+                    job_anomalies = parse_anomaly_analysis(analysis_data)
+                    print(f"DEBUG: Parsed anomalies for job {mj.job_listing.id}: {job_anomalies}")
+
                 processed_job_matches.append({
                     'job': mj.job_listing,
                     'score': mj.score, 
                     'reason': mj.reason, 
                     'parsed_insights_list': parsed_insights_for_table, # New field for structured insights
                     'tips': mj.tips,       # Now directly accessing from model
-                    'saved_status': supa_status or None
+                    'saved_status': supa_status or None,
+                    'anomalies': job_anomalies
                 })
             if not processed_job_matches:
                 no_match_reason = request.session.pop('no_match_reason', None)
@@ -535,6 +598,15 @@ def job_detail_page(request, job_id, match_session_id=None):
     if not parsed_insights and hasattr(job, 'insights_for_match') and job.insights_for_match:
         parsed_insights = parse_and_prepare_insights_for_template(job.insights_for_match)
 
+    # Parse anomaly data from Supabase
+    job_anomalies = []
+    anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase([job.id])
+    analysis_data = anomaly_data_map.get(job.id)
+    print(f"DEBUG: Job detail page - Job ID {job.id}, analysis_data: {analysis_data}")
+    if analysis_data:
+        job_anomalies = parse_anomaly_analysis(analysis_data)
+        print(f"DEBUG: Job detail page - Parsed anomalies for job {job.id}: {job_anomalies}")
+
     context = {
         'job': job,
         'skills_text': user_cv_text,
@@ -544,7 +616,8 @@ def job_detail_page(request, job_id, match_session_id=None):
         'job_match_analysis': job_match_analysis,
         'current_match_session_id_for_url': session_id_to_use, 
         'active_match_session': active_match_session, # Pass the session object for breadcrumb
-        'parsed_insights_list': parsed_insights # Add parsed insights to context
+        'parsed_insights_list': parsed_insights, # Add parsed insights to context
+        'job_anomalies': job_anomalies
     }
     return render(request, 'matcher/job_detail.html', context)
 
@@ -927,4 +1000,3 @@ def experience_completed_callback(request):
     data = json.loads(request.body)
     print(f"Received callback from N8n for session_id: {data.get('session_id')}")
     return JsonResponse({'success': True, 'message': 'Callback received.'})
-
