@@ -343,7 +343,7 @@ def simulate_match_jobs(structured_user_profile, job_listings, max_jobs_to_proce
         
     matched_results = []
     
-    for job in processed_job_listings: # Use the (potentially sliced) list
+    for i, job in enumerate(processed_job_listings): # Use the (potentially sliced) list
         score = random.randint(30, 95)
         reason_fragments = ["Simulated Enhanced Reason:"]
         insights_fragments = ["Simulated Insights:"]
@@ -370,8 +370,38 @@ def simulate_match_jobs(structured_user_profile, job_listings, max_jobs_to_proce
         if error_message and job == processed_job_listings[0] if processed_job_listings else False: 
             reason_fragments.append(f"(SimError: {error_message})")
 
+        # Enhanced job object with simulated anomaly analysis
+        enhanced_job = job.copy()
+        
+        # Add simulated anomaly analysis to some jobs (not all, to be realistic)
+        if i < 2:  # Only add to first 2 jobs for variety
+            enhanced_job['anomaly_analysis'] = {
+                "role": structured_user_profile.get('preferences', {}).get('desired_roles', ['unknown'])[0] if structured_user_profile.get('preferences', {}).get('desired_roles') else 'unknown',
+                "job_id": str(job.get('id', '')),
+                "industry": job.get('industry', 'unknown'),
+                "job_title": job.get('job_title', ''),
+                "company_name": job.get('company_name', ''),
+                "semantic_anomalies": [
+                    {
+                        "type": "Cross-Role",
+                        "chunk": f"Simulated anomaly chunk for {job.get('job_title', 'this role')} - potential role mismatch detected.",
+                        "similarity_to_role": round(random.uniform(0.2, 0.4), 3),
+                        "similarity_to_global": round(random.uniform(0.3, 0.5), 3),
+                        "similarity_to_industry": round(random.uniform(0.2, 0.4), 3)
+                    },
+                    {
+                        "type": "Industry-Specific",
+                        "chunk": f"Industry-specific anomaly for {job.get('industry', 'this industry')} - unusual requirements detected.",
+                        "similarity_to_role": round(random.uniform(0.3, 0.5), 3),
+                        "similarity_to_global": round(random.uniform(0.4, 0.6), 3),
+                        "similarity_to_industry": round(random.uniform(0.2, 0.3), 3)
+                    }
+                ] if random.choice([True, False]) else [],  # Sometimes no anomalies
+                "effective_description": f"Simulated effective description for {job.get('job_title', 'this position')} at {job.get('company_name', 'this company')}. This is a comprehensive role description with all relevant details."
+            }
+
         matched_results.append({
-            'job': job,
+            'job': enhanced_job,
             'score': score,
             'reason': " ".join(reason_fragments),
             'insights': " ".join(insights_fragments),

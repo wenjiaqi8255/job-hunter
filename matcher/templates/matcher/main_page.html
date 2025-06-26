@@ -269,6 +269,31 @@
                                                 </div>
                                             </div>
                                 {% endif %}
+
+                                {% if match_item.anomalies %}
+                                    <div class="accordion accordion-flush accordion-sm mb-2" id="accordionAnomalies{{ match_item.job.id }}">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingAnomalies{{ match_item.job.id }}">
+                                                <button class="accordion-button p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAnomalies{{ match_item.job.id }}" aria-expanded="true" aria-controls="collapseAnomalies{{ match_item.job.id }}">
+                                                    <small><strong><i class="fas fa-shield-alt me-1"></i> Anomaly Detection</strong></small>
+                                                </button>
+                                            </h2>
+                                            <div id="collapseAnomalies{{ match_item.job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingAnomalies{{ match_item.job.id }}">
+                                                <div class="accordion-body p-0">
+                                                    <ul class="list-group list-group-flush">
+                                                        {% for anomaly in match_item.anomalies %}
+                                                            <li class="list-group-item small">
+                                                                <span class="badge bg-warning text-dark me-2">{{ anomaly.type }}</span>
+                                                                {{ anomaly.chunk }}
+                                                            </li>
+                                                        {% endfor %}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+
                                     </div>
                                     <div class="card-footer bg-light border-top-0 p-2">
                                         <div class="d-flex justify-content-end">
