@@ -13,7 +13,7 @@
     </nav>
 
     <h2>Cover Letter for: {{ job.job_title }} at {{ job.company_name }}</h2>
-    <p class="text-muted">Based on your skills: "{{ skills_text|truncatechars:100 }}"</p>
+    <p class="text-muted">Based on your CV: "{{ user_cv_text|truncatechars:100 }}"</p>
     
     <div class="card mt-3">
         <div class="card-header">
@@ -24,12 +24,12 @@
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     {{ cover_letter_content }}
-                    <a href="{{ profile_url }}" class="btn btn-sm btn-primary mt-2">
+                    <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-primary mt-2">
                         <i class="fas fa-edit me-1"></i> Go to Profile to Edit CV
                     </a>
                 </div>
             {% else %}
-                <textarea id="coverLetterContent" class="form-control" rows="15" readonly>{{ cover_letter_content }}</textarea>
+                <textarea id="coverLetterContent" class="form-control" rows="15">{{ cover_letter_content }}</textarea>
             {% endif %}
         </div>
         <div class="card-footer">
@@ -60,4 +60,4 @@ function copyCoverLetter() {
         });
 }
 </script>
-{% endblock %} 
+{% endblock %}

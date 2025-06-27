@@ -47,13 +47,24 @@
                     <li class="nav-item">
                         <a class="nav-link {% if request.resolver_match.url_name == 'main_page' %}active{% endif %}" href="{% url 'matcher:main_page' %}">Home & Matching</a>
                     </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'my_applications_page' %}active{% endif %}" href="{% url 'matcher:my_applications_page' %}">My Applications</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'profile_page' %}active{% endif %}" href="{% url 'matcher:profile_page' %}">Profile</a>
-                    </li>
-                    {# Add other nav links here as features are built #}
+                    {% if user.is_authenticated %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'my_applications_page' %}active{% endif %}" href="{% url 'matcher:my_applications_page' %}">My Applications</a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.resolver_match.url_name == 'profile_page' %}active{% endif %}" href="{% url 'matcher:profile_page' %}">Profile</a>
+                        </li>
+                        <li class="nav-item">
+                            <form method="post" action="{% url 'logout' %}">
+                                {% csrf_token %}
+                                <button type="submit" class="nav-link btn btn-link">Logout</button>
+                            </form>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link" href="{% url 'login' %}">Login</a>
+                        </li>
+                    {% endif %}
                 </ul>
                 
                 {% get_current_language as CURRENT_LANGUAGE_CODE %}
@@ -86,4 +97,4 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
 </body>
-</html> 
+</html>

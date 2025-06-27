@@ -13,7 +13,7 @@
     </nav>
 
     <h2>Customize CV for: {{ job.job_title }} at {{ job.company_name }}</h2>
-    <p class="text-muted">Based on your skills: "{{ skills_text|truncatechars:100 }}"</p>
+    <p class="text-muted">Based on your CV: "{{ user_cv_text|truncatechars:100 }}"</p>
     
     <div class="card mt-3">
         <div class="card-header">
@@ -24,24 +24,25 @@
                 <div class="alert alert-warning">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     {{ custom_resume_content }}
-                    <a href="{{ profile_url }}" class="btn btn-sm btn-primary mt-2">
+                    <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-primary mt-2">
                         <i class="fas fa-edit me-1"></i> Go to Profile to Edit CV
                     </a>
                 </div>
             {% else %}
-                <textarea id="customResumeContent" class="form-control" rows="20" readonly>{{ custom_resume_content }}</textarea>
+                <textarea id="customResumeContent" class="form-control" rows="20">{{ custom_resume_content }}</textarea>
             {% endif %}
         </div>
         <div class="card-footer">
-            {% if not generation_error %}
-            <button class="btn btn-secondary" onclick="copyCustomResume()"><i class="fas fa-copy"></i> Copy Full Text</button>
-            <button class="btn btn-primary ms-2" onclick="downloadCustomResumePDF()"><i class="fas fa-file-pdf"></i> Download PDF</button>
-            {% endif %}
-            {% if has_existing_resume and not generation_error %}
             <form method="post" style="display:inline;">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-warning ms-2"><i class="fas fa-sync-alt"></i> Regenerate</button>
+                <button type="submit" class="btn btn-warning">
+                    <i class="fas fa-sync-alt"></i> 
+                    {% if has_existing_resume %}Regenerate{% else %}Generate{% endif %}
+                </button>
             </form>
+            {% if not generation_error and custom_resume_content %}
+            <button class="btn btn-secondary ms-2" onclick="copyCustomResume()"><i class="fas fa-copy"></i> Copy Full Text</button>
+            <a href="{% url 'matcher:download_custom_resume_pdf' job.id %}" class="btn btn-primary ms-2"><i class="fas fa-file-pdf"></i> Download PDF</a>
             {% endif %}
         </div>
     </div>
@@ -60,9 +61,5 @@ function copyCustomResume() {
             alert("Failed to copy text. Please try selecting and copying manually. Error: " + err);
         });
 }
-
-function downloadCustomResumePDF() {
-    window.location.href = "{% url 'matcher:download_custom_resume_pdf' job.id %}";
-}
 </script>
-{% endblock %} 
+{% endblock %}

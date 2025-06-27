@@ -7,8 +7,6 @@
 <div class="container py-4">
     <div class="d-flex justify-content-between align-items-center mb-4">
         <h2 class="h2">My Saved Applications</h2>
-        {# Optional: Link to go back to main matching page #}
-        {# <a href="{% url 'matcher:main_page' %}" class="btn btn-outline-secondary">Back to Matching</a> #}
     </div>
 
     <!-- Status Filter Tabs -->
@@ -16,48 +14,48 @@
         {% for status_val, status_display in status_choices %}
         <li class="nav-item">
             <a class="nav-link {% if selected_status == status_val %}active{% endif %}" 
-               href="{% url 'matcher:my_applications_page' %}{% if status_val %}?status={{ status_val }}{% endif %}">
+               href="{% url 'matcher:my_applications_page' %}?status={{ status_val }}">
                 {{ status_display }} 
-                <span class="badge rounded-pill">{{ status_counts|lookup:status_val|default:0 }}</span>
+                <span class="badge rounded-pill bg-secondary">{{ status_counts|lookup:status_val|default:0 }}</span>
             </a>
         </li>
         {% endfor %}
     </ul>
 
-    {% if saved_jobs_with_forms_and_letters %}
+    {% if saved_jobs %}
         <div class="row row-cols-1 row-cols-md-2 g-4">
-            {% for item_dict in saved_jobs_with_forms_and_letters %}
+            {% for job in saved_jobs %}
             <div class="col">
                 <div class="card h-100 jobbAI-job-card">
                     <div class="card-body">
-                        <h5 class="card-title"><a href="{% url 'matcher:job_detail_page_no_session' item_dict.saved_job.job_listing.id %}">{{ item_dict.saved_job.job_listing.job_title }}</a></h5>
-                        <h6 class="card-subtitle mb-2 text-muted">{{ item_dict.saved_job.job_listing.company_name }}</h6>
+                        <h5 class="card-title"><a href="{% url 'matcher:job_detail_page_no_session' job.original_job_id %}">{{ job.job_title }}</a></h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ job.company_name }}</h6>
                         <p class="card-text">
                             <strong>Status:</strong> 
-                            <span class="badge status-badge {% if item_dict.saved_job.status == 'applied' %}status-applied{% elif item_dict.saved_job.status == 'interviewing' %}status-interviewing{% elif item_dict.saved_job.status == 'offer_received' %}status-offer-received{% elif item_dict.saved_job.status == 'accepted' %}status-accepted{% elif item_dict.saved_job.status == 'rejected' %}status-rejected{% else %}status-default{% endif %}">
-                                {{ item_dict.saved_job.get_status_display }}
+                            <span class="badge status-badge status-{{ job.status|default:'not-applied'|lower }}">
+                                {{ job.status|capfirst }}
                             </span>
                         </p>
-                        {% if item_dict.saved_job.job_listing.level %}
-                            <p class="card-text"><small class="text-muted">Level: {{ item_dict.saved_job.job_listing.level }}</small></p>
+                        {% if job.level %}
+                            <p class="card-text"><small class="text-muted">Level: {{ job.level }}</small></p>
                         {% endif %}
-                        <p class="card-text"><small class="text-muted">Location: {{ item_dict.saved_job.job_listing.location|default:"N/A" }}</small></p>
-                        <p class="card-text"><small class="text-muted">Last updated: {{ item_dict.saved_job.updated_at|date:"Y-m-d H:i" }}</small></p>
-                        {% if item_dict.saved_job.notes %}
-                            <p class="mt-2 mb-1"><small><strong>Notes:</strong> {{ item_dict.saved_job.notes|truncatewords:15|linebreaksbr }}</small></p>
+                        <p class="card-text"><small class="text-muted">Location: {{ job.location|default:"N/A" }}</small></p>
+                        <p class="card-text"><small class="text-muted">Last updated: {{ job.updated_at|date:"Y-m-d H:i" }}</small></p>
+                        {% if job.notes %}
+                            <p class="mt-2 mb-1"><small><strong>Notes:</strong> {{ job.notes|truncatewords:15|linebreaksbr }}</small></p>
                         {% endif %}
                     </div>
                     <div class="card-footer bg-light">
-                        <a href="{% url 'matcher:job_detail_page_no_session' item_dict.saved_job.job_listing.id %}" 
+                        <a href="{% url 'matcher:job_detail_page_no_session' job.original_job_id %}" 
                         class="btn btn-outline-secondary btn-sm me-2">
                         <i class="fas fa-eye"></i> View Details</a>
 
-                        {% if item_dict.cover_letter %}
-                            <a href="{% url 'matcher:generate_cover_letter_page' item_dict.saved_job.job_listing.id %}" 
+                        {% if job.has_cover_letter %}
+                            <a href="{% url 'matcher:generate_cover_letter_page' job.original_job_id %}" 
                             class="btn btn-outline-secondary btn-sm ms-2">
                             <i class="fas fa-file-alt"></i> View Cover Letter</a>
                         {% else %}
-                             <a href="{% url 'matcher:generate_cover_letter_page' item_dict.saved_job.job_listing.id %}" 
+                             <a href="{% url 'matcher:generate_cover_letter_page' job.original_job_id %}" 
                              class="btn btn-success btn-sm ms-2">
                              <i class="fas fa-envelope"></i> Generate Cover Letter</a>
                         {% endif %}
@@ -69,9 +67,7 @@
     {% else %}
         <div class="alert alert-info mt-4" role="alert">
             {% if selected_status %}
-                You have no saved applications with the status "{{ selected_status|get_status_display_from_value:status_choices|default:selected_status|capfirst }}".
-            {% elif message %}
-                {{ message }}
+                You have no saved applications with the status "{{ selected_status|capfirst }}".
             {% else %}
                 You haven't saved any job applications yet. 
                 Start by finding jobs on the <a href="{% url 'matcher:main_page' %}" class="alert-link">main page</a> and saving their status on the job detail page.
@@ -79,11 +75,4 @@
         </div>
     {% endif %}
 </div>
-
-{# Custom filter for dictionary lookup if not available globally - this is a Django template limitation #}
-{# This custom filter would need to be registered in a templatetags file #}
-{# For simplicity, if `status_counts|lookup:status_val` doesn't work directly, #}
-{# you might need to adjust how counts are accessed or pass them differently. #}
-{# However, the default filter `|default:0` should handle missing keys gracefully. #}
-
-{% endblock %} 
+{% endblock %}

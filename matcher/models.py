@@ -2,24 +2,32 @@ from django.db import models
 import uuid # Import uuid for UUIDField default
 import json # For storing structured profile as JSON
 import os
+from django.conf import settings
 
 # Create your models here.
 
 def user_cv_path(instance, filename):
-    # file will be uploaded to MEDIA_ROOT/user_cvs/<session_key>/<filename>
-    return f'user_cvs/{instance.session_key}/{filename}'
+    # file will be uploaded to MEDIA_ROOT/user_cvs/<user_id>/<filename>
+    if instance.user:
+        return f'user_cvs/{instance.user.username}/{filename}'
+    return f'user_cvs/anonymous/{uuid.uuid4()}/{filename}'
 
 class UserProfile(models.Model):
-    session_key = models.CharField(max_length=40, primary_key=True, editable=False)
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        primary_key=True, # User is the new primary key
+    )
+    # session_key is kept to potentially migrate old data in the future, but it's no longer a PK.
+    session_key = models.CharField(max_length=40, null=True, blank=True, unique=True)
     user_cv_text = models.TextField(blank=True, null=True)
     cv_file = models.FileField(upload_to=user_cv_path, blank=True, null=True)
     user_preferences_text = models.TextField(blank=True, null=True)
-    user_email = models.EmailField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
-        return f"Profile for session {self.session_key}"
+        return f"Profile for user {self.user.username}"
 
 class JobListing(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
@@ -45,6 +53,7 @@ class JobListing(models.Model):
 class MatchSession(models.Model):
     """Stores a specific matching session, including the skills input used."""
     id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True)
     skills_text = models.TextField()
     user_preferences_text = models.TextField(null=True, blank=True)
     structured_user_profile_json = models.JSONField(null=True, blank=True)
@@ -80,7 +89,7 @@ class MatchedJob(models.Model):
         ordering = ['-score'] # Default ordering by score descending for a given session
 
     def __str__(self):
-        return f"{self.job_listing.job_title} ({self.score}%) for session {self.match_session_id}"
+        return f"{self.job_listing.job_title} ({self.score}%) for session {self.match_session.id}"
 
 class SavedJob(models.Model):
     STATUS_CHOICES = [
@@ -93,18 +102,17 @@ class SavedJob(models.Model):
     ]
 
     job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name='saved_instances')
-    user_session_key = models.CharField(max_length=40, db_index=True) 
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='not_applied')
     notes = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('job_listing', 'user_session_key')
-        ordering = ['-updated_at']
+        unique_together = ('user', 'job_listing')
 
     def __str__(self):
-        return f"{self.job_listing.job_title} - {self.get_status_display()} for session {self.user_session_key}"
+        return f"{self.job_listing.job_title} saved by {self.user.username}"
 
 class CoverLetter(models.Model):
     saved_job = models.OneToOneField(SavedJob, on_delete=models.CASCADE, related_name='cover_letter') # Assuming one cover letter per saved job for simplicity
@@ -113,7 +121,7 @@ class CoverLetter(models.Model):
     updated_at = models.DateTimeField(auto_now=True) # Good to have to see when it was last modified if ever editable
 
     def __str__(self):
-        return f"Cover Letter for {self.saved_job.job_listing.job_title} (SavedJob ID: {self.saved_job.id})"
+        return f"Cover Letter for {self.saved_job.job_listing.job_title} (SavedJob PK: {self.saved_job.pk})"
 
 class Experience(models.Model):
     # This is a placeholder model. The actual data is in Supabase.
@@ -128,18 +136,18 @@ class Experience(models.Model):
         managed = False
 
 class CustomResume(models.Model):
-    user_session_key = models.CharField(max_length=40, db_index=True)
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name='custom_resumes')
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
     class Meta:
-        unique_together = ('user_session_key', 'job_listing')
+        unique_together = ('user', 'job_listing')
         ordering = ['-updated_at']
 
     def __str__(self):
-        return f"Custom Resume for {self.job_listing.job_title} (Session: {self.user_session_key})"
+        return f"Custom Resume for {self.job_listing.job_title} by {self.user.username}"
 
 class JobAnomalyAnalysis(models.Model):
     job_listing = models.OneToOneField(

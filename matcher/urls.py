@@ -20,5 +20,5 @@ urlpatterns = [
     # URL for N8n to call when it's done
     path('api/experience-completed-callback/', views.experience_completed_callback, name='experience_completed_callback'),
 
-    path('job/<str:job_id>/download-custom-resume-pdf/', views.download_custom_resume_pdf, name='download_custom_resume_pdf'),
-] 
+    path('job/<str:job_id>/download-custom-resume-pdf/', views.download_custom_resume, name='download_custom_resume_pdf'),
+]

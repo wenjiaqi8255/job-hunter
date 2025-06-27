@@ -54,7 +54,7 @@
 {% block content %}
 <div class="container mt-4">
     <div class="profile-header">
-        <h1>Hi, {{ username }}!</h1> 
+        <h1>Hi, {{ user.username }}!</h1> 
     </div>
 
     <div class="stats-container">
@@ -159,7 +159,6 @@
                                     </div>
                                     {# Keep preferences in its own modal, or decide if one modal is enough #}
                                     <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
-                                    <input type="hidden" name="user_email_text" value="{{ user_email_text }}">
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -187,7 +186,6 @@
                                         <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
                                     </div>
                                     <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
-                                    <input type="hidden" name="user_email_text" value="{{ user_email_text }}">
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -284,4 +282,4 @@ window.addEventListener('message', function(event) {
     }
 });
 </script>
-{% endblock content %} 
+{% endblock content %}

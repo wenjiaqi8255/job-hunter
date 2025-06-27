@@ -24,13 +24,13 @@
                     </h6>
                     <ul class="nav flex-column mb-2">
                         {% for session in match_history %}
-                            {% if session.matched_at|date:"Y-m-d" == today_date_str %} {# Assuming today_date_str is passed to context #}
+                            {% if session.matched_at|date:"Y-m-d" == today_date_str %}
                             <li class="nav-item">
                                 <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}" 
                                    href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
                                     <i class="fas fa-calendar-day me-2"></i>
                                     <span class="sidebar-text">{{ session.matched_at|date:"H:i" }} - {{ session.skills_text|truncatewords:3 }}</span>
-                                </a>
+                                a>
                             </li>
                             {% endif %}
                         {% empty %}
@@ -54,16 +54,12 @@
                             </a>
                         </li>
                             {% endif %}
-                    {% empty %}
-                            <li class="nav-item px-3">
-                                <small class="text-muted sidebar-text">No past match history.</small>
-                            </li>
-                        {% endfor %}
-                         {% if not match_history %} {# Handle case where match_history itself is empty #}
-                        <li class="nav-item px-3">
-                            <small class="text-muted sidebar-text">No match history yet.</small>
-                        </li>
-                        {% endif %}
+                    {% endfor %}
+                     {% if not match_history %}
+                    <li class="nav-item px-3">
+                        <small class="text-muted sidebar-text">No match history yet.</small>
+                    </li>
+                    {% endif %}
                 </ul>
             </div>
         </nav>
@@ -178,22 +174,9 @@
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
                                                 <h5 class="card-title mb-0">
-                                {% if current_match_session_id %}
-                                                        <a href="{% url 'matcher:job_detail_page' match_item.job.id current_match_session_id %}" class="text-decoration-none">
-                                                            {{ match_item.job.job_title }}
-                                    </a>
-                                {% else %}
-                                                        <a href="{% url 'matcher:job_detail_page_no_session' match_item.job.id %}" class="text-decoration-none">
-                                                            {{ match_item.job.job_title }}
-                                    </a>
-                                {% endif %}
-                                {% if match_item.saved_status == 'applied' %}
-                                            <span class="badge status-badge status-applied mb-2" id="job-status-badge-matched-{{ match_item.job.id }}">Status: Applied</span>
-                                        {% elif match_item.saved_status == 'viewed' %}
-                                            <span class="badge status-badge status-viewed mb-2" id="job-status-badge-matched-{{ match_item.job.id }}">Status: Viewed</span>
-                                        {% else %} {# Default to not-applied or any other status not explicitly handled #}
-                                            <span class="badge status-badge status-not-applied mb-2" id="job-status-badge-matched-{{ match_item.job.id }}">Status: {% if match_item.saved_status %}{{ match_item.saved_status|capfirst }}{% else %}Not Applied{% endif %}</span>
-                                        {% endif %}
+                                                    <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="text-decoration-none">
+                                                        {{ match_item.job.job_title }}
+                                                    </a>
                                                 </h5>
                                                 <small class="text-muted">{{ match_item.job.company_name }}</small>
                                             </div>
@@ -668,4 +651,4 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 </script>
 
-{% endblock %} 
+{% endblock %}

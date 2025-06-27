@@ -98,23 +98,14 @@
 <script>
 // Listen for a message from the N8n iframe
 window.addEventListener('message', function(event) {
-    // IMPORTANT: Add a check for the event origin for security
-    // if (event.origin !== 'http://localhost:5678') return;
+    // Optional: Check the origin of the message for security
+    // if (event.origin !== 'YOUR_N8N_URL') return;
 
-    if (event.data && event.data.type === 'experience_completed') {
-        console.log('Received experience_completed message. Hiding modal and reloading.');
-        
-        var experienceModalElement = document.getElementById('experienceModal');
-        var experienceModal = bootstrap.Modal.getInstance(experienceModalElement);
-        if (experienceModal) {
-            experienceModal.hide();
-        }
-
-        // Reload the page to display the new data from Supabase
-        setTimeout(function() {
-            location.reload();
-        }, 300);
+    if (event.data === 'n8n-chat-session-closed') {
+        // Reload the page to show the new experience
+        window.location.reload();
     }
 });
 </script>
-{% endblock %} 
+
+{% endblock %}
