@@ -52,15 +52,20 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "matcher",
     "corsheaders",
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "allauth.account.middleware.AccountMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
+    "job_hunting_project.supabase_middleware.SupabaseAuthMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -175,3 +180,25 @@ CORS_ALLOWED_ORIGINS = [
 
 # N8N Integration
 N8N_CHAT_URL = "http://localhost:5678/webhook/bddbcab4-7cb3-4b64-ab9c-70321bbbda7d/chat"
+
+# Application definition
+
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    "job_hunting_project.supabase_auth_backend.SupabaseAuthBackend",
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+
+# Password validation
+# https://docs.djangoproject.com/en/5.0/ref/settings/#auth-password-validators
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+SITE_ID = 1
+LOGIN_REDIRECT_URL = '/'

@@ -33,8 +33,8 @@
               <h4 class="mb-1">{{ job.job_title }}</h4>
               <p class="text-muted fw-normal mb-2">{{ job.company_name }}</p>
             </div>
-            <span class="badge status-badge status-{{ saved_job_instance.status|default_if_none:'not-applied'|lower }}">
-              {{ saved_job_instance.get_status_display|default:"Not Applied" }}
+            <span class="badge status-badge status-{{ supa_saved_job.status|default_if_none:'not-applied'|lower }}">
+              {{ supa_saved_job.status|default:"Not Applied"|capfirst }}
             </span>
           </div>
         </div>
@@ -107,17 +107,17 @@
                 </div>
             </div>
           </div>
-          {% elif job.insights_for_match and job.insights_for_match != 'N/A' %}
+          {% elif insights_for_match and insights_for_match != 'N/A' %}
           <div class="mt-4">
             <h5 class="h6 mb-2"><i class="fas fa-search-plus me-2 text-primary"></i>Further Insights</h5>
-            <p class="small">{{ job.insights_for_match|linebreaksbr }}</p>
+            <p class="small">{{ insights_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
 
-          {% if job.reason_for_match %}
+          {% if reason_for_match %}
           <div class="mt-4">
             <h5 class="h6 mb-2"><i class="fas fa-bullseye me-2 text-primary"></i>Reason for Recommendation</h5>
-            <p class="small">{{ job.reason_for_match|linebreaksbr }}</p>
+            <p class="small">{{ reason_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
 
@@ -139,10 +139,10 @@
           </div>
           {% endif %}
 
-          {% if job.tips_for_match and job.tips_for_match != 'N/A' %}
+          {% if tips_for_match and tips_for_match != 'N/A' %}
           <div class="mt-4">
             <h5 class="h6 mb-2"><i class="fas fa-magic me-2 text-primary"></i>Application Tips</h5>
-            <p class="small">{{ job.tips_for_match|linebreaksbr }}</p>
+            <p class="small">{{ tips_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
 
@@ -180,28 +180,22 @@
             {% csrf_token %}
             
             <div class="mb-3">
-                <label for="{{ saved_job_form.status.id_for_label }}" class="form-label small"><strong>Status</strong></label>
-                {{ saved_job_form.status }}
-                {% if saved_job_form.status.errors %}
-                    <div class="invalid-feedback d-block small">
-                        {{ saved_job_form.status.errors|join:", " }}
-                    </div>
-                {% endif %}
+                <label for="id_status" class="form-label small"><strong>Status</strong></label>
+                <select name="status" id="id_status" class="form-select">
+                    {% for value, display in status_choices %}
+                        <option value="{{ value }}" {% if supa_saved_job.status == value %}selected{% endif %}>{{ display }}</option>
+                    {% endfor %}
+                </select>
             </div>
             
             <div class="mb-3">
-                <label for="{{ saved_job_form.notes.id_for_label }}" class="form-label small"><strong>Notes</strong></label>
-                {{ saved_job_form.notes }}
-                {% if saved_job_form.notes.errors %}
-                    <div class="invalid-feedback d-block small">
-                        {{ saved_job_form.notes.errors|join:", " }}
-                    </div>
-                {% endif %}
+                <label for="id_notes" class="form-label small"><strong>Notes</strong></label>
+                <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ supa_saved_job.notes|default:"" }}</textarea>
             </div>
             
             <button type="submit" class="btn btn-primary w-100" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
-            {% if saved_job_instance and saved_job_instance.pk %}
-                <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ saved_job_instance.updated_at|date:"M d, Y H:i" }}</small></p>
+            {% if supa_saved_job and supa_saved_job.updated_at %}
+                <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ supa_saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
             {% endif %}
           </form>
         </div>
@@ -228,4 +222,4 @@
 </nav>
 {% endif %}
 
-{% endblock %} 
+{% endblock %}
