@@ -40,27 +40,38 @@ from .services.job_listing_service import fetch_todays_job_listings_from_supabas
 # logger = logging.getLogger(__name__)
 
 # Create your views here.
-@login_required
 def main_page(request):
     """
     Renders the main page, handling job matching and user interactions.
+    Allows anonymous users to view a limited version of the page.
     """
     user = request.user
-    user_profile, created = UserProfile.objects.get_or_create(user=user)
+    user_profile = None
+    match_history = []
+    supa_saved_jobs = []
+    supa_status_map = {}
 
-    # Fetch match history for the sidebar, ordered by most recent
-    match_history = MatchSession.objects.filter(user=user).order_by('-matched_at')
+    if user.is_authenticated:
+        user_profile, created = UserProfile.objects.get_or_create(user=user)
+        # Fetch match history for the sidebar, ordered by most recent
+        match_history = MatchSession.objects.filter(user=user).order_by('-matched_at')
+        # Use the user's ID (which is the Supabase user ID) to fetch their saved jobs
+        # The user_id is now handled by RLS via the authenticated supabase client
+        supa_saved_jobs = list_supabase_saved_jobs(request.supabase)
+        supa_status_map = {sj['original_job_id']: sj['status'] for sj in supa_saved_jobs}
 
     current_match_session_id_str = request.GET.get('session_id')
     processed_job_matches = []
     selected_session_object = None
     no_match_reason = None
 
-    # Use the user's ID (which is the Supabase user ID) to fetch their saved jobs
-    supa_saved_jobs = list_supabase_saved_jobs(request.user.username)
-    supa_status_map = {sj['original_job_id']: sj['status'] for sj in supa_saved_jobs}
-
     if request.method == 'POST':
+        if not user.is_authenticated:
+            messages.error(request, "You must be logged in to perform a job match.")
+            # Assuming you have a login URL name, e.g., 'account_login' from django-allauth
+            # or your custom login view.
+            return redirect(settings.LOGIN_URL)
+
         print(f"--- [POST] Request received for user {request.user.username}. ---")
         
         if not user_profile.user_cv_text:
@@ -82,7 +93,7 @@ def main_page(request):
 
         structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text_input, user_preferences_text_input)
         
-        job_listings_for_api = fetch_todays_job_listings_from_supabase()
+        job_listings_for_api = fetch_todays_job_listings_from_supabase(request.supabase)
         
         if not job_listings_for_api:
             no_match_reason = "No new job listings found for today. Matching cannot proceed with current day's data."
@@ -151,24 +162,29 @@ def main_page(request):
         return redirect(f"{reverse('matcher:main_page')}?session_id={current_match_session_id_str}")
 
     if current_match_session_id_str:
+        if not user.is_authenticated:
+            messages.error(request, "You must be logged in to view a specific match session.")
+            return redirect(reverse('matcher:main_page'))
+
         print(f"--- [GET] Request with session_id '{current_match_session_id_str}' received. ---")
         try:
             current_match_session_id_uuid = UUID(current_match_session_id_str)
             # Ensure the session belongs to the current user
             current_match_session = get_object_or_404(MatchSession, id=current_match_session_id_uuid, user=request.user)
             selected_session_object = current_match_session
-            user_profile.user_cv_text = current_match_session.skills_text
-            user_profile.user_preferences_text = current_match_session.user_preferences_text
-            user_profile.save()
-            cv_preview = user_profile.user_cv_text or ""
-            print(f"--- [GET] UserProfile updated from MatchSession. New CV: '{cv_preview[:70]}' ---")
+            if user_profile: # Check if user_profile exists
+                user_profile.user_cv_text = current_match_session.skills_text
+                user_profile.user_preferences_text = current_match_session.user_preferences_text
+                user_profile.save()
+                cv_preview = user_profile.user_cv_text or ""
+                print(f"--- [GET] UserProfile updated from MatchSession. New CV: '{cv_preview[:70]}' ---")
             
             # WORKAROUND for linter issue: Use direct filter instead of reverse relation
             matched_jobs_for_session = MatchedJob.objects.filter(match_session=current_match_session).select_related('job_listing').order_by('-score')
 
             # Fetch anomaly data from Supabase for all matched jobs at once
             job_ids_for_anomaly_check = [mj.job_listing.id for mj in matched_jobs_for_session]
-            anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(job_ids_for_anomaly_check)
+            anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(request.supabase, job_ids_for_anomaly_check)
             
             # Check if we have temporary anomaly data from simulation mode
             temp_anomaly_data = getattr(request, '_temp_anomaly_data', {})
@@ -180,7 +196,7 @@ def main_page(request):
                 
                 # Parse anomaly data from Supabase data or temp simulation data
                 job_anomalies = []
-                analysis_data = anomaly_data_map.get(mj.job_listing.id) or temp_anomaly_data.get(mj.job_listing.id)
+                analysis_data = anomaly_data_map.get(str(mj.job_listing.id)) or temp_anomaly_data.get(str(mj.job_listing.id))
                 print(f"DEBUG: Job ID {mj.job_listing.id}, analysis_data: {analysis_data}")
                 if analysis_data:
                     job_anomalies = parse_anomaly_analysis(analysis_data)
@@ -207,38 +223,34 @@ def main_page(request):
     # The automatic redirect to last_match_session_id has been removed to allow this.
 
     # Fetch all job listings for the "All Available Job Listings" section
-    # Annotate all jobs with their saved status for the current user
     all_jobs = JobListing.objects.all().order_by('company_name', 'job_title')
     
-    # Prepare a list of dictionaries or custom objects for `all_jobs_annotated`
+    # Annotate all jobs with their saved status for the current user
     all_jobs_annotated = []
     for job in all_jobs:
-        supa_status = supa_status_map.get(job.id)
+        # supa_status_map is empty for anonymous users, so status will be None
+        supa_status = supa_status_map.get(str(job.id)) # Use string of job.id for matching
         all_jobs_annotated.append({
             'job_object': job,
             'saved_status': supa_status or None
         })
 
-    # Fetch match history for the current user
-    match_history = MatchSession.objects.filter(user=request.user).order_by('-matched_at')[:10]
-
     # If just visiting the main page without a specific session,
     # ensure the profile info is loaded for the initial form display.
-    if not current_match_session_id_str:
+    if not current_match_session_id_str and user_profile:
         # This block already correctly uses user_profile which is fetched at the start.
         # No changes needed here, but confirming the logic is sound.
         pass
 
     # Fetch today's job listings count for display
-    all_jobs_count = JobListing.objects.filter(
-        created_at__date=timezone.now().date()
-    ).count()
+    all_jobs_count = len(all_jobs)
     
     # Prepare context for rendering
     context = {
-        'user_cv_text': user_profile.user_cv_text,
-        'user_preferences_text': user_profile.user_preferences_text,
+        'user_cv_text': user_profile.user_cv_text if user_profile else "",
+        'user_preferences_text': user_profile.user_preferences_text if user_profile else "",
         'processed_job_matches': processed_job_matches,
+        'all_jobs_annotated': all_jobs_annotated,
         'all_jobs_count': all_jobs_count,
         'current_match_session_id': current_match_session_id_str,
         'selected_session_object': selected_session_object,
@@ -271,7 +283,7 @@ def profile_page(request):
                     with fitz.open(stream=uploaded_file.read(), filetype="pdf") as doc:
                         text = ""
                         for page in doc:
-                            text += page.get_text() # Explicitly get text
+                            text += page.get_text('text') # Explicitly get text as plain text
                         user_profile.user_cv_text = text
                     messages.success(request, 'Successfully uploaded and extracted text from your CV.')
                 except Exception as e:
@@ -289,10 +301,12 @@ def profile_page(request):
         return redirect('matcher:profile_page')
 
     # Fetch work experiences from Supabase for the current user
-    experiences = get_user_experiences(request.user)
+    experiences = get_user_experiences(request.supabase)
     experience_count = len(experiences) if experiences else 0
 
-    application_count = SavedJob.objects.filter(user=request.user).count()
+    # Fetch saved jobs from Supabase to get an accurate count
+    saved_jobs_from_supabase = list_supabase_saved_jobs(request.supabase)
+    application_count = len(saved_jobs_from_supabase) if saved_jobs_from_supabase else 0
     already_saved_minutes = application_count * 20
     
     n8n_chat_url = settings.N8N_CHAT_URL
@@ -313,56 +327,65 @@ def profile_page(request):
     }
     return render(request, 'matcher/profile_page.html', context)
 
-@login_required
 def job_detail_page(request, job_id, match_session_id=None):
     job = get_object_or_404(JobListing, id=job_id)
-    user_profile, _ = UserProfile.objects.get_or_create(user=request.user)
-    user_cv_text = user_profile.user_cv_text or ""
-    
-    supa_saved_job = get_supabase_saved_job(request.user.username, job.id)
-
+    user = request.user
+    user_profile = None
+    user_cv_text = ""
+    supa_saved_job = None
     active_match_session = None
     reason_for_match = None
     tips_for_match = None
     parsed_insights = []
+
+    if user.is_authenticated:
+        user_profile, _ = UserProfile.objects.get_or_create(user=user)
+        user_cv_text = user_profile.user_cv_text or ""
+        # user.username no longer needed, RLS handles it
+        supa_saved_job = get_supabase_saved_job(request.supabase, job.id)
+
+        session_id_to_use = match_session_id or request.session.get('last_match_session_id')
+
+        if session_id_to_use:
+            try:
+                session_uuid = UUID(str(session_id_to_use))
+                active_match_session = get_object_or_404(MatchSession, id=session_uuid, user=request.user)
+                
+                job_match_analysis = MatchedJob.objects.filter(
+                    match_session=active_match_session,
+                    job_listing_id=job.id
+                ).first()
+
+                if job_match_analysis:
+                    reason_for_match = job_match_analysis.reason
+                    tips_for_match = job_match_analysis.tips
+                    if job_match_analysis.insights:
+                        parsed_insights = parse_and_prepare_insights_for_template(job_match_analysis.insights)
+            except (ValueError, MatchSession.DoesNotExist, TypeError):
+                active_match_session = None
+
+    # Fetch and parse anomaly data - available to all users
     job_anomalies = []
-
-    session_id_to_use = match_session_id or request.session.get('last_match_session_id')
-
-    if session_id_to_use:
-        try:
-            session_uuid = UUID(str(session_id_to_use))
-            active_match_session = get_object_or_404(MatchSession, id=session_uuid, user=request.user)
-            
-            job_match_analysis = MatchedJob.objects.filter(
-                match_session=active_match_session,
-                job_listing_id=job.id
-            ).first()
-
-            if job_match_analysis:
-                reason_for_match = job_match_analysis.reason
-                tips_for_match = job_match_analysis.tips
-                if job_match_analysis.insights:
-                    parsed_insights = parse_and_prepare_insights_for_template(job_match_analysis.insights)
-        except (ValueError, MatchSession.DoesNotExist, TypeError):
-            active_match_session = None
-
-    # Fetch and parse anomaly data
-    anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase([job.id])
-    analysis_data = anomaly_data_map.get(job.id)
+    anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(request.supabase, [job.id])
+    analysis_data = anomaly_data_map.get(str(job.id))
     if analysis_data:
         job_anomalies = parse_anomaly_analysis(analysis_data)
 
     if request.method == 'POST':
+        if not user.is_authenticated:
+            messages.error(request, "You must be logged in to save or update job applications.")
+            return redirect(f"{settings.LOGIN_URL}?next={request.path}")
+
         new_status = request.POST.get('status')
         notes = request.POST.get('notes')
         
         if supa_saved_job:
-            update_supabase_saved_job_status(request.user.username, job.id, new_status, notes)
+            # user.username no longer needed
+            update_supabase_saved_job_status(request.supabase, job.id, new_status, notes)
             messages.success(request, "Application status updated.")
         else:
             create_data = {
-                "user_id": request.user.username,
+                # "user_id" is now handled by RLS, so it's removed from here
                 "status": new_status or 'viewed',
                 "notes": notes,
                 "original_job_id": job.id,
@@ -372,7 +395,7 @@ def job_detail_page(request, job_id, match_session_id=None):
                 "application_url": job.application_url,
                 "location": job.location,
             }
-            create_supabase_saved_job(create_data)
+            create_supabase_saved_job(request.supabase, create_data)
             messages.success(request, "Application saved.")
         
         # Sync local SavedJob mirror
@@ -423,24 +446,18 @@ def generate_cover_letter_page(request, job_id):
     generation_error = False
     has_existing_cover_letter = False
 
-    # Ensure the job is saved in Supabase and locally before proceeding
-    supa_saved_job = get_supabase_saved_job(user.username, job.id)
+    # Ensure the job is saved in Supabase before proceeding
+    supa_saved_job = get_supabase_saved_job(request.supabase, job.id)
     if not supa_saved_job:
         create_data = {
-            "user_id": user.username,
             "status": 'viewed',
             "original_job_id": job.id,
             "company_name": job.company_name,
             "job_title": job.job_title,
         }
-        create_supabase_saved_job(create_data)
+        create_supabase_saved_job(request.supabase, create_data)
 
-    # Now, get or create the local mirror for the FK relationship
-    saved_job, _ = SavedJob.objects.get_or_create(
-        job_listing=job,
-        user=user,
-        defaults={"status": "viewed"}
-    )
+    # Local SavedJob mirror is no longer needed for CoverLetter relationship
 
     # 构造 job dict
     job_dict = {
@@ -469,14 +486,15 @@ def generate_cover_letter_page(request, job_id):
                 generation_error = True
             else:
                 CoverLetter.objects.update_or_create(
-                    saved_job=saved_job,
+                    user=user,
+                    job_listing=job,
                     defaults={"content": cover_letter_content}
                 )
                 has_existing_cover_letter = True
     else:
         # GET: 优先查历史
         try:
-            cover_letter_obj = CoverLetter.objects.get(saved_job=saved_job)
+            cover_letter_obj = CoverLetter.objects.get(user=user, job_listing=job)
             cover_letter_content = cover_letter_obj.content
             has_existing_cover_letter = True
         except CoverLetter.DoesNotExist:
@@ -490,7 +508,7 @@ def generate_cover_letter_page(request, job_id):
                    cover_letter_content.startswith("Could not generate") or \
                    cover_letter_content.startswith("Please enter your skills")):
                     # Save the newly generated letter
-                    CoverLetter.objects.create(saved_job=saved_job, content=cover_letter_content)
+                    CoverLetter.objects.create(user=user, job_listing=job, content=cover_letter_content)
                     has_existing_cover_letter = True # It exists now
                 else:
                     generation_error = True
@@ -537,16 +555,17 @@ def generate_custom_resume_page(request, job_id):
                 generation_error = True
             else:
                 # Also save the job to Supabase and locally to mark interest
-                supa_saved_job = get_supabase_saved_job(user.username, job.id)
+                # user.username no longer needed
+                supa_saved_job = get_supabase_saved_job(request.supabase, job.id)
                 if not supa_saved_job:
                     create_data = {
-                        "user_id": user.username,
+                        # "user_id" is now handled by RLS
                         "status": 'viewed',
                         "original_job_id": job.id,
                         "company_name": job.company_name,
                         "job_title": job.job_title,
                     }
-                    create_supabase_saved_job(create_data)
+                    create_supabase_saved_job(request.supabase, create_data)
 
                 SavedJob.objects.get_or_create(
                     job_listing=job,
@@ -625,10 +644,10 @@ def my_applications_page(request):
     Data is fetched from Supabase.
     """
     selected_status = request.GET.get('status', 'applied') # Default to 'applied'
-    user_id = request.user.username
+    # user_id is no longer needed, RLS handles it
 
     # Fetch all saved jobs for the user from Supabase
-    all_saved_jobs = list_supabase_saved_jobs(user_id)
+    all_saved_jobs = list_supabase_saved_jobs(request.supabase)
 
     # Define the status choices, matching what's used elsewhere
     status_choices = [
@@ -657,9 +676,9 @@ def my_applications_page(request):
     # Check for existing cover letters for the filtered jobs
     job_ids = [job['original_job_id'] for job in filtered_jobs]
     existing_cover_letters = CoverLetter.objects.filter(
-        saved_job__job_listing_id__in=job_ids,
-        saved_job__user=request.user
-    ).values_list('saved_job__job_listing_id', flat=True)
+        job_listing_id__in=job_ids,
+        user=request.user
+    ).values_list('job_listing_id', flat=True)
 
     # Augment the job data with cover letter info
     for job in filtered_jobs:
@@ -677,7 +696,8 @@ def my_applications_page(request):
 @login_required
 def update_job_application_status(request, job_id):
     user = request.user
-    supa_saved_job = get_supabase_saved_job(user.username, job_id)
+    # user.username no longer needed
+    supa_saved_job = get_supabase_saved_job(request.supabase, job_id)
     
     try:
         data = json.loads(request.body)
@@ -689,11 +709,12 @@ def update_job_application_status(request, job_id):
         job = get_object_or_404(JobListing, id=job_id) # Get job once.
 
         if supa_saved_job:
-            update_supabase_saved_job_status(user.username, job_id, new_status=new_status)
+            # user.username no longer needed
+            update_supabase_saved_job_status(request.supabase, job_id, new_status=new_status)
         else:
             # If it doesn't exist in Supabase, create it.
             create_data = {
-                "user_id": user.username,
+                # "user_id" is now handled by RLS
                 "status": new_status,
                 "original_job_id": job.id,
                 "company_name": job.company_name,
@@ -704,7 +725,7 @@ def update_job_application_status(request, job_id):
                 "salary_range": job.salary_range,
                 "industry": job.industry,
             }
-            create_supabase_saved_job(create_data)
+            create_supabase_saved_job(request.supabase, create_data)
 
         # Sync local SavedJob mirror
         SavedJob.objects.update_or_create(
@@ -724,7 +745,8 @@ def update_job_application_status(request, job_id):
 def experience_list(request):
     """Lists all work experiences for the current user from Supabase."""
     user = request.user
-    experiences = get_user_experiences(user)
+    # The user object is no longer needed, RLS handles it
+    experiences = get_user_experiences(request.supabase)
     n8n_chat_url = settings.N8N_CHAT_URL
     full_n8n_url = f"{n8n_chat_url}?user_id={user.username}" if n8n_chat_url else ""
     
@@ -739,8 +761,8 @@ def experience_list(request):
 def experience_delete(request, experience_id):
     """Deletes a work experience from Supabase."""
     try:
-        # Pass the user object for authorization
-        delete_experience_from_supabase(experience_id, request.user)
+        # The user object is no longer needed for authorization, RLS handles it
+        delete_experience_from_supabase(request.supabase, experience_id)
         messages.success(request, 'Work experience deleted successfully!')
     except Exception as e:
         messages.error(request, f'Failed to delete experience: {e}')

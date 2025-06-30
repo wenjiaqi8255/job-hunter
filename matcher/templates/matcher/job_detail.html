@@ -33,9 +33,11 @@
               <h4 class="mb-1">{{ job.job_title }}</h4>
               <p class="text-muted fw-normal mb-2">{{ job.company_name }}</p>
             </div>
+            {% if user.is_authenticated %}
             <span class="badge status-badge status-{{ supa_saved_job.status|default_if_none:'not-applied'|lower }}">
               {{ supa_saved_job.status|default:"Not Applied"|capfirst }}
             </span>
+            {% endif %}
           </div>
         </div>
         <div class="card-body p-4">
@@ -169,6 +171,7 @@
     </div>
 
     <div class="col-lg-4">
+      {% if user.is_authenticated %}
       <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
         <div class="card-header bg-light border-bottom-0 py-3">
             <h5 class="h6 mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
@@ -200,26 +203,18 @@
           </form>
         </div>
       </div>
+      {% else %}
+      <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
+        <div class="card-header bg-light border-bottom-0 py-3">
+            <h5 class="h6 mb-0"><i class="fas fa-lock me-2 text-primary"></i>Save Your Progress</h5>
+        </div>
+        <div class="card-body p-4 text-center">
+            <p>Please log in or sign up to save jobs, track your application status, and take notes.</p>
+            <a href="{% url 'matcher:profile_page' %}" class="btn btn-primary" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;">Log In / Sign Up</a>
+        </div>
+      </div>
+      {% endif %}
     </div>
   </div>
 </div>
-
-{% if job.application_url or True %}
-<nav class="navbar fixed-bottom navbar-light bg-light shadow-lg py-3">
-  <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
-    <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" class="btn btn-lg btn-outline-secondary">
-        <i class="fas fa-envelope me-2"></i>Generate Cover Letter
-    </a>
-    <a href="{% url 'matcher:generate_custom_resume_page' job.id %}" class="btn btn-lg btn-outline-primary">
-        <i class="fas fa-file-alt me-2"></i>Customize CV
-    </a>
-    {% if job.application_url %}
-    <a href="{{ job.application_url }}" class="btn btn-lg" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;" target="_blank">
-        <i class="fas fa-external-link-alt me-2"></i>Apply Now
-    </a>
-    {% endif %}
-  </div>
-</nav>
-{% endif %}
-
 {% endblock %}

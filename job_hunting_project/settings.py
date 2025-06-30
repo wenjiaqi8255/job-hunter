@@ -64,8 +64,9 @@ MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
+    "job_hunting_project.auth_middleware.SupabaseAuthMiddleware", # 新的中间件
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    "job_hunting_project.supabase_middleware.SupabaseAuthMiddleware",
+    # "job_hunting_project.supabase_middleware.SupabaseAuthMiddleware", # 将被新的中间件取代
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -162,6 +163,7 @@ DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 # Supabase Configuration
 SUPABASE_URL = os.getenv('SUPABASE_URL')
 SUPABASE_KEY = os.getenv('SUPABASE_KEY')
+SUPABASE_SERVICE_ROLE_KEY = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
 
 # It's good practice to check if these are set, especially in production
 if not SUPABASE_URL or not SUPABASE_KEY:
@@ -185,7 +187,8 @@ N8N_CHAT_URL = "http://localhost:5678/webhook/bddbcab4-7cb3-4b64-ab9c-70321bbbda
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    "job_hunting_project.supabase_auth_backend.SupabaseAuthBackend",
+    "job_hunting_project.auth_backend.SupabaseUserBackend", # 新的认证后端
+    # "job_hunting_project.supabase_auth_backend.SupabaseAuthBackend", # 将被新的认证后端取代
     'allauth.account.auth_backends.AuthenticationBackend',
 ]
 

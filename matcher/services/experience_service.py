@@ -1,60 +1,44 @@
-import os
-from supabase import create_client, Client
-from django.conf import settings
-from django.contrib.auth.models import User # Import User
+from supabase import Client
 
-def get_supabase_client():
-    """Initializes and returns the Supabase client."""
-    url: str = settings.SUPABASE_URL
-    key: str = settings.SUPABASE_KEY
-    if not url or not key:
-        print("Supabase URL or Key not configured.")
-        return None
-    return create_client(url, key)
+# 注意：所有函数现在都依赖于通过认证的 Supabase 客户端中包含的 JWT 来实施 RLS。
+# 不再需要传递 User 对象或在查询中手动指定 user_id。
 
-def get_user_experiences(user: User) -> list:
-    """Fetches all work experiences for a specific user from Supabase."""
-    supabase = get_supabase_client()
+def get_user_experiences(supabase: Client) -> list:
+    """Fetches all work experiences for the authenticated user from Supabase."""
     if not supabase:
         return []
 
     try:
-        # The user's username is the Supabase user UUID
-        user_id = user.username
+        # RLS 策略将根据客户端的 JWT 自动将结果范围限定为当前用户。
+        # 不再需要 .eq('user_id', user_id)
         response = supabase.table('work_experiences') \
             .select('*') \
-            .eq('user_id', user_id) \
             .order('created_at', desc=True) \
             .execute()
         return response.data if response.data else []
     except Exception as e:
-        print(f"Error fetching experiences for user {user_id} from Supabase: {e}")
+        print(f"Error fetching user experiences from Supabase: {e}")
         return []
 
-def delete_experience(experience_id: str, user: User):
-    """Deletes a specific work experience from Supabase, ensuring user ownership."""
-    if not experience_id:
-        raise ValueError("Experience ID cannot be null.")
-
-    supabase = get_supabase_client()
+def delete_experience(supabase: Client, experience_id: str):
+    """Deletes a specific work experience for the authenticated user from Supabase."""
     if not supabase:
-        raise ConnectionError("Could not connect to Supabase.")
+        raise Exception("Supabase client not available.")
 
     try:
-        user_id = user.username
-        # This delete operation ensures that a user can only delete an experience
-        # that matches both the experience_id and their own user_id.
+        # RLS 策略将确保用户只能删除自己的经历。
+        # 不再需要 .eq('user_id', user.username)
         response = supabase.table('work_experiences') \
             .delete() \
             .eq('id', experience_id) \
-            .eq('user_id', user_id) \
             .execute()
         
+        # 检查 response.data 是否为空，可以判断删除是否成功（或被 RLS 阻止）
         if not response.data:
-            raise ValueError("Record not found or user does not have permission to delete.")
+            # This might happen if the RLS policy prevents the deletion or the item doesn't exist.
+            raise Exception("Failed to delete experience. Check permissions or if the item exists.")
             
-        return response
+        return response.data
     except Exception as e:
-        print(f"Error deleting experience {experience_id} from Supabase: {e}")
-        # Re-raise the exception to be handled by the view
+        print(f"Error deleting experience from Supabase: {e}")
         raise e

@@ -19,6 +19,7 @@
                         </a>
                     </div>
                     
+                    {% if user.is_authenticated %}
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
                         <span>Today's Matches</span>
                     </h6>
@@ -43,8 +44,8 @@
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
                         <span>History Matches</span>
                     </h6>
-                <ul class="nav flex-column">
-                    {% for session in match_history %}
+                    <ul class="nav flex-column">
+                        {% for session in match_history %}
                              {% if session.matched_at|date:"Y-m-d" != today_date_str %}
                         <li class="nav-item">
                             <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}" 
@@ -54,15 +55,23 @@
                             </a>
                         </li>
                             {% endif %}
-                    {% endfor %}
-                     {% if not match_history %}
-                    <li class="nav-item px-3">
-                        <small class="text-muted sidebar-text">No match history yet.</small>
-                    </li>
+                        {% endfor %}
+                         {% if not match_history %}
+                        <li class="nav-item px-3">
+                            <small class="text-muted sidebar-text">No match history yet.</small>
+                        </li>
+                        {% endif %}
+                    </ul>
+                    {% else %}
+                    <div class="px-3 mt-4 text-muted">
+                        <small>
+                            <i class="fas fa-sign-in-alt me-1"></i>
+                            <a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to view your match history and save jobs.
+                        </small>
+                    </div>
                     {% endif %}
-                </ul>
-            </div>
-        </nav>
+                </div>
+            </nav>
 
         <!-- Main content -->
             <main class="px-md-4 main-content-area jobbAI-main-content">
@@ -81,7 +90,7 @@
                                 {{ all_jobs_count }} Job Listings
                             {% endif %}
                         </h1>
-                        {% if user_preferences_text %}
+                        {% if user.is_authenticated and user_preferences_text %}
                         <p class="text-muted mb-0 small">Based on preferences: {{ user_preferences_text|truncatewords:20 }}</p>
                         {% endif %}
                     </div>
@@ -96,12 +105,13 @@
                 <!-- CV and Preferences Input Modals have been removed and integrated directly into the page flow below -->
                 
                 <!-- Profile Preview and Start Match Action -->
-                {% if not current_match_session_id  %}
+                {% if not current_match_session_id %}
                 <div class="card mt-4 mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Review Your Profile & Start Match</h5>
                     </div>
                     <div class="card-body">
+                        {% if user.is_authenticated %}
                         <form method="POST" action="{% url 'matcher:main_page' %}" id="startMatchForm">
                             {% csrf_token %}
                             <div class="row">
@@ -145,11 +155,25 @@
                                 </div>
                             </div>
                         </form>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <h5 class="alert-heading">Welcome, Guest!</h5>
+                            <p>You are viewing this page as a guest. You can browse all available jobs below.</p>
+                            <hr>
+                            <p class="mb-0">To get personalized job matches, save applications, and use other features, please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">log in or create an account</a>.</p>
+                        </div>
+                        {% endif %}
                     </div>
                     <div class="card-footer text-end">
+                        {% if user.is_authenticated %}
                         <button type="submit" form="startMatchForm" class="btn btn-primary btn-lg" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
                             <i class="fas fa-search me-1"></i> Find Matches with Current Profile
                         </button>
+                        {% else %}
+                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+                            <i class="fas fa-sign-in-alt me-1"></i> Log In to Find Matches
+                        </a>
+                        {% endif %}
                     </div>
                 </div>
                 {% endif %}
@@ -174,7 +198,7 @@
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
                                                 <h5 class="card-title mb-0">
-                                                    <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="text-decoration-none">
+                                                    <a href="{% if user.is_authenticated %}{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}{% else %}{% url 'matcher:job_detail_page_no_session' job_id=match_item.job.id %}{% endif %}" class="text-decoration-none">
                                                         {{ match_item.job.job_title }}
                                                     </a>
                                                 </h5>
@@ -280,7 +304,7 @@
                                     </div>
                                     <div class="card-footer bg-light border-top-0 p-2">
                                         <div class="d-flex justify-content-end">
-                                            <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" 
+                                            <a href="{% if user.is_authenticated %}{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}{% else %}{% url 'matcher:job_detail_page_no_session' job_id=match_item.job.id %}{% endif %}" 
                                             class="btn btn-outline-secondary btn-sm me-2">
                                                 <i class="fas fa-info-circle me-1"></i> View Details
                                             </a>
@@ -361,13 +385,13 @@
                                             </small>
                                         </div>
 
-                                    {% if item.saved_status %}
+                                    {% if user.is_authenticated and item.saved_status %}
                                             <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}"><small><strong>Status:</strong>
                                                 <span class="badge status-badge {% if item.saved_status == 'applied' %}status-applied{% elif item.saved_status == 'viewed' %}status-viewed{% else %}status-not-applied{% endif %}" id="job-status-badge-all-{{ item.job_object.id }}">
                                                     {% if item.saved_status %}{{ item.saved_status|capfirst }}{% else %}Not Applied{% endif %}
                                                 </span></small>
                                             </p>
-                                    {% else %}
+                                    {% elif user.is_authenticated %}
                                             <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}" style="display: none;"><small><strong>Status:</strong>
                                                 <span class="badge status-badge status-not-applied" id="job-status-badge-all-{{ item.job_object.id }}">Not Applied</span></small>
                                             </p>
@@ -475,6 +499,14 @@ document.addEventListener('DOMContentLoaded', function () {
 
     applyNowButtons.forEach(button => {
         button.addEventListener('click', function (event) {
+            // For anonymous users, we need to check if they are logged in before showing the modal
+            const userIsAuthenticated = document.body.dataset.isAuthenticated === 'true';
+            if (!userIsAuthenticated) {
+                // Optionally, you can redirect them to login or just let the link open
+                // For now, we just let the link open, as saving status requires login anyway.
+                return; 
+            }
+
             event.preventDefault(); 
             const jobTitle = this.getAttribute('data-job-title');
             const jobId = this.getAttribute('data-job-id');
@@ -491,6 +523,9 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     window.addEventListener('focus', function() {
+        const userIsAuthenticated = document.body.dataset.isAuthenticated === 'true';
+        if (!userIsAuthenticated) return;
+
         const pendingJobId = sessionStorage.getItem('pendingApplicationJobId');
         if (pendingJobId && modalInstance) {
             const pendingJobTitle = sessionStorage.getItem('pendingApplicationJobTitle');
@@ -499,156 +534,66 @@ document.addEventListener('DOMContentLoaded', function () {
             if (modalJobTitleEl) {
                 modalJobTitleEl.textContent = pendingJobTitle || 'this job';
             }
+            
+            // Set the correct URL for the confirmation button
             if (confirmAppliedButton) {
-                confirmAppliedButton.dataset.jobId = pendingJobId;
-                confirmAppliedButton.dataset.listType = pendingListType;
+                const urlTemplate = "{% url 'matcher:update_job_application_status' job_id=0 %}".replace('/0/', `/${pendingJobId}/`);
+                confirmAppliedButton.setAttribute('data-url', urlTemplate);
+                confirmAppliedButton.setAttribute('data-list-type', pendingListType);
             }
+
             modalInstance.show();
+            
+            // Clear the session storage items to prevent the modal from re-appearing
+            sessionStorage.removeItem('pendingApplicationJobId');
+            sessionStorage.removeItem('pendingApplicationJobTitle');
+            sessionStorage.removeItem('pendingApplicationListType');
         }
     });
 
-    function clearPendingApplicationState() {
-        sessionStorage.removeItem('pendingApplicationJobId');
-        sessionStorage.removeItem('pendingApplicationJobTitle');
-        sessionStorage.removeItem('pendingApplicationListType');
-        if (confirmAppliedButton) {
-            delete confirmAppliedButton.dataset.jobId;
-            delete confirmAppliedButton.dataset.listType;
-        }
-    }
-
     if (confirmAppliedButton) {
-        confirmAppliedButton.addEventListener('click', function () {
-            const jobId = this.dataset.jobId;
-            const listType = this.dataset.listType;
-            const urlTemplate = this.dataset.urlTemplate;
+        confirmAppliedButton.addEventListener('click', function() {
+            const url = this.getAttribute('data-url');
+            const listType = this.getAttribute('data-list-type');
+            const jobId = url.match(/\/(\d+)\/$/)[1];
 
-            if (jobId && listType && urlTemplate) {
-                const url = urlTemplate.replace('0', jobId);
-                fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRFToken': getCookie('csrftoken')
-                    },
-                    body: JSON.stringify({ status: 'applied' })
-                })
-                .then(response => {
-                    if (!response.ok) {
-                        return response.text().then(text => {
-                            console.error('Server error response text:', text.substring(0, 500)); 
-                            try {
-                                const errData = JSON.parse(text);
-                                throw new Error(errData.message || `HTTP error ${response.status}`);
-                            } catch (e) {
-                                throw new Error(`HTTP error ${response.status}. Response not valid JSON.`);
-                            }
-                        });
+            fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': '{{ csrf_token }}'
+                },
+                body: JSON.stringify({ status: 'applied' })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update the UI
+                    const badge = document.getElementById(`job-status-badge-${listType}-${jobId}`);
+                    const paragraph = document.getElementById(`job-status-paragraph-${listType}-${jobId}`);
+                    
+                    if (badge) {
+                        badge.textContent = 'Applied';
+                        badge.className = 'badge status-badge status-applied';
                     }
-                    return response.json(); 
-                })
-                .then(data => {
-                    if (data.success) {
-                        console.log('Status updated successfully for job', jobId, 'to', data.new_status);
-                        
-                        let statusBadge = null;
-                        let statusParagraph = null;
-
-                        if (listType === 'matched') {
-                            statusBadge = document.getElementById(`job-status-badge-matched-${jobId}`);
-                        } else if (listType === 'all') {
-                            statusBadge = document.getElementById(`job-status-badge-all-${jobId}`);
-                            statusParagraph = document.getElementById(`job-status-paragraph-all-${jobId}`);
-                        }
-
-                        if (statusBadge) {
-                            // Update text content
-                            statusBadge.textContent = `Status: ${data.new_status_display || data.new_status}`;
-                            
-                            // Define a list of all possible status classes we use
-                            const allStatusClasses = ['status-applied', 'status-not-applied', 'status-viewed']; // Add any other status slugs here
-
-                            // Remove any existing status class
-                            allStatusClasses.forEach(cls => statusBadge.classList.remove(cls));
-
-                            // Add the new status class based on data.new_status
-                            // Assuming data.new_status is a slug like 'applied', 'not_applied', 'viewed'
-                            let newStatusClass = `status-${data.new_status.toLowerCase().replace('_', '-')}`;
-                            if (allStatusClasses.includes(newStatusClass)) {
-                                statusBadge.classList.add(newStatusClass);
-                            } else {
-                                statusBadge.classList.add('status-not-applied'); // Fallback to not-applied
-                                console.warn(`Unknown status slug: ${data.new_status}, falling back to status-not-applied`);
-                            }
-                            
-                            if (statusParagraph) { 
-                                statusParagraph.style.display = ''; 
-                            }
-                        } else {
-                            console.warn('Could not find status badge for job', jobId, 'listType', listType);
-                        }
-                        
-                    } else {
-                        console.error('Failed to update status (server-side):', data.message);
-                        alert('Error updating status: ' + data.message);
+                    if (paragraph) {
+                        paragraph.style.display = 'block';
                     }
-                })
-                .catch(error => {
-                    console.error('Fetch API Error:', error);
-                    alert('An error occurred: ' + error.message);
-                })
-                .finally(() => {
-                    if (modalInstance) modalInstance.hide();
-                    clearPendingApplicationState();
-                });
-            }
-        });
-    }
-
-    if (applyConfirmationModalEl) {
-        applyConfirmationModalEl.addEventListener('hidden.bs.modal', function () {
-            clearPendingApplicationState();
-        });
-    }
-
-    function getCookie(name) {
-        let cookieValue = null;
-        if (document.cookie && document.cookie !== '') {
-            const cookies = document.cookie.split(';');
-            for (let i = 0; i < cookies.length; i++) {
-                const cookie = cookies[i].trim();
-                if (cookie.substring(0, name.length + 1) === (name + '=')) {
-                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
-                    break;
+                    
+                    modalInstance.hide();
+                    // Optionally, show a success toast/message
+                } else {
+                    // Handle error
+                    console.error('Failed to update status:', data.error);
+                    alert('There was an error updating the job status.');
                 }
-            }
-        }
-        return cookieValue;
-    }
-
-    // Add a class to body to indicate new layout is active, for specific global overrides if needed
-    document.body.classList.add('jobbAI-layout-active');
-
-    // Logic for mobile sidebar toggle if needed, beyond Bootstrap's default
-    // Example: When mobile sidebar (#sidebarMenu) is shown/hidden by Bootstrap,
-    // we might want to change an icon in the main top navbar toggler.
-    const mobileSidebarToggler = document.querySelector('.navbar-toggler[data-bs-target="#sidebarMenu"]');
-    if (sidebar && mobileSidebarToggler) {
-        const bsCollapse = new bootstrap.Collapse(sidebar, { toggle: false });
-        // Listen to Bootstrap's events
-        sidebar.addEventListener('shown.bs.collapse', function () {
-            // Mobile sidebar is now open
-            // mobileSidebarToggler.innerHTML = '<i class="fas fa-times"></i>'; // Change to close icon
-            // CSS handles the main content push now via sibling selector
-        });
-        sidebar.addEventListener('hidden.bs.collapse', function () {
-            // Mobile sidebar is now closed
-            // mobileSidebarToggler.innerHTML = '<i class="fas fa-bars"></i>'; // Change back to hamburger
-            // CSS handles the main content margin reset now
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('An unexpected error occurred.');
+            });
         });
     }
-
 });
 </script>
-
 {% endblock %}

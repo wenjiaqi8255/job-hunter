@@ -2,13 +2,22 @@ import json
 
 def parse_and_prepare_insights_for_template(insights_text):
     """
-    Parses the insights string (potentially bullet points) into a list of strings.
-    Handles None or empty strings.
+    Parses the insights string into pairs for pro/con template display.
+    Returns list of tuples (pro_insight, con_insight).
     """
     if not insights_text:
         return []
-    # Split by newline and filter out empty lines, remove leading/trailing whitespace and asterisks
-    return [line.strip().lstrip('* ').strip() for line in insights_text.strip().split('\n') if line.strip()]
+    
+    lines = [line.strip().lstrip('* ').strip() for line in insights_text.strip().split('\n') if line.strip()]
+    
+    # Group lines into pairs for pro/con display
+    pairs = []
+    for i in range(0, len(lines), 2):
+        pro = lines[i] if i < len(lines) else ""
+        con = lines[i + 1] if i + 1 < len(lines) else ""
+        pairs.append((pro, con))
+    
+    return pairs
 
 def parse_anomaly_analysis(analysis_data):
     """
