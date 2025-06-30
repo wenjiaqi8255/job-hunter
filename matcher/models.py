@@ -18,8 +18,7 @@ class UserProfile(models.Model):
         on_delete=models.CASCADE,
         primary_key=True, # User is the new primary key
     )
-    # session_key is kept to potentially migrate old data in the future, but it's no longer a PK.
-    session_key = models.CharField(max_length=40, null=True, blank=True, unique=True)
+    # session_key is obsolete and has been removed.
     user_cv_text = models.TextField(blank=True, null=True)
     cv_file = models.FileField(upload_to=user_cv_path, blank=True, null=True)
     user_preferences_text = models.TextField(blank=True, null=True)
@@ -58,7 +57,7 @@ class MatchSession(models.Model):
     user_preferences_text = models.TextField(null=True, blank=True)
     structured_user_profile_json = models.JSONField(null=True, blank=True)
     matched_at = models.DateTimeField(auto_now_add=True)
-    # session_key = models.CharField(max_length=40, null=True, blank=True, unique=True) 
+    # session_key is obsolete and has been removed.
 
     def __str__(self):
         preferences_snippet = self.user_preferences_text[:30] + "..." if self.user_preferences_text else "No preferences"
@@ -94,11 +93,11 @@ class MatchedJob(models.Model):
 class SavedJob(models.Model):
     STATUS_CHOICES = [
         ('not_applied', 'Not Applied'),
+        ('viewed', 'Viewed'),
         ('applied', 'Applied'),
         ('interviewing', 'Interviewing'),
-        ('offer_received', 'Offer Received'),
+        ('offer', 'Offer'),
         ('rejected', 'Rejected'),
-        ('accepted', 'Accepted'),
     ]
 
     job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name='saved_instances')
@@ -115,10 +114,10 @@ class SavedJob(models.Model):
         return f"{self.job_listing.job_title} saved by {self.user.username}"
 
 class CoverLetter(models.Model):
-    saved_job = models.OneToOneField(SavedJob, on_delete=models.CASCADE, related_name='cover_letter') # Assuming one cover letter per saved job for simplicity
+    saved_job = models.OneToOneField(SavedJob, on_delete=models.CASCADE, related_name='cover_letter')
     content = models.TextField()
     created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True) # Good to have to see when it was last modified if ever editable
+    updated_at = models.DateTimeField(auto_now=True)
 
     def __str__(self):
         return f"Cover Letter for {self.saved_job.job_listing.job_title} (SavedJob PK: {self.saved_job.pk})"

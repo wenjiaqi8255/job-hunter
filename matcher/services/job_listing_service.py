@@ -1,22 +1,11 @@
-from django.conf import settings
-from supabase import create_client, Client
+from supabase import Client
 import os
 from datetime import datetime, date, time
 
-# Initialize Supabase client
-supabase: Client | None = None
-try:
-    supabase_url = os.environ.get("SUPABASE_URL")
-    supabase_key = os.environ.get("SUPABASE_KEY")
-    if not supabase_url or not supabase_key:
-        raise ValueError("Supabase URL or Key not found in environment variables.")
-    supabase = create_client(supabase_url, supabase_key)
-    print("INFO: Supabase client initialized successfully for job_listing_service.")
-except (ValueError, Exception) as e:
-    print(f"ERROR: Failed to initialize Supabase client for job_listing_service: {e}")
-    # supabase remains None
+# 注意：全局的 Supabase 客户端初始化已被移除。
+# 所有函数现在都希望接收一个已认证的 supabase 客户端实例。
 
-def fetch_todays_job_listings_from_supabase():
+def fetch_todays_job_listings_from_supabase(supabase: Client):
     """
     Fetches job listings from Supabase that were created today.
     """
@@ -38,7 +27,7 @@ def fetch_todays_job_listings_from_supabase():
         print(f"ERROR: Could not fetch today's job listings from Supabase: {e}")
         return []
 
-def fetch_anomaly_analysis_for_jobs_from_supabase(job_ids: list):
+def fetch_anomaly_analysis_for_jobs_from_supabase(supabase: Client, job_ids: list):
     """
     Fetches anomaly analysis for a list of job IDs from Supabase.
     """
@@ -51,11 +40,11 @@ def fetch_anomaly_analysis_for_jobs_from_supabase(job_ids: list):
         str_job_ids = [str(job_id) for job_id in job_ids]
         
         # Assuming the table is named 'job_anomaly_analysis'
-        response = supabase.table('job_anomaly_analysis').select('*').in_('job_id', str_job_ids).execute()
+        response = supabase.table('job_anomaly_analysis').select('*').in_('job_listing_id', str_job_ids).execute()
         
         if response.data:
             # Return a map of job_id -> anomaly_data
-            return {item['job_id']: item for item in response.data}
+            return {item['job_listing_id']: item for item in response.data}
         return {}
     except Exception as e:
         print(f"ERROR: Could not fetch anomaly analysis from Supabase for jobs {job_ids}: {e}")
