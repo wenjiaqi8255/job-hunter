@@ -31,6 +31,14 @@
             color: #6c757d;
         }
     </style>
+
+    <script>
+        window.SUPABASE_CONFIG = {
+            URL: "{{ SUPABASE_URL }}",
+            KEY: "{{ SUPABASE_KEY }}"
+        };
+    </script>
+
 </head>
 <body data-is-authenticated="{{ user.is_authenticated|yesno:'true,false' }}">
     <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top">
@@ -96,5 +104,110 @@
     </footer>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+    
+    <script>
+        // 处理 Supabase OAuth fragment 参数
+        function handleOAuthFragment() {
+            const hash = window.location.hash;
+            
+            if (hash && hash.includes('access_token')) {
+                console.log('[DEBUG] OAuth fragment detected:', hash);
+                
+                // 解析 fragment 参数
+                const params = new URLSearchParams(hash.substring(1));
+                const accessToken = params.get('access_token');
+                const refreshToken = params.get('refresh_token');
+                const expiresAt = params.get('expires_at');
+                const providerToken = params.get('provider_token');
+                
+                console.log('[DEBUG] Extracted tokens:', {
+                    accessToken: accessToken ? accessToken.substring(0, 20) + '...' : null,
+                    refreshToken: refreshToken ? refreshToken.substring(0, 20) + '...' : null,
+                    expiresAt: expiresAt
+                });
+                
+                if (accessToken) {
+                    // 获取CSRF token
+                    function getCSRFToken() {
+                        const cookieValue = document.cookie
+                            .split('; ')
+                            .find(row => row.startsWith('csrftoken='));
+                        return cookieValue ? cookieValue.split('=')[1] : '';
+                    }
+                    
+                    console.log('[DEBUG] Sending OAuth tokens to server...');
+                    
+                    // 使用 fetch 发送 tokens 到服务器
+                    const formData = new FormData();
+                    formData.append('csrfmiddlewaretoken', getCSRFToken());
+                    formData.append('access_token', accessToken);
+                    formData.append('refresh_token', refreshToken || '');
+                    formData.append('expires_at', expiresAt || '');
+                    formData.append('provider_token', providerToken || '');
+                    
+                    fetch('/auth/process-oauth-tokens/', {
+                        method: 'POST',
+                        body: formData,
+                        credentials: 'same-origin'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log('[DEBUG] Server response:', data);
+                        
+                        if (data.success) {
+                            // 清除URL hash并重定向
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            
+                            // 显示成功消息
+                            if (data.message) {
+                                console.log('[DEBUG] Login successful:', data.message);
+                            }
+                            
+                            // 重定向或刷新页面
+                            if (data.redirect) {
+                                window.location.href = data.redirect;
+                            } else {
+                                window.location.reload();
+                            }
+                        } else {
+                            console.error('[DEBUG] Login failed:', data.error || 'Unknown error');
+                            alert('Login failed: ' + (data.error || 'Unknown error'));
+                            
+                            // 清除hash并重定向到登录页
+                            window.history.replaceState({}, document.title, window.location.pathname);
+                            window.location.href = '/login/';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('[DEBUG] Network error:', error);
+                        alert('Network error during login. Please try again.');
+                        
+                        // 清除hash并重定向到登录页
+                        window.history.replaceState({}, document.title, window.location.pathname);
+                        window.location.href = '/login/';
+                    });
+                    
+                    return true; // 表示处理了 OAuth
+                }
+            }
+            
+            return false;
+        }
+        
+        // 页面加载时检查 OAuth fragment
+        document.addEventListener('DOMContentLoaded', function() {
+            handleOAuthFragment();
+        });
+        
+        // 如果页面已经加载，立即检查
+        if (document.readyState === 'loading') {
+            // DOM 还在加载
+        } else {
+            // DOM 已经加载完成
+            handleOAuthFragment();
+        }
+    </script>
+    
+    {% block scripts %}{% endblock scripts %}
 </body>
 </html>
