@@ -24,7 +24,7 @@ from django.contrib.auth import views as auth_views
 from matcher.views.auth_views import google_login, google_callback, process_oauth_tokens  # Import specific auth views
 
 urlpatterns = [
-    path('i18n/', include('django.conf.urls.i18n')),
+    path('i18n/', include('django.conf.urls.i18n')), #language switcher
     path("admin/", admin.site.urls),
     path('accounts/', include('allauth.urls')),
     path('login/', auth_views.LoginView.as_view(template_name='matcher/login.html'), name='login'),
