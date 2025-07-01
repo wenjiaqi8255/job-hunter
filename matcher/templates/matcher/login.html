@@ -1,4 +1,5 @@
 {% extends 'matcher/base.html' %}
+{% load static %}
 
 {% block title %}Login{% endblock %}
 
@@ -21,9 +22,23 @@
                         {{ form.as_p }}
                         <button type="submit" class="btn btn-primary w-100">Login</button>
                     </form>
+
+                    <div class="text-center my-3">
+                        <span class="text-muted">OR</span>
+                    </div>
+
+                    <a href="{% url 'google_login' %}" class="btn btn-outline-danger w-100">
+                        <i class="fab fa-google me-2"></i> Sign in with Google
+                    </a>
+
                 </div>
             </div>
         </div>
     </div>
 </div>
 {% endblock %}
+
+{% block scripts %}
+{# The client-side Supabase login logic is now removed. #}
+{# The login flow is handled by the Django backend. #}
+{% endblock scripts %}

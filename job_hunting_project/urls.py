@@ -21,6 +21,7 @@ from django.conf import settings
 from django.conf.urls.static import static
 from django.conf.urls.i18n import i18n_patterns
 from django.contrib.auth import views as auth_views
+from matcher import views as matcher_views  # Import matcher views directly
 
 urlpatterns = [
     path('i18n/', include('django.conf.urls.i18n')),
@@ -28,6 +29,10 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),
     path('login/', auth_views.LoginView.as_view(template_name='matcher/login.html'), name='login'),
     path('logout/', auth_views.LogoutView.as_view(next_page='matcher:main_page'), name='logout'),
+    # OAuth routes should not be internationalized to avoid session issues
+    path('auth/login/google/', matcher_views.google_login, name='google_login'),
+    path('auth/callback/', matcher_views.google_callback, name='google_callback'),
+    path('auth/process-oauth-tokens/', matcher_views.process_oauth_tokens, name='process_oauth_tokens'),
 ]
 
 urlpatterns += i18n_patterns(
