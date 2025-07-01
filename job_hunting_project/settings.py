@@ -145,7 +145,7 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 
@@ -153,6 +153,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 STATICFILES_DIRS = [
     BASE_DIR / "static",
 ]
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -201,4 +202,15 @@ CACHES = {
 }
 
 SITE_ID = 1
-LOGIN_REDIRECT_URL = '/'
+
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/en/'
+ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
+ACCOUNT_SIGNUP_REDIRECT_URL = '/en/'
+
+ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+
+ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
+
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

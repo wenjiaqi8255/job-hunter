@@ -40,7 +40,7 @@ def update_supabase_saved_job_status(user_session_key, original_job_id, new_stat
 # 查询所有申请记录（可选按状态过滤）
 def list_supabase_saved_jobs(user_session_key, status=None):
     supabase = get_supabase_client()
-    query = supabase.table('saved_jobs').select('*').eq('user_session_key', user_session_key)
+    query = supabase.table('saved_jobs').select('*')#.eq('user_session_key', user_session_key)
     if status:
         query = query.eq('status', status)
     resp = query.order('updated_at', desc=True).execute()
