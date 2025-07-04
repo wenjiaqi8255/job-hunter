@@ -4,41 +4,27 @@
 {% block title %}Login{% endblock %}
 
 {% block content %}
-<div class="container mt-5">
-    <div class="row justify-content-center">
-        <div class="col-md-6">
-            <div class="card shadow-sm">
-                <div class="card-header">
-                    <h2 class="mb-0">Login</h2>
-                </div>
-                <div class="card-body">
-                    {% if form.errors %}
-                        <div class="alert alert-danger">
-                            Your username and password didn't match. Please try again.
-                        </div>
-                    {% endif %}
-                    <form method="post">
-                        {% csrf_token %}
-                        {{ form.as_p }}
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
+<div class="login-wrapper d-flex align-items-center justify-content-center min-vh-100">
+    <div class="login-card p-5 shadow rounded-4">
+        <h2 class="mb-4 text-center">Hello, Guest!</h2>
 
-                    <div class="text-center my-3">
-                        <span class="text-muted">OR</span>
-                    </div>
-
-                    <a href="{% url 'google_login' %}" class="btn btn-outline-danger w-100">
-                        <i class="fab fa-google me-2"></i> Sign in with Google
-                    </a>
-
-                </div>
+        {% if form.errors %}
+            <div class="alert alert-danger">
+                Your username and password didn't match. Please try again.
             </div>
-        </div>
+        {% endif %}
+
+        <form method="post" class="mb-3">
+            {% csrf_token %}
+            {{ form.as_p }}
+            <button type="submit" class="btn btn-accent w-100">Login</button>
+        </form>
+
+        <div class="text-center mb-3 text-muted">or</div>
+
+        <a href="{% url 'google_login' %}" class="btn btn-outline-dark w-100">
+            <i class="fab fa-google me-2"></i> Sign in with Google
+        </a>
     </div>
 </div>
 {% endblock %}
-
-{% block scripts %}
-{# The client-side Supabase login logic is now removed. #}
-{# The login flow is handled by the Django backend. #}
-{% endblock scripts %}
