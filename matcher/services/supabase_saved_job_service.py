@@ -17,13 +17,19 @@ def get_supabase_saved_job(supabase: Client, original_job_id: str):
 
 # 创建申请记录（含岗位快照）
 def create_supabase_saved_job(supabase: Client, data: dict):
-    # user_id 会由 RLS 策略根据 JWT 自动填充或验证，无需在 data 中提供
-    if 'user_id' in data:
-        # 最好从数据中移除，以防混淆
-        del data['user_id']
-
+    """创建一个新的 saved_job 记录"""
     if 'original_job_id' not in data:
         raise ValueError("Missing required field 'original_job_id' in saved_job data")
+    
+    # 调试：检查当前用户会话
+    try:
+        user_response = supabase.auth.get_user()
+        if user_response and user_response.user:
+            print(f"[SavedJobService] Creating job for user: {user_response.user.id}")
+        else:
+            print(f"[SavedJobService] Warning: No authenticated user found")
+    except Exception as e:
+        print(f"[SavedJobService] Error checking user: {e}")
     
     # 确保 created_at 和 updated_at 存在
     now = datetime.utcnow().isoformat()

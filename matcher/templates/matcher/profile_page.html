@@ -53,43 +53,56 @@
 
 {% block content %}
 <div class="container mt-4">
-    <div class="profile-header">
-        <h1>Hi, {{ user.username }}!</h1> 
-    </div>
-
-    <div class="stats-container">
-        <div class="stat-card">
-            <div class="stat-value">{{ job_matches_count }}</div>
-            <div class="stat-label">Job Matches</div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ already_saved_minutes }} mins</div>
-            <div class="stat-label">Time Saved Searching</div>
-            <small class="text-muted mt-1">(Based on {{ application_count }} applications at 20 mins each)</small>
-        </div>
-        <div class="stat-card">
-            <div class="stat-value">{{ tips_to_improve_count }}</div>
-            <div class="stat-label">Tips to Improve</div>
+    <!-- 游客用户内容 -->
+    <div class="guest-only" style="display: none;">
+        <div class="alert alert-info">
+            <h5 class="alert-heading">Access Restricted</h5>
+            <p>You need to be logged in to view your profile.</p>
+            <hr>
+            <p class="mb-0">Please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">log in or create an account</a> to access this page.</p>
         </div>
     </div>
 
-    {# Placeholder sections for CV/Resume, Preferences, Newsletter as per Figma #}
-    <div class="row mt-4">
-        <div class="col-md-12">
-            <div class="placeholder-section">
-                <h4>CV/Resume</h4>
-                <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}No CV uploaded.{% endif %}</strong></p>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
+    <!-- 认证用户内容 -->
+    <div class="auth-required" style="display: none;">
+        <div class="profile-header">
+            <h1 id="profile-username">Hi, Loading...</h1> 
+        </div>
+
+        <div class="stats-container">
+            <div class="stat-card">
+                <div class="stat-value" id="job-matches-count">0</div>
+                <div class="stat-label">Job Matches</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="time-saved-display">0 mins</div>
+                <div class="stat-label">Time Saved Searching</div>
+                <small class="text-muted mt-1" id="application-count-detail">(Based on 0 applications at 20 mins each)</small>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value" id="tips-to-improve-count">0</div>
+                <div class="stat-label">Tips to Improve</div>
             </div>
         </div>
-    </div>
 
-    <div class="row mt-3">
-        <div class="col-md-12">
-            <div class="placeholder-section">
-                <h4>Preferences</h4>
-                <p>Your default preferences for jobs: <strong>{% if user_preferences_text %}{{ user_preferences_text|truncatewords:10 }}{% else %}Little German required, startup... (Placeholder){% endif %}</strong></p>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
+        {# Placeholder sections for CV/Resume, Preferences, Newsletter as per Figma #}
+        <div class="row mt-4">
+            <div class="col-md-12">
+                <div class="placeholder-section">
+                    <h4>CV/Resume</h4>
+                    <p>Your default CV/Resume: <strong id="cv-text-preview">Loading...</strong></p>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mt-3">
+            <div class="col-md-12">
+                <div class="placeholder-section">
+                    <h4>Preferences</h4>
+                    <p>Your default preferences for jobs: <strong id="preferences-text-preview">Loading...</strong></p>
+                    <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
+                </div>
             </div>
         </div>
     </div>
@@ -259,6 +272,144 @@
 </div>
 
 <script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[个人资料页] 开始初始化认证状态处理');
+    
+    // 监听认证状态变化
+    function handleAuthStateChange(isAuthenticated) {
+        console.log(`[个人资料页] 认证状态变化: ${isAuthenticated}`);
+        
+        if (isAuthenticated) {
+            // 显示需要认证的内容
+            const authRequiredElements = document.querySelectorAll('.auth-required');
+            authRequiredElements.forEach(el => {
+                el.style.display = 'block';
+            });
+            
+            // 隐藏游客提示内容
+            const guestOnlyElements = document.querySelectorAll('.guest-only');
+            guestOnlyElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 加载用户个人资料数据
+            loadProfileUserData();
+        } else {
+            // 隐藏需要认证的内容
+            const authRequiredElements = document.querySelectorAll('.auth-required');
+            authRequiredElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 显示游客提示内容
+            const guestOnlyElements = document.querySelectorAll('.guest-only');
+            guestOnlyElements.forEach(el => {
+                el.style.display = 'block';
+            });
+        }
+    }
+    
+    // 加载用户个人资料数据
+    async function loadProfileUserData() {
+        console.log('[个人资料页] 开始加载用户数据');
+        
+        try {
+            // 检查是否有认证管理器
+            if (!window.authManager) {
+                console.log('[个人资料页] 认证管理器未就绪，稍后重试');
+                setTimeout(loadProfileUserData, 1000);
+                return;
+            }
+            
+            // 获取用户状态
+            const userStatus = await window.authManager.getUserStatus();
+            if (userStatus) {
+                console.log('[个人资料页] 用户状态加载成功');
+                
+                // 更新用户基本信息
+                updateProfileDisplay(userStatus);
+                
+                // 加载保存的工作数据
+                await loadProfileSavedJobsData();
+            }
+        } catch (error) {
+            console.error('[个人资料页] 加载用户数据失败:', error);
+        }
+    }
+    
+    // 更新个人资料显示
+    function updateProfileDisplay(userStatus) {
+        // 更新用户名
+        const usernameElement = document.getElementById('profile-username');
+        if (usernameElement) {
+            usernameElement.textContent = `Hi, ${userStatus.full_name || userStatus.email || 'User'}!`;
+        }
+        
+        // 更新CV预览
+        const cvPreview = document.getElementById('cv-text-preview');
+        if (cvPreview) {
+            cvPreview.textContent = userStatus.cv_text ? 
+                userStatus.cv_text.substring(0, 50) + '...' : 
+                'No CV uploaded.';
+        }
+        
+        // 更新偏好预览
+        const preferencesPreview = document.getElementById('preferences-text-preview');
+        if (preferencesPreview) {
+            preferencesPreview.textContent = userStatus.preferences_text ? 
+                userStatus.preferences_text.substring(0, 50) + '...' : 
+                'No preferences set.';
+        }
+    }
+    
+    // 加载保存的工作数据
+    async function loadProfileSavedJobsData() {
+        console.log('[个人资料页] 开始加载保存的工作数据');
+        
+        try {
+            const savedJobs = await window.authManager.getSavedJobs();
+            
+            // 计算统计数据
+            const appliedJobsCount = savedJobs.filter(job => job.status === 'applied').length;
+            const timeSaved = appliedJobsCount * 20; // 每个申请节省20分钟
+            
+            // 更新统计显示
+            const matchesCount = document.getElementById('job-matches-count');
+            if (matchesCount) {
+                matchesCount.textContent = savedJobs.length;
+            }
+            
+            const timeSavedDisplay = document.getElementById('time-saved-display');
+            if (timeSavedDisplay) {
+                timeSavedDisplay.textContent = `${timeSaved} mins`;
+            }
+            
+            const applicationCountDetail = document.getElementById('application-count-detail');
+            if (applicationCountDetail) {
+                applicationCountDetail.textContent = `(Based on ${appliedJobsCount} applications at 20 mins each)`;
+            }
+            
+            const tipsCount = document.getElementById('tips-to-improve-count');
+            if (tipsCount) {
+                // 简单的提示计算：每5个保存的工作给1个提示
+                tipsCount.textContent = Math.max(1, Math.floor(savedJobs.length / 5));
+            }
+            
+            console.log(`[个人资料页] 统计数据更新完成: ${savedJobs.length}个工作`);
+        } catch (error) {
+            console.error('[个人资料页] 加载保存的工作失败:', error);
+        }
+    }
+    
+    // 初始检查认证状态
+    setTimeout(function() {
+        if (window.authManager) {
+            const isAuthenticated = window.authManager.getCurrentUser() !== null;
+            handleAuthStateChange(isAuthenticated);
+        }
+    }, 500);
+});
+
 // Listen for a message from the N8n iframe
 window.addEventListener('message', function(event) {
     // IMPORTANT: Add a check for the event origin to ensure messages are from a trusted source

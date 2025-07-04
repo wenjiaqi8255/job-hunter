@@ -19,7 +19,7 @@
                         </a>
                     </div>
                     
-                    {% if user.is_authenticated %}
+                    <div class="auth-required" style="display: none;">
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
                         <span>Today's Matches</span>
                     </h6>
@@ -62,14 +62,14 @@
                         </li>
                         {% endif %}
                     </ul>
-                    {% else %}
-                    <div class="px-3 mt-4 text-muted">
+                    
+                    <div class="guest-only px-3 mt-4 text-muted" style="display: none;">
                         <small>
                             <i class="fas fa-sign-in-alt me-1"></i>
-                            <a href="{% url 'login' %}?next={{ request.path }}">Log in</a> to view your match history and save jobs.
+                            <span>Log in to view your match history and save jobs.</span>
                         </small>
                     </div>
-                    {% endif %}
+                    </div>
                 </div>
             </nav>
 
@@ -90,9 +90,9 @@
                                 {{ all_jobs_count }} Job Listings
                             {% endif %}
                         </h1>
-                        {% if user.is_authenticated and user_preferences_text %}
-                        <p class="text-muted mb-0 small">Based on preferences: {{ user_preferences_text|truncatewords:20 }}</p>
-                        {% endif %}
+                        <div class="auth-required" style="display: none;">
+                            <p class="text-muted mb-0 small" id="user-preferences-display">Based on preferences: {{ user_preferences_text|truncatewords:20 }}</p>
+                        </div>
                     </div>
                     <!-- <div class="btn-toolbar mb-2 mb-md-0">
                         <div class="btn-group me-2">
@@ -111,69 +111,77 @@
                         <h5 class="mb-0">Review Your Profile & Start Match</h5>
                     </div>
                     <div class="card-body">
-                        {% if user.is_authenticated %}
-                        <form method="POST" action="{% url 'matcher:main_page' %}" id="startMatchForm">
-                            {% csrf_token %}
-                            <div class="row">
-                                <div class="col-lg-6 mb-3 mb-lg-0">
-                                    <label class="form-label"><strong>Your Current CV:</strong></label>
-                                    {% if user_cv_text %}
-                                        <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
-                                            <small class="text-muted">{{ user_cv_text|truncatewords:50|linebreaksbr }}</small>
-                                        </div>
-                                        <div class="mt-2">
-                                            <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
-                                                <i class="fas fa-edit me-1"></i> Edit CV in Profile
-                                            </a>
-                                        </div>
-                                    {% else %}
-                                        <div class="alert alert-warning">
-                                            <i class="fas fa-exclamation-triangle me-2"></i>
-                                            No CV found. Please <a href="{% url 'matcher:profile_page' %}" class="alert-link">complete your profile</a> first.
-                                        </div>
-                                    {% endif %}
-                                    <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                        <!-- 认证用户内容 -->
+                        <div class="auth-required" style="display: none;">
+                            <form method="POST" action="{% url 'matcher:main_page' %}" id="startMatchForm">
+                                {% csrf_token %}
+                                <div class="row">
+                                    <div class="col-lg-6 mb-3 mb-lg-0">
+                                        <label class="form-label"><strong>Your Current CV:</strong></label>
+                                        {% if user_cv_text %}
+                                            <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                                <small class="text-muted">{{ user_cv_text|truncatewords:50|linebreaksbr }}</small>
+                                            </div>
+                                            <div class="mt-2">
+                                                <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-edit me-1"></i> Edit CV in Profile
+                                                </a>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-warning">
+                                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                                No CV found. Please <a href="{% url 'matcher:profile_page' %}" class="alert-link">complete your profile</a> first.
+                                            </div>
+                                        {% endif %}
+                                        <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                                    </div>
+                                    <div class="col-lg-6">
+                                        <label class="form-label"><strong>Your Preferences:</strong></label>
+                                        {% if user_preferences_text %}
+                                            <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                                <small class="text-muted">{{ user_preferences_text|linebreaksbr }}</small>
+                                            </div>
+                                            <div class="mt-2">
+                                                <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
+                                                    <i class="fas fa-edit me-1"></i> Edit Preferences in Profile
+                                                </a>
+                                            </div>
+                                        {% else %}
+                                            <div class="alert alert-info">
+                                                <i class="fas fa-info-circle me-2"></i>
+                                                No preferences set. <a href="{% url 'matcher:profile_page' %}" class="alert-link">Add preferences</a> for better matching.
+                                            </div>
+                                        {% endif %}
+                                        <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                                    </div>
                                 </div>
-                                <div class="col-lg-6">
-                                    <label class="form-label"><strong>Your Preferences:</strong></label>
-                                    {% if user_preferences_text %}
-                                        <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
-                                            <small class="text-muted">{{ user_preferences_text|linebreaksbr }}</small>
-                                        </div>
-                                        <div class="mt-2">
-                                            <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary">
-                                                <i class="fas fa-edit me-1"></i> Edit Preferences in Profile
-                                            </a>
-                                        </div>
-                                    {% else %}
-                                        <div class="alert alert-info">
-                                            <i class="fas fa-info-circle me-2"></i>
-                                            No preferences set. <a href="{% url 'matcher:profile_page' %}" class="alert-link">Add preferences</a> for better matching.
-                                        </div>
-                                    {% endif %}
-                                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
-                                </div>
-                            </div>
-                        </form>
-                        {% else %}
-                        <div class="alert alert-info">
-                            <h5 class="alert-heading">Welcome, Guest!</h5>
-                            <p>You are viewing this page as a guest. You can browse all available jobs below.</p>
-                            <hr>
-                            <p class="mb-0">To get personalized job matches, save applications, and use other features, please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">log in or create an account</a>.</p>
+                            </form>
                         </div>
-                        {% endif %}
+                        
+                        <!-- 游客用户内容 -->
+                        <div class="guest-only" style="display: none;">
+                            <div class="alert alert-info">
+                                <h5 class="alert-heading">Welcome, Guest!</h5>
+                                <p>You are viewing this page as a guest. You can browse all available jobs below.</p>
+                                <hr>
+                                <p class="mb-0">To get personalized job matches, save applications, and use other features, please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">log in or create an account</a>.</p>
+                            </div>
+                        </div>
                     </div>
                     <div class="card-footer text-end">
-                        {% if user.is_authenticated %}
-                        <button type="submit" form="startMatchForm" class="btn btn-primary btn-lg" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
-                            <i class="fas fa-search me-1"></i> Find Matches with Current Profile
-                        </button>
-                        {% else %}
-                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
-                            <i class="fas fa-sign-in-alt me-1"></i> Log In to Find Matches
-                        </a>
-                        {% endif %}
+                        <!-- 认证用户按钮 -->
+                        <div class="auth-required" style="display: none;">
+                            <button type="submit" form="startMatchForm" class="btn btn-primary btn-lg" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
+                                <i class="fas fa-search me-1"></i> Find Matches with Current Profile
+                            </button>
+                        </div>
+                        
+                        <!-- 游客用户按钮 -->
+                        <div class="guest-only" style="display: none;">
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary btn-lg">
+                                <i class="fas fa-sign-in-alt me-1"></i> Log In to Find Matches
+                            </a>
+                        </div>
                     </div>
                 </div>
                 {% endif %}
@@ -197,10 +205,9 @@
                                     <div class="card-body">
                                         <div class="d-flex justify-content-between align-items-start mb-2">
                                             <div>
-                                                <h5 class="card-title mb-0">
-                                                    <a href="{% if user.is_authenticated %}{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}{% else %}{% url 'matcher:job_detail_page_no_session' job_id=match_item.job.id %}{% endif %}" class="text-decoration-none">
-                                                        {{ match_item.job.job_title }}
-                                                    </a>
+                                                <h5 class="card-title mb-0">                                            <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" class="text-decoration-none">
+                                                {{ match_item.job.job_title }}
+                                            </a>
                                                 </h5>
                                                 <small class="text-muted">{{ match_item.job.company_name }}</small>
                                             </div>
@@ -304,7 +311,7 @@
                                     </div>
                                     <div class="card-footer bg-light border-top-0 p-2">
                                         <div class="d-flex justify-content-end">
-                                            <a href="{% if user.is_authenticated %}{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}{% else %}{% url 'matcher:job_detail_page_no_session' job_id=match_item.job.id %}{% endif %}" 
+                                            <a href="{% url 'matcher:job_detail_page' job_id=match_item.job.id match_session_id=current_match_session_id %}" 
                                             class="btn btn-outline-secondary btn-sm me-2">
                                                 <i class="fas fa-info-circle me-1"></i> View Details
                                             </a>
@@ -368,7 +375,7 @@
                         <div class="row row-cols-1 g-4">
                         {% for item in all_jobs_annotated %}
                         <div class="col">
-                                <div class="card jobbAI-job-card-all shadow-sm">
+                                <div class="card jobbAI-job-card-all shadow-sm" data-job-id="{{ item.job_object.id }}">
                                 <div class="card-body">
                                         <h5 class="card-title">
                                             <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="text-decoration-none">
@@ -385,36 +392,41 @@
                                             </small>
                                         </div>
 
-                                    {% if user.is_authenticated and item.saved_status %}
-                                            <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}"><small><strong>Status:</strong>
-                                                <span class="badge status-badge {% if item.saved_status == 'applied' %}status-applied{% elif item.saved_status == 'viewed' %}status-viewed{% else %}status-not-applied{% endif %}" id="job-status-badge-all-{{ item.job_object.id }}">
-                                                    {% if item.saved_status %}{{ item.saved_status|capfirst }}{% else %}Not Applied{% endif %}
-                                                </span></small>
-                                            </p>
-                                    {% elif user.is_authenticated %}
-                                            <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}" style="display: none;"><small><strong>Status:</strong>
-                                                <span class="badge status-badge status-not-applied" id="job-status-badge-all-{{ item.job_object.id }}">Not Applied</span></small>
-                                            </p>
-                                    {% endif %}
+                                    <!-- 动态保存状态显示 - 由前端JavaScript管理 -->
+                                    <div class="auth-required" style="display: none;">
+                                        <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}">
+                                            <small><strong>Status:</strong>
+                                                <span class="badge status-badge status-not-applied" id="job-status-badge-all-{{ item.job_object.id }}">Not Applied</span>
+                                            </small>
+                                        </p>
+                                    </div>
                                         <p class="card-text small"><small>{{ item.job_object.description|truncatewords:20 }}</small></p>
                                 </div>
                                     <div class="card-footer bg-light border-top-0 p-2">
-                                        <div class="d-flex justify-content-end">
-                                            <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="btn btn-outline-secondary btn-sm me-2"><i class="fas fa-info-circle me-1"></i> Details</a>
-                                     {% if item.job_object.application_url %}
-                                     <a href="{{ item.job_object.application_url }}"
-                                        class="btn btn-success btn-sm apply-now-btn-trigger"
-                                        target="_blank" rel="noopener noreferrer"
-                                        data-job-id="{{ item.job_object.id }}"
-                                        data-job-title="{{ item.job_object.job_title }}"
-                                        data-list-type="all">
-                                                 <i class="fas fa-external-link-alt me-1"></i> Apply
-                                     </a>
-                                     {% else %}
-                                     <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
-                                                 <i class="fas fa-external-link-alt me-1"></i> Apply
-                                     </button>
-                                     {% endif %}
+                                        <div class="d-flex justify-content-between">
+                                            <!-- 保存按钮 - 只对认证用户显示 -->
+                                            <div class="auth-required" style="display: none;">
+                                                <button type="button" class="btn btn-outline-primary btn-sm save-job-btn" data-job-id="{{ item.job_object.id }}">
+                                                    <i class="fas fa-bookmark me-1"></i> Save
+                                                </button>
+                                            </div>
+                                            <div class="d-flex">
+                                                <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="btn btn-outline-secondary btn-sm me-2"><i class="fas fa-info-circle me-1"></i> Details</a>
+                                         {% if item.job_object.application_url %}
+                                         <a href="{{ item.job_object.application_url }}"
+                                            class="btn btn-success btn-sm apply-now-btn-trigger"
+                                            target="_blank" rel="noopener noreferrer"
+                                            data-job-id="{{ item.job_object.id }}"
+                                            data-job-title="{{ item.job_object.job_title }}"
+                                            data-list-type="all">
+                                                     <i class="fas fa-external-link-alt me-1"></i> Apply
+                                         </a>
+                                         {% else %}
+                                         <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
+                                                     <i class="fas fa-external-link-alt me-1"></i> Apply
+                                         </button>
+                                         {% endif %}
+                                            </div>
                                         </div>
                                 </div>
                             </div>
@@ -594,6 +606,162 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         });
     }
+
+
+    // 页面特定的认证逻辑
+    console.log('[主页] 开始初始化主页特定功能');
+    
+    // 监听认证状态变化
+    function handleAuthStateChange(isAuthenticated) {
+        console.log(`[主页] 认证状态变化: ${isAuthenticated}`);
+        
+        if (isAuthenticated) {
+            // 显示需要认证的内容
+            const authRequiredElements = document.querySelectorAll('.auth-required');
+            authRequiredElements.forEach(el => {
+                el.style.display = 'block';
+            });
+            
+            // 隐藏游客提示内容
+            const guestOnlyElements = document.querySelectorAll('.guest-only');
+            guestOnlyElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 加载用户特定数据
+            loadMainPageUserData();
+        } else {
+            // 隐藏需要认证的内容
+            const authRequiredElements = document.querySelectorAll('.auth-required');
+            authRequiredElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 显示游客提示内容
+            const guestOnlyElements = document.querySelectorAll('.guest-only');
+            guestOnlyElements.forEach(el => {
+                el.style.display = 'block';
+            });
+        }
+    }
+    
+    // 加载主页用户数据
+    async function loadMainPageUserData() {
+        console.log('[主页] 开始加载用户数据');
+        
+        try {
+            // 检查是否有认证管理器
+            if (!window.authManager) {
+                console.log('[主页] 认证管理器未就绪，稍后重试');
+                setTimeout(loadMainPageUserData, 1000);
+                return;
+            }
+            
+            // 获取用户状态
+            const userStatus = await window.authManager.getUserStatus();
+            if (userStatus) {
+                console.log('[主页] 用户状态加载成功');
+                
+                // 更新用户信息显示
+                updateMainPageUserInfo(userStatus);
+                
+                // 加载保存的工作数据
+                await loadMainPageSavedJobs();
+            }
+        } catch (error) {
+            console.error('[主页] 加载用户数据失败:', error);
+        }
+    }
+    
+    // 更新主页用户信息显示
+    function updateMainPageUserInfo(userStatus) {
+        // 简单的用户信息更新
+        const userElements = document.querySelectorAll('[data-user-info]');
+        userElements.forEach(el => {
+            el.textContent = userStatus.full_name || userStatus.email || '';
+        });
+    }
+    
+    // 加载主页保存的工作数据
+    async function loadMainPageSavedJobs() {
+        console.log('[主页] 开始加载保存的工作数据');
+        
+        try {
+            const savedJobs = await window.authManager.getSavedJobs();
+            
+            // 更新工作列表中的保存状态
+            savedJobs.forEach(savedJob => {
+                const jobElement = document.querySelector(`[data-job-id="${savedJob.original_job_id}"]`);
+                if (jobElement) {
+                    // 添加保存状态指示
+                    jobElement.classList.add('job-saved');
+                    jobElement.setAttribute('data-saved-status', savedJob.status);
+                    
+                    // 更新保存按钮状态
+                    const saveButton = jobElement.querySelector('.save-job-btn');
+                    if (saveButton) {
+                        saveButton.textContent = '已保存';
+                        saveButton.classList.add('btn-success');
+                        saveButton.classList.remove('btn-outline-primary');
+                    }
+                }
+            });
+            
+            console.log(`[主页] 工作保存状态更新完成: ${savedJobs.length}个`);
+        } catch (error) {
+            console.error('[主页] 加载保存的工作失败:', error);
+        }
+    }
+    
+    // 监听工作保存按钮点击
+    document.addEventListener('click', function(e) {
+        if (e.target.classList.contains('save-job-btn')) {
+            e.preventDefault();
+            
+            const jobId = e.target.getAttribute('data-job-id');
+            if (jobId) {
+                handleSaveJob(jobId, e.target);
+            }
+        }
+    });
+    
+    // 处理保存工作
+    async function handleSaveJob(jobId, button) {
+        console.log(`[主页] 保存工作: ${jobId}`);
+        
+        try {
+            // 检查是否已认证
+            if (!window.authManager || !window.authManager.getCurrentUser()) {
+                alert('请先登录再保存工作');
+                return;
+            }
+            
+            // 保存工作
+            const success = await window.authManager.saveJob(jobId, 'viewed');
+            
+            if (success) {
+                // 更新按钮状态
+                button.textContent = '已保存';
+                button.classList.add('btn-success');
+                button.classList.remove('btn-outline-primary');
+                
+                console.log(`[主页] 工作保存成功: ${jobId}`);
+            } else {
+                alert('保存工作失败，请重试');
+            }
+        } catch (error) {
+            console.error(`[主页] 保存工作失败: ${jobId}`, error);
+            alert('保存工作时发生错误');
+        }
+    }
+    
+    // 初始检查认证状态
+    setTimeout(function() {
+        if (window.authManager) {
+            const isAuthenticated = window.authManager.getCurrentUser() !== null;
+            handleAuthStateChange(isAuthenticated);
+        }
+    }, 500);
 });
 </script>
 {% endblock %}

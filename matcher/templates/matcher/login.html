@@ -9,28 +9,26 @@
         <div class="col-md-6">
             <div class="card shadow-sm">
                 <div class="card-header">
-                    <h2 class="mb-0">Login</h2>
+                    <h2 class="mb-0">登录</h2>
                 </div>
                 <div class="card-body">
-                    {% if form.errors %}
-                        <div class="alert alert-danger">
-                            Your username and password didn't match. Please try again.
-                        </div>
-                    {% endif %}
-                    <form method="post">
-                        {% csrf_token %}
-                        {{ form.as_p }}
-                        <button type="submit" class="btn btn-primary w-100">Login</button>
-                    </form>
-
-                    <div class="text-center my-3">
-                        <span class="text-muted">OR</span>
+                    <p class="text-center text-muted mb-4">
+                        请使用 Google 账号登录
+                    </p>
+                    
+                    <!-- 使用Supabase客户端的登录按钮 -->
+                    <div class="text-center">
+                        <button id="google-login-btn" class="btn btn-outline-primary btn-lg" style="width: 100%;">
+                            <i class="fab fa-google me-2"></i>
+                            使用 Google 账号登录
+                        </button>
                     </div>
-
-                    <a href="{% url 'google_login' %}" class="btn btn-outline-danger w-100">
-                        <i class="fab fa-google me-2"></i> Sign in with Google
-                    </a>
-
+                    
+                    <div class="text-center mt-3">
+                        <small class="text-muted">
+                            点击登录即表示您同意我们的服务条款
+                        </small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -39,6 +37,36 @@
 {% endblock %}
 
 {% block scripts %}
-{# The client-side Supabase login logic is now removed. #}
-{# The login flow is handled by the Django backend. #}
-{% endblock scripts %}
+<script>
+    // 页面加载完成后绑定登录按钮事件
+    document.addEventListener('DOMContentLoaded', function() {
+        const loginBtn = document.getElementById('google-login-btn');
+        
+        if (loginBtn) {
+            loginBtn.addEventListener('click', async function() {
+                try {
+                    // 禁用按钮，防止重复点击
+                    loginBtn.disabled = true;
+                    loginBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>正在登录...';
+                    
+                    // 使用AuthManager进行登录
+                    const success = await window.authManager.signInWithGoogle();
+                    
+                    if (!success) {
+                        // 登录失败，重置按钮状态
+                        loginBtn.disabled = false;
+                        loginBtn.innerHTML = '<i class="fab fa-google me-2"></i>使用 Google 账号登录';
+                        alert('登录失败，请重试');
+                    }
+                    // 成功的话，Supabase会自动重定向
+                } catch (error) {
+                    console.error('登录错误:', error);
+                    loginBtn.disabled = false;
+                    loginBtn.innerHTML = '<i class="fab fa-google me-2"></i>使用 Google 账号登录';
+                    alert('登录过程中发生错误，请重试');
+                }
+            });
+        }
+    });
+</script>
+{% endblock %}

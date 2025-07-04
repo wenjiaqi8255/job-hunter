@@ -1,0 +1,281 @@
+{% extends 'matcher/base.html' %}
+
+{% block title %}API测试{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>API调用测试</h3>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <h5>当前认证状态：</h5>
+                        <div id="auth-status" class="alert alert-info">
+                            检查中...
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button id="test-public-api" class="btn btn-secondary me-2">
+                            测试公开API
+                        </button>
+                        <button id="test-protected-api" class="btn btn-primary me-2">
+                            测试受保护的API
+                        </button>
+                        <button id="test-verify-token" class="btn btn-info me-2">
+                            测试Token验证
+                        </button>
+                        <button id="test-fetch-intercept" class="btn btn-success me-2">
+                            测试Fetch拦截器
+                        </button>
+                        <button id="test-business-api" class="btn btn-warning me-2">
+                            测试业务API
+                        </button>
+                        <button id="test-new-apis" class="btn btn-info">
+                            测试新API端点
+                        </button>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <h5>测试结果：</h5>
+                        <div id="test-results" class="border p-3 bg-light" style="height: 300px; overflow-y: auto;">
+                            <p class="text-muted">点击上面的按钮开始测试...</p>
+                        </div>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <button id="clear-results" class="btn btn-secondary">
+                            清除结果
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const resultsDiv = document.getElementById('test-results');
+    const authStatusDiv = document.getElementById('auth-status');
+    
+    // 检查认证状态
+    function updateAuthStatus() {
+        const currentUser = window.authManager?.getCurrentUser();
+        const authToken = window.authManager?.getAuthToken();
+        
+        if (currentUser && authToken) {
+            authStatusDiv.className = 'alert alert-success';
+            authStatusDiv.innerHTML = `
+                <strong>✓ 已登录</strong><br>
+                用户: ${currentUser.email}<br>
+                Token: ${authToken.substring(0, 20)}...
+            `;
+        } else {
+            authStatusDiv.className = 'alert alert-warning';
+            authStatusDiv.innerHTML = '<strong>⚠ 未登录</strong><br>部分API测试将返回401错误';
+        }
+    }
+    
+    // 初始检查
+    setTimeout(updateAuthStatus, 1000);
+    
+    function addResult(message, type = 'info') {
+        const timestamp = new Date().toLocaleTimeString();
+        const colorClass = type === 'success' ? 'text-success' : 
+                          type === 'error' ? 'text-danger' : 'text-info';
+        
+        resultsDiv.innerHTML += `<div class="${colorClass}">[${timestamp}] ${message}</div>`;
+        resultsDiv.scrollTop = resultsDiv.scrollHeight;
+    }
+    
+    // 测试公开API
+    document.getElementById('test-public-api').addEventListener('click', async function() {
+        try {
+            addResult('开始测试公开API...', 'info');
+            
+            const response = await fetch('/api/test-public/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                addResult(`公开API调用成功: ${JSON.stringify(data)}`, 'success');
+                
+                // 检查是否有认证状态
+                const hasToken = window.authManager?.getAuthToken();
+                
+                if (data.has_auth_header && hasToken) {
+                    addResult('✓ 拦截器正在工作 - 已登录用户的请求自动添加了认证头', 'success');
+                } else if (!data.has_auth_header && !hasToken) {
+                    addResult('✓ 拦截器正在工作 - 未登录用户的请求没有添加认证头', 'success');
+                } else if (data.has_auth_header && !hasToken) {
+                    addResult('⚠ 意外情况 - 没有token但添加了认证头', 'error');
+                } else {
+                    addResult('⚠ 意外情况 - 有token但没有添加认证头', 'error');
+                }
+            } else {
+                addResult(`公开API调用失败: ${response.status} - ${JSON.stringify(data)}`, 'error');
+            }
+        } catch (error) {
+            addResult(`公开API测试失败: ${error.message}`, 'error');
+        }
+    });
+    
+    // 测试受保护的API
+    document.getElementById('test-protected-api').addEventListener('click', async function() {
+        try {
+            addResult('开始测试受保护的API...', 'info');
+            
+            const response = await fetch('/api/test-protected/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                addResult(`成功访问受保护的API: ${JSON.stringify(data)}`, 'success');
+            } else {
+                addResult(`API返回错误: ${response.status} - ${JSON.stringify(data)}`, 'error');
+            }
+        } catch (error) {
+            addResult(`请求失败: ${error.message}`, 'error');
+        }
+    });
+    
+    // 测试Token验证
+    document.getElementById('test-verify-token').addEventListener('click', async function() {
+        try {
+            addResult('开始测试Token验证...', 'info');
+            
+            const response = await fetch('/api/verify-token/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            const data = await response.json();
+            
+            if (response.ok) {
+                addResult(`Token验证成功: ${JSON.stringify(data)}`, 'success');
+            } else {
+                addResult(`Token验证失败: ${response.status} - ${JSON.stringify(data)}`, 'error');
+            }
+        } catch (error) {
+            addResult(`请求失败: ${error.message}`, 'error');
+        }
+    });
+    
+    // 测试Fetch拦截器
+    document.getElementById('test-fetch-intercept').addEventListener('click', async function() {
+        try {
+            addResult('测试Fetch拦截器是否正常工作...', 'info');
+            
+            // 检查当前认证状态
+            const authToken = window.authManager.getAuthToken();
+            if (authToken) {
+                addResult(`当前有认证Token: ${authToken.substring(0, 20)}...`, 'success');
+            } else {
+                addResult('当前没有认证Token', 'error');
+            }
+            
+            // 测试一个简单的API调用
+            const response = await fetch('/api/verify-token/', {
+                method: 'POST'
+            });
+            
+            addResult(`Fetch拦截器测试完成，响应状态: ${response.status}`, 'info');
+            
+        } catch (error) {
+            addResult(`拦截器测试失败: ${error.message}`, 'error');
+        }
+    });
+    
+    // 测试业务API
+    document.getElementById('test-business-api').addEventListener('click', async function() {
+        try {
+            addResult('开始测试业务API...', 'info');
+            
+            // 测试用户经历API
+            const experienceResponse = await fetch('/api/user-experiences/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (experienceResponse.ok) {
+                const experienceData = await experienceResponse.json();
+                addResult(`用户经历API调用成功: ${JSON.stringify(experienceData)}`, 'success');
+            } else {
+                const experienceError = await experienceResponse.json();
+                addResult(`用户经历API调用失败: ${experienceResponse.status} - ${JSON.stringify(experienceError)}`, 'error');
+            }
+            
+        } catch (error) {
+            addResult(`业务API测试失败: ${error.message}`, 'error');
+        }
+    });
+    
+    // 测试新的API端点
+    document.getElementById('test-new-apis').addEventListener('click', async function() {
+        try {
+            addResult('开始测试新的API端点...', 'info');
+            
+            // 测试用户个人资料API
+            const profileResponse = await fetch('/api/user-profile/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (profileResponse.ok) {
+                const profileData = await profileResponse.json();
+                addResult(`用户个人资料API调用成功: ${JSON.stringify(profileData)}`, 'success');
+            } else {
+                const profileError = await profileResponse.json();
+                addResult(`用户个人资料API调用失败: ${profileResponse.status} - ${JSON.stringify(profileError)}`, 'error');
+            }
+            
+            // 测试用户保存工作API  
+            const savedJobsResponse = await fetch('/api/user-saved-jobs/', {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            });
+            
+            if (savedJobsResponse.ok) {
+                const savedJobsData = await savedJobsResponse.json();
+                addResult(`用户保存工作API调用成功: ${JSON.stringify(savedJobsData)}`, 'success');
+            } else {
+                const savedJobsError = await savedJobsResponse.json();
+                addResult(`用户保存工作API调用失败: ${savedJobsResponse.status} - ${JSON.stringify(savedJobsError)}`, 'error');
+            }
+            
+        } catch (error) {
+            addResult(`新API端点测试失败: ${error.message}`, 'error');
+        }
+    });
+    
+    // 清除结果
+    document.getElementById('clear-results').addEventListener('click', function() {
+        resultsDiv.innerHTML = '<p class="text-muted">点击上面的按钮开始测试...</p>';
+    });
+});
+</script>
+{% endblock %}
