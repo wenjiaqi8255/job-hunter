@@ -1,59 +1,47 @@
-from supabase import Client
+import os
+from django.conf import settings
+from supabase import create_client
 from datetime import datetime
-from typing import Optional
 
-# 注意：get_supabase_client 已被移除。
-# 所有函数现在都希望接收一个已认证的 supabase 客户端实例，并依赖 RLS 策略。
+def get_supabase_client():
+    url = os.environ.get('SUPABASE_URL') or getattr(settings, 'SUPABASE_URL', None)
+    key = os.environ.get('SUPABASE_KEY') or getattr(settings, 'SUPABASE_KEY', None)
+    if not url or not key:
+        raise Exception('Supabase URL/KEY 未配置')
+    return create_client(url, key)
 
 # 查询单条申请记录
-def get_supabase_saved_job(supabase: Client, original_job_id: str):
-    # user_id 不再需要作为参数，RLS 会自动处理
-    resp = supabase.table('saved_jobs').select('*').eq('original_job_id', original_job_id).execute()
-    # 如果 RLS 生效且没有找到匹配当前用户的记录，data 会是空列表
-    data = resp.data if hasattr(resp, 'data') and resp.data else None
-    if data:
+def get_supabase_saved_job(user_session_key, original_job_id):
+    supabase = get_supabase_client()
+    resp = supabase.table('saved_jobs').select('*').eq('user_session_key', user_session_key).eq('original_job_id', original_job_id).execute()
+    data = resp.data if hasattr(resp, 'data') else None
+    if data and isinstance(data, list) and len(data) > 0:
         return data[0]
     return None
 
 # 创建申请记录（含岗位快照）
-def create_supabase_saved_job(supabase: Client, data: dict):
-    # user_id 会由 RLS 策略根据 JWT 自动填充或验证，无需在 data 中提供
-    if 'user_id' in data:
-        # 最好从数据中移除，以防混淆
-        del data['user_id']
-
-    if 'original_job_id' not in data:
-        raise ValueError("Missing required field 'original_job_id' in saved_job data")
-    
-    # 确保 created_at 和 updated_at 存在
-    now = datetime.utcnow().isoformat()
-    data.setdefault('created_at', now)
-    data.setdefault('updated_at', now)
-
+def create_supabase_saved_job(data):
+    supabase = get_supabase_client()
     resp = supabase.table('saved_jobs').insert(data).execute()
-    return resp.data[0] if hasattr(resp, 'data') and resp.data else None
+    return resp.data if hasattr(resp, 'data') else None
 
 # 更新申请状态和备注
-def update_supabase_saved_job_status(supabase: Client, original_job_id: str, new_status=None, notes=None):
+def update_supabase_saved_job_status(user_session_key, original_job_id, new_status=None, notes=None):
+    supabase = get_supabase_client()
     update_data = {}
     if new_status:
         update_data['status'] = new_status
     if notes is not None:
         update_data['notes'] = notes
-    
-    if not update_data:
-        return None # Nothing to update
-
     update_data['updated_at'] = datetime.utcnow().isoformat()
-    # user_id 条件被移除，RLS 会确保只更新属于当前用户的记录
-    resp = supabase.table('saved_jobs').update(update_data).eq('original_job_id', original_job_id).execute()
-    return resp.data[0] if hasattr(resp, 'data') and resp.data else None
+    resp = supabase.table('saved_jobs').update(update_data).eq('user_session_key', user_session_key).eq('original_job_id', original_job_id).execute()
+    return resp.data if hasattr(resp, 'data') else None
 
 # 查询所有申请记录（可选按状态过滤）
-def list_supabase_saved_jobs(supabase: Client, status: Optional[str] = None):
-    # user_id 条件被移除，RLS 会自动过滤
-    query = supabase.table('saved_jobs').select('*')
+def list_supabase_saved_jobs(user_session_key, status=None):
+    supabase = get_supabase_client()
+    query = supabase.table('saved_jobs').select('*')#.eq('user_session_key', user_session_key)
     if status:
         query = query.eq('status', status)
     resp = query.order('updated_at', desc=True).execute()
-    return resp.data if hasattr(resp, 'data') else []
+    return resp.data if hasattr(resp, 'data') else [] 

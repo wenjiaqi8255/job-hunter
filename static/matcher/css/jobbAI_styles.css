@@ -1,0 +1,568 @@
+body {
+    background-color: #F8FAF8; /* Light gray background as per Figma */
+    font-family: 'Be Vietnam Pro', sans-serif; /* Assuming this font is available or imported */
+}
+
+.jobbAI-main-container {
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+.jobbAI-top-nav {
+    /* Styles from Figma: white background, border */
+    background-color: #FFFFFF;
+    border-bottom: 1px solid #E5E8EB;
+    padding-top: 12px;
+    padding-bottom: 12px;
+}
+.jobbAI-top-nav .nav-link {
+    color: #121717; /* Dark text for nav links */
+    font-weight: 500; /* Medium weight */
+    font-size: 14px; /* Figma specified 14px */
+    padding-left: 18px; /* Spacing between nav items */
+    padding-right: 18px;
+}
+.jobbAI-top-nav .nav-link.active,
+.jobbAI-top-nav .nav-link:hover {
+    color: #1098F7; /* Blue for active/hover - assuming from general theme */
+}
+ .jobbAI-top-nav .fa-user-circle {
+    color: #6B827D; /* User icon color from Figma */
+    /* Add margin if needed */
+}
+
+
+.jobbAI-content-wrapper {
+   flex-grow: 1;
+   padding: 0 !important; /* Remove padding for full-width row */
+}
+
+.jobbAI-sidebar {
+    background-color: #FFFFFF; /* White sidebar */
+    border-right: 1px solid #E5E8EB; /* Figma border */
+    padding: 0; /* Reset padding, use sidebar-sticky */
+    width: 320px; /* Figma sidebar width */
+    position: fixed; /* Fixed sidebar */
+    top: 56px; /* Height of top nav, adjust if dynamic */
+    bottom: 0;
+    left: 0;
+    z-index: 1000;
+    overflow-y: auto;
+    transition: margin-left 0.3s ease-in-out;
+}
+
+.jobbAI-sidebar.collapsed {
+    margin-left: -320px; /* Hide sidebar */
+}
+
+.jobbAI-sidebar .sidebar-sticky {
+    padding-top: 1rem; /* Internal padding */
+}
+
+.jobbAI-sidebar .btn-primary {
+    background-color: #DBF2F0; /* Light teal button */
+    border-color: #DBF2F0;
+    color: #121717; /* Dark text */
+    font-weight: bold;
+    font-size: 14px;
+}
+.jobbAI-sidebar .btn-primary:hover {
+    background-color: #cce9e6;
+    border-color: #cce9e6;
+    color: #121717;
+}
+.jobbAI-sidebar .btn-primary.active {
+     background-color: #0AEDC7; /* Active button color from Figma - primary green/teal */
+     border-color: #0AEDC7;
+     color: #121717;
+}
+
+.jobbAI-sidebar .sidebar-heading {
+    font-size: 0.85rem;
+    color: #6B827D !important; /* Muted text color */
+}
+
+.jobbAI-sidebar .nav-link {
+    font-weight: 500;
+    color: #121717; /* Dark text for links */
+    font-size: 14px;
+    padding: 0.5rem 1.5rem; /* px-3 like padding */
+    border-radius: 8px; /* Rounded corners for hover/active state */
+    margin: 0 0.75rem 0.25rem 0.75rem; /* Some margin around items */
+}
+.jobbAI-sidebar .nav-link .fa-calendar-day,
+.jobbAI-sidebar .nav-link .fa-history {
+    color: #6B827D; /* Icon color */
+}
+
+.jobbAI-sidebar .nav-link.active,
+.jobbAI-sidebar .nav-link:hover {
+    background-color: #F2F5F2; /* Light gray background for active/hover */
+    color: #1098F7; /* Blue for active text - or keep dark if preferred */
+}
+.jobbAI-sidebar .nav-link.active .fa-calendar-day,
+.jobbAI-sidebar .nav-link.active .fa-history,
+.jobbAI-sidebar .nav-link:hover .fa-calendar-day,
+.jobbAI-sidebar .nav-link:hover .fa-history {
+    color: #1098F7; /* Blue icon on active/hover */
+}
+
+
+.jobbAI-main-content {
+    background-color: #F8FAF8; /* Main content background */
+    padding-left: 24px !important; /* Figma specified padding */
+    padding-right: 24px !important;
+    padding-top: 20px !important;
+    margin-left: 320px; /* Space for the sidebar */
+    width: calc(100% - 320px); /* Occupy remaining width */
+    box-sizing: border-box; /* Ensure correct width calculation with padding */
+    transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out; /* Add width to transition */
+    min-height: calc(100vh - 70px); /* Full height minus top nav */
+}
+.jobbAI-main-content.sidebar-collapsed {
+    margin-left: 0 !important;
+}
+
+/* Header in main content */
+.jobbAI-main-content .h2 {
+    font-size: 32px; /* Figma font size */
+    font-weight: 700; /* Bold */
+    color: #121717;
+}
+.jobbAI-main-content .btn-outline-secondary {
+    font-size: 14px;
+    font-weight: 700;
+    color: #121717;
+    border-color: #E5E8EB; /* Light border */
+    background-color: #FFFFFF; /* White background */
+    border-radius: 12px; /* Figma border radius */
+    padding: 8px 16px;
+}
+.jobbAI-main-content .btn-outline-secondary:hover {
+    background-color: #f2f2f2;
+}
+
+/* Job Card Styling */
+.jobbAI-job-card, .jobbAI-job-card-all {
+    background-color: #FFFFFF; /* White card background */
+    border-radius: 20px; /* Figma border radius */
+    border: none; /* Remove default bootstrap border if any */
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
+}
+.jobbAI-job-card:hover, .jobbAI-job-card-all:hover {
+    transform: translateY(-5px);
+    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.08);
+}
+
+.jobbAI-job-card .card-title a {
+    font-size: 16px; /* Figma "Werkstudent..." text */
+    font-weight: 700;
+    color: #121717;
+}
+.jobbAI-job-card .card-title a:hover {
+    color: #1098F7;
+}
+ .jobbAI-job-card .text-muted {
+    font-size: 14px; /* Figma smaller text */
+    color: #6B827D !important;
+    }
+.jobbAI-job-card .badge.bg-primary { /* Match score badge */
+    background-color: #0AEDC7 !important; /* Figma green/teal */
+    color: #121717 !important;
+    font-size: 20px !important; /* Larger score text */
+    font-weight: 700;
+    padding: .4em .6em .3em;
+}
+.jobbAI-job-card .badge.bg-primary + small { /* "Match" text below score */
+    font-size: 12px;
+    color: #6B827D !important;
+}
+
+/* NEW Status-specific badge styles */
+.jobbAI-job-card .status-badge { /* Common styles for all our status badges */
+    font-size: 12px;
+    font-weight: 500;
+    border-radius: 10px;
+    padding: 0.4em 0.7em;
+}
+
+.jobbAI-job-card .badge.status-applied {
+    background-color: #D1FAE5; /* Light green for Applied */
+    color: #065F46; /* Dark green text */
+}
+
+.jobbAI-job-card .badge.status-interviewing {
+    background-color: #DBEAFE; /* Light blue for Interviewing */
+    color: #1E40AF; /* Dark blue text */
+}
+
+.jobbAI-job-card .badge.status-offer-received {
+    background-color: #FEF3C7; /* Light yellow for Offer Received */
+    color: #92400E; /* Dark yellow/brown text */
+}
+
+.jobbAI-job-card .badge.status-accepted {
+    background-color: #CCFBF1; /* Light teal for Accepted */
+    color: #0D9488; /* Dark teal text */
+}
+
+.jobbAI-job-card .badge.status-rejected {
+    background-color: #FEE2E2; /* Light red for Rejected */
+    color: #991B1B; /* Dark red text */
+}
+
+.jobbAI-job-card .badge.status-default {
+    background-color: #E5E7EB; /* Light gray for Default/Other */
+    color: #374151; /* Dark gray text */
+}
+
+.jobbAI-job-card .badge.status-not-applied {
+    background-color: #EBEBEB; /* Grey for Not Applied */
+    color: #121717; /* Dark text */
+}
+
+.jobbAI-job-card .badge.status-viewed { /* Example for a 'viewed' status */
+    background-color: #BFDBFE; /* Light blue */
+    color: #1E40AF; /* Dark blue text */
+}
+/* Add more .status-xxx classes here if you have other statuses */
+
+
+.jobbAI-job-card .accordion-sm .accordion-button {
+    font-size: 0.8rem;
+    background-color: transparent;
+    border-bottom: 1px solid #eee;
+}
+.jobbAI-job-card .accordion-sm .accordion-button:not(.collapsed) {
+    box-shadow: none;
+    background-color: #f8f9fa;
+}
+.jobbAI-job-card .accordion-sm .accordion-button::after {
+    width: 0.8rem;
+    height: 0.8rem;
+    background-size: 0.8rem;
+}
+.jobbAI-job-card .table-sm th, .jobbAI-job-card .table-sm td {
+    padding: 0.25rem 0.1rem; /* Reduced padding for table cells */
+}
+.jobbAI-job-card .table-borderless th, .jobbAI-job-card .table-borderless td {
+    border: 0;
+}
+.jobbAI-job-card .text-success { color: #10B981 !important; }
+.jobbAI-job-card .text-danger { color: #EF4444 !important; }
+
+
+.jobbAI-job-card .card-footer .btn-outline-secondary {
+    background-color: #DBF2F0; /* Figma "View Details" button */
+    border-color: #DBF2F0;
+    color: #121717;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 20px; /* Fully rounded */
+}
+.jobbAI-job-card .card-footer .btn-outline-secondary:hover {
+    background-color: #cce9e6;
+}
+.jobbAI-job-card .card-footer .btn-success { /* Apply Now button */
+    background-color: #0AEDC7; /* Figma primary green/teal */
+    border-color: #0AEDC7;
+    color: #121717;
+    font-weight: 700;
+    font-size: 14px;
+    border-radius: 20px; /* Fully rounded */
+}
+.jobbAI-job-card .card-footer .btn-success:hover {
+    background-color: #09dcb5;
+    border-color: #09dcb5;
+}
+
+/* Styling for "All Jobs" cards for consistency, can be less detailed than matched */
+.jobbAI-job-card-all .card-title a {
+    font-size: 1rem;
+    font-weight: 600;
+    color: #333;
+}
+ .jobbAI-job-card-all .card-footer .btn-outline-secondary,
+ .jobbAI-job-card-all .card-footer .btn-success {
+    font-size: 0.8rem;
+    padding: 0.3rem 0.6rem;
+ }
+
+
+/* Dashed border for initial input card */
+.border-dashed {
+    border: 2px dashed #d1d5db; /* Example: gray-300 from Tailwind */
+}
+
+/* Small accordion styling */
+.accordion-sm .accordion-button {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+}
+.accordion-sm .accordion-body {
+    padding: 0.75rem;
+    font-size: 0.85rem;
+}
+.accordion-sm .accordion-button::after {
+    width: 1rem;
+    height: 1rem;
+    background-size: 1rem;
+}
+
+
+/* Ensure modals have a higher z-index than the fixed sidebar */
+.modal {
+    z-index: 1060; /* Bootstrap default is 1055, sidebar is 1000 or 1030 */
+}
+.modal-backdrop {
+    z-index: 1050; /* Bootstrap default, ensure it's below modal but above other content */
+}
+
+
+/* Responsive adjustments for sidebar and main content */
+@media (max-width: 767.98px) { /* Below md breakpoint */
+    .jobbAI-sidebar {
+        position: fixed; /* Ensure it's fixed for collapse behavior */
+        top: 69px; /* Adjust if top nav height changes on mobile */
+        height: calc(100vh - 69px);
+        margin-left: -320px; /* Start collapsed */
+        z-index: 1030; /* Ensure it's above content but can be toggled */
+    }
+    .jobbAI-sidebar.show { /* Bootstrap 'show' class for collapsed elements */
+        margin-left: 0;
+    }
+    .jobbAI-main-content {
+        margin-left: 0; /* Reset margin for mobile when sidebar is hidden */
+        width: 100%; /* Ensure it takes full width */
+        padding-top: 1rem !important; /* Reset padding for mobile */
+        box-sizing: border-box; /* Consistent box sizing */
+    }
+    .jobbAI-sidebar.show + .jobbAI-main-content {
+        margin-left: 320px; /* Push main content to the right when sidebar is shown */
+        width: calc(100% - 320px); /* Adjust width to fit */
+        box-sizing: border-box; /* Consistent box sizing */
+    }
+    .jobbAI-top-nav .navbar-nav { /* Center nav items on mobile when toggler is active */
+        align-items: center;
+    }
+}
+
+/* Previous sidebar styles - assess if needed or if new ones cover all */
+/* .sidebar { ... } */
+/* .sidebar.collapsed { ... } */
+/* .sidebar.collapsed .sidebar-text { ... } */
+/* .sidebar-sticky { ... } */
+/* .main-content-area { ... } */
+/* .main-content-area.sidebar-collapsed { ... } */
+
+
+/* Hide original Bootstrap sidebar toggle button, we use a new structure */
+button[data-bs-target="#sidebarMenu"] {
+    /* This was the hamburger for the old sidebar, might not be needed if top nav has its own toggler */
+    /* display: none !important; */ /* Let Bootstrap handle it, or integrate with new top nav toggler */
+}
+
+/* Tab styling for My Applications page */
+.nav-tabs .nav-link {
+    color: #6B827D; /* Muted text color from sidebar heading */
+    border: 1px solid transparent;
+    border-bottom-color: #E5E8EB; /* Match border from top nav */
+    margin-bottom: -1px; /* Align with content border */
+    font-weight: 500;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    border-color: #E5E8EB #E5E8EB #E5E8EB;
+    color: #121717; /* Darker text on hover/focus */
+}
+
+.nav-tabs .nav-link.active,
+.nav-tabs .nav-item.show .nav-link {
+    color: #1098F7; /* Blue for active tab text */
+    background-color: #F8FAF8; /* Page background color */
+    border-color: #E5E8EB #E5E8EB #F8FAF8; /* Active tab border connects with content */
+    border-bottom-color: #F8FAF8; /* Hide bottom border for active tab */
+    font-weight: 700;
+}
+
+.nav-tabs .nav-link .badge {
+    background-color: #E5E8EB; /* Default badge background in tabs */
+    color: #6B827D; /* Muted text for badge */
+    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+}
+
+.nav-tabs .nav-link.active .badge,
+.nav-tabs .nav-link:hover .badge {
+    background-color: #1098F7; /* Blue badge background for active/hover tab */
+    color: #FFFFFF; /* White text for badge */
+}
+
+
+/* ─── Login-page Styles ────────────────────────────────────────────────────── */
+body {
+    background: white;
+    background-attachment: fixed;
+    font-family: 'Montserrat', sans-serif;
+}
+
+
+.login-wrapper::before {
+    content: "";
+    position: absolute;
+    width: 600px;
+    height: 600px;
+    background: url('/static/matcher/images/login_bg.png') no-repeat center center;
+    background-size: contain;
+    z-index: 0;
+    opacity: 1; /* keep it visible */
+    filter: blur(0px);
+}
+.login-wrapper {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    background-color: transparent;
+    padding: 2rem;
+    overflow: hidden;
+}
+
+
+.login-card {
+  position: relative;
+  z-index: 2;
+  backdrop-filter: blur(40px) saturate(150%);
+  -webkit-backdrop-filter: blur(40px) saturate(150%);
+  background-color: rgba(255, 255, 255, 0.08); /* More transparent */
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 3rem 2rem;
+  max-width: 400px;
+  width: 100%;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+  text-align: center;
+  transition: all 0.3s ease;
+  animation: fadeInUp 0.6s ease-out both;
+
+    .login-card::before {
+    content: "";
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    background: url('/static/matcher/images/noise_pic.png') repeat;
+    opacity: 0.08; /* Adjust for subtlety */
+    pointer-events: none; /* So it doesn’t block clicks */
+    z-index: 3;
+    border-radius: 20px;
+}
+
+.login-card {
+    position: relative;
+    z-index: 2;
+    overflow: hidden; /* ensures noise stays inside rounded corners */
+}
+
+
+}
+
+.login-card form p {
+    margin-bottom: 1.2rem;
+    text-align: left;
+}
+
+.login-card label {
+    font-weight: 500;
+    margin-bottom: 0.4rem;
+    display: block;
+    color: #333;
+}
+
+.login-card input[type="text"],
+.login-card input[type="password"] {
+    width: 100%;
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: 1px solid #ffffff;
+    background: rgba(255, 255, 255, 0.6);
+    transition: all 0.3s ease;
+}
+
+.login-card input[type="text"]:focus,
+.login-card input[type="password"]:focus {
+    outline: none;
+    border-color: white;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.4); /* white glow */
+    background: rgba(255, 255, 255, 0.6); /* subtle background */
+}
+
+
+.login-card:hover {
+    box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+}
+
+.btn-accent {
+    background-color: #8ee6ca;
+    border: none;
+    color: #000;
+    font-weight: 500;
+    transition: 0.3s ease;
+}
+
+.btn-accent:hover {
+    background-color: #ffffff;
+}
+
+.form-control:focus {
+    border-color: #8ee6ca;
+    box-shadow: 0 0 0 0.2rem rgba(142, 230, 202, 0.25);
+}
+
+@keyframes fadeInUp {
+    from {
+        transform: translateY(20px);
+        opacity: 0;
+    }
+    to {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+.btn-accent {
+    background: white;
+    color: #1b1b1b;
+    font-weight: 600;
+    padding: 0.75rem;
+    border-radius: 12px;
+    border: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 10px rgba(142, 230, 202, 0.2);
+}
+
+.btn-accent:hover {
+    background: white;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 14px rgba(142, 230, 202, 0.3);
+}
+
+.btn-outline-dark {
+    border-radius: 12px;
+    padding: 0.75rem;
+}
+
+.login-card h1,
+.login-card h2,
+.login-card h3,
+.login-card button,
+.login-card .btn {
+    font-family: 'Courier New', Courier, monospace;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+}
+
+/* ────────────────────────────────────────────────────────────────────────── */
