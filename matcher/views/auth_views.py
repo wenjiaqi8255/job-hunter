@@ -1,298 +1,431 @@
 """
-认证相关的视图
-处理 OAuth 登录、回调、登出等功能
+认证相关的视图 - 纯前端Supabase认证
+只负责token验证，不处理OAuth流程
 """
-from django.shortcuts import render, redirect
-from django.urls import reverse
-from django.contrib import messages
-from django.contrib.auth import login
-from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
-from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
-from django.core.cache import cache
-
-from supabase import create_client, Client
+from django.views.decorators.csrf import csrf_exempt
+from django.views.decorators.http import require_http_methods
+from django.shortcuts import render
 import json
-import secrets
-import urllib.parse
+import logging
+import requests
+from datetime import datetime
 
+logger = logging.getLogger(__name__)
 
-def google_login(request):
+def login_page(request):
     """
-    启动 Google OAuth 登录流程 - 修正版本（使用 Supabase 默认重定向）
+    登录页面视图 - 只负责显示登录页面
+    认证流程由前端Supabase客户端处理
+    """
+    # 调试信息
+    if not settings.GOOGLE_CLIENT_ID:
+        logger.warning("GOOGLE_CLIENT_ID is not set in environment variables")
+        print("WARNING: GOOGLE_CLIENT_ID is not set in environment variables")
+    else:
+        logger.info(f"Google Client ID configured: {settings.GOOGLE_CLIENT_ID[:20]}...")
+        print(f"[DEBUG] Google Client ID configured: {settings.GOOGLE_CLIENT_ID[:20]}...")
+    
+    return render(request, 'matcher/login.html')
+
+def verify_supabase_token(token):
+    """
+    验证Supabase JWT token的有效性
+    返回：(is_valid, user_info, error_message)
     """
     try:
-        print(f"[DEBUG] Starting Google OAuth login with Supabase default redirect")
-        
-        # 不使用自定义 redirect_to，让 Supabase 使用 Dashboard 中配置的 Site URL
-        # 这样 OAuth 回调会直接到达首页，我们在首页处理 OAuth 参数
-        
-        oauth_params = {
-            'provider': 'google',
-            # 不设置 redirect_to 和 state，避免 bad_oauth_state 错误
+        # 调用Supabase API验证token
+        headers = {
+            'Authorization': f'Bearer {token}',
+            'apikey': settings.SUPABASE_KEY
         }
         
-        # 构建完整的 OAuth URL
-        base_oauth_url = f"{settings.SUPABASE_URL}/auth/v1/authorize"
-        oauth_url = f"{base_oauth_url}?" + urllib.parse.urlencode(oauth_params)
+        response = requests.get(
+            f"{settings.SUPABASE_URL}/auth/v1/user",
+            headers=headers
+        )
         
-        print(f"[DEBUG] Redirecting to OAuth URL (using Supabase default): {oauth_url}")
-        print(f"[DEBUG] OAuth 成功后将重定向到 Supabase Dashboard 中配置的 Site URL")
-        
-        return redirect(oauth_url)
-        
+        if response.status_code == 200:
+            user_data = response.json()
+            return True, user_data, None
+        else:
+            return False, None, f"Token verification failed: {response.status_code}"
+            
     except Exception as e:
-        print(f"[DEBUG] Error in google_login: {str(e)}")
-        messages.error(request, f"OAuth login failed: {str(e)}")
-        return redirect('matcher:login_page')
+        logger.error(f"Token verification error: {str(e)}")
+        return False, None, f"Token verification error: {str(e)}"
 
-
-def google_callback(request):
+@csrf_exempt
+@require_http_methods(["POST"])
+def api_verify_token(request):
     """
-    处理 Google OAuth 回调 - 最新最佳实践
-    使用最新的 exchange_code_for_session 方法
+    验证Supabase token的API端点
     """
     try:
-        print(f"[DEBUG] === OAuth Callback Debug ===")
-        print(f"[DEBUG] Full URL: {request.build_absolute_uri()}")
-        print(f"[DEBUG] Method: {request.method}")
-        print(f"[DEBUG] GET params: {dict(request.GET)}")
-        print(f"[DEBUG] ========================================")
+        # 获取token
+        auth_header = request.META.get('HTTP_AUTHORIZATION')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return JsonResponse({
+                'authenticated': False,
+                'error': 'Missing or invalid Authorization header'
+            }, status=401)
         
-        # 1. 获取参数
-        code = request.GET.get('code')
-        state = request.GET.get('state')
-        error = request.GET.get('error')
-        error_description = request.GET.get('error_description')
+        token = auth_header.split(' ')[1]
         
-        print(f"[DEBUG] Extracted - code: {code[:20] if code else None}...")
-        print(f"[DEBUG] Extracted - state: {state}")
-        print(f"[DEBUG] Extracted - error: {error}")
-        print(f"[DEBUG] Extracted - error_description: {error_description}")
+        # 验证token
+        is_valid, user_info, error = verify_supabase_token(token)
         
-        # 2. 错误处理
-        if error:
-            print(f"[DEBUG] OAuth error: {error} - {error_description}")
-            messages.error(request, f"OAuth error: {error_description or error}")
-            return redirect('matcher:login_page')
-        
-        if not code:
-            print("[DEBUG] No authorization code received")
-            messages.error(request, "Authentication failed: No authorization code received.")
-            return redirect('matcher:login_page')
-        
-        # 3. 验证 state（如果有）
-        if state:
-            cached_state = cache.get(f"oauth_state_{state}")
-            if not cached_state:
-                print("[DEBUG] Invalid or expired state parameter")
-                messages.error(request, "Authentication failed: Invalid state parameter.")
-                return redirect('matcher:login_page')
-            cache.delete(f"oauth_state_{state}")
-            print("[DEBUG] State parameter validated successfully")
-        
-        # 4. 使用最新的 exchange_code_for_session 方法
-        print(f"[DEBUG] Exchanging code for session: {code[:10]}...")
-        
-        # 初始化 Supabase 客户端
-        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        
-        try:
-            # 这是最新的推荐方法 - 只传递授权码
-            session_response = supabase.auth.exchange_code_for_session(code)
-            
-            if session_response and session_response.session:
-                user = session_response.user
-                session = session_response.session
-                
-                print(f"[DEBUG] User authenticated successfully: {user.email if user else 'No user'}")
-                
-                # 5. 存储用户会话信息到 Django session（最佳实践）
-                request.session['supabase_access_token'] = session.access_token
-                request.session['supabase_refresh_token'] = session.refresh_token
-                request.session['user_id'] = user.id
-                request.session['user_email'] = user.email
-                request.session['user_name'] = user.user_metadata.get('full_name', '')
-                request.session['user_avatar'] = user.user_metadata.get('picture', '')
-                
-                print(f"[DEBUG] Session data stored successfully")
-                
-                # 6. 使用 Django 认证系统（可选，如果你需要的话）
-                from job_hunting_project.auth_backend import SupabaseUserBackend
-                auth_backend = SupabaseUserBackend()
-                django_user = auth_backend.authenticate(request=request, supabase_user=user)
-                
-                if django_user:
-                    login(request, django_user, backend='job_hunting_project.auth_backend.SupabaseUserBackend')
-                    print(f"[DEBUG] Django user logged in successfully: {django_user.username}")
-                    messages.success(request, "Successfully logged in!")
-                else:
-                    print("[DEBUG] Failed to create/retrieve Django user")
-                    messages.error(request, "Could not complete login. Please try again.")
-                    return redirect('matcher:login_page')
-                
-                print(f"[DEBUG] Redirecting to main page")
-                return redirect(reverse('matcher:main_page'))
-            else:
-                print("[DEBUG] No session returned from code exchange")
-                messages.error(request, "Authentication failed: No session returned.")
-                return redirect('matcher:login_page')
-                
-        except Exception as exchange_error:
-            print(f"[DEBUG] Error exchanging code for session: {str(exchange_error)}")
-            import traceback
-            print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-            messages.error(request, f"Authentication failed: {str(exchange_error)}")
-            return redirect('matcher:login_page')
+        if is_valid and user_info:
+            return JsonResponse({
+                'authenticated': True,
+                'user': {
+                    'id': user_info.get('id'),
+                    'email': user_info.get('email'),
+                    'name': user_info.get('user_metadata', {}).get('full_name', '')
+                }
+            })
+        else:
+            return JsonResponse({
+                'authenticated': False,
+                'error': error or 'Invalid token'
+            }, status=401)
             
     except Exception as e:
-        print(f"[DEBUG] Error in google_callback: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        messages.error(request, "An error occurred during authentication.")
-        return redirect('matcher:login_page')
+        logger.error(f"API verify token error: {str(e)}")
+        return JsonResponse({
+            'authenticated': False,
+            'error': 'Internal server error'
+        }, status=500)
 
+def token_required(view_func):
+    """
+    装饰器：要求有效的Supabase token
+    替代传统的@login_required装饰器
+    """
+    def wrapper(request, *args, **kwargs):
+        # 获取Authorization header
+        auth_header = request.META.get('HTTP_AUTHORIZATION')
+        if not auth_header or not auth_header.startswith('Bearer '):
+            return JsonResponse({
+                'authenticated': False,
+                'error': 'Authentication required'
+            }, status=401)
+        
+        token = auth_header.split(' ')[1]
+        
+        # 验证token
+        is_valid, user_info, error = verify_supabase_token(token)
+        
+        if not is_valid or not user_info:
+            return JsonResponse({
+                'authenticated': False,
+                'error': error or 'Invalid token'
+            }, status=401)
+        
+        # 将用户信息添加到request对象
+        request.supabase_user = user_info
+        
+        return view_func(request, *args, **kwargs)
+    
+    return wrapper
 
-def logout_view(request):
-    """登出视图"""
-    return logout_user(request)
+def get_user_from_token(request):
+    """
+    从token中获取用户信息
+    替代传统的get_current_user函数
+    """
+    auth_header = request.META.get('HTTP_AUTHORIZATION')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return None
+    
+    token = auth_header.split(' ')[1]
+    is_valid, user_info, error = verify_supabase_token(token)
+    
+    return user_info if is_valid else None
 
-
-def api_check_auth(request):
-    """API：检查认证状态"""
-    user = get_current_user_info(request)
+@token_required
+def api_test_protected(request):
+    """
+    测试受保护的API端点
+    """
+    user_info = request.supabase_user
+    
     return JsonResponse({
-        'authenticated': user is not None,
-        'user': user
+        'success': True,
+        'message': 'Access granted to protected API',
+        'user': {
+            'id': user_info.get('id'),
+            'email': user_info.get('email'),
+            'name': user_info.get('user_metadata', {}).get('full_name', '')
+        }
     })
+
+# 简化版本的认证辅助函数
+def get_current_user(request):
+    """
+    获取当前用户信息 - 简化版本，只用于页面渲染
+    对于API调用，应该使用get_user_from_token
+    """
+    # 对于页面渲染，我们先简单返回None
+    # 所有的认证状态将由前端JavaScript管理
+    return None
+
+def api_test_page(request):
+    """
+    API测试页面 - 用于测试API调用拦截器
+    """
+    return render(request, 'matcher/api_test.html')
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_public_test(request):
+    """
+    公开的API端点 - 不需要认证
+    """
+    return JsonResponse({
+        'success': True,
+        'message': 'Public API endpoint accessed successfully',
+        'timestamp': str(datetime.now()),
+        'has_auth_header': bool(request.META.get('HTTP_AUTHORIZATION'))
+    })
+
+@token_required
+def api_user_saved_jobs(request):
+    """
+    获取用户保存的工作状态 - API端点
+    """
+    try:
+        user_info = request.supabase_user
+        
+        # 这里应该调用服务获取用户保存的工作
+        # 暂时返回空字典，后续可以实现具体逻辑
+        saved_jobs_status = {}
+        
+        return JsonResponse({
+            'success': True,
+            'user_id': user_info.get('id'),
+            'saved_jobs_status': saved_jobs_status,
+            'message': 'User saved jobs retrieved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"API user saved jobs error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error'
+        }, status=500)
+
+@token_required  
+def api_user_profile(request):
+    """
+    获取用户个人资料 - API端点
+    """
+    try:
+        user_info = request.supabase_user
+        
+        # 返回用户基本信息
+        profile_data = {
+            'id': user_info.get('id'),
+            'email': user_info.get('email'),
+            'name': user_info.get('user_metadata', {}).get('full_name', ''),
+            'cv_text': '',  # 后续可以从Supabase获取
+            'preferences_text': '',  # 后续可以从Supabase获取
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'profile': profile_data,
+            'message': 'User profile retrieved successfully'
+        })
+        
+    except Exception as e:
+        logger.error(f"API user profile error: {str(e)}")
+        return JsonResponse({
+            'success': False,
+            'error': 'Internal server error'
+        }, status=500)
+
+@token_required
+def api_user_status(request):
+    """
+    获取用户状态API - 返回用户基本信息和认证状态
+    简单粗暴，不过度设计
+    """
+    try:
+        user_info = request.supabase_user
+        
+        # 基本用户信息
+        user_status = {
+            'authenticated': True,
+            'user_id': user_info.get('id'),
+            'email': user_info.get('email'),
+            'full_name': user_info.get('user_metadata', {}).get('full_name', ''),
+            'avatar_url': user_info.get('user_metadata', {}).get('avatar_url', ''),
+        }
+        
+        return JsonResponse({
+            'success': True,
+            'user': user_status
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
 @csrf_exempt
-@require_POST
-def process_oauth_tokens(request):
+def api_user_status_public(request):
     """
-    处理从客户端JavaScript发送的OAuth tokens
+    公开的用户状态检查API - 不需要认证
+    用于检查是否有有效的认证状态
     """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
+    # 简单检查Authorization header
+    auth_header = request.headers.get('Authorization', '')
+    if not auth_header.startswith('Bearer '):
+        return JsonResponse({
+            'authenticated': False,
+            'message': 'No valid token'
+        })
+    
+    # 这里可以简单验证token格式，但不做复杂验证
+    return JsonResponse({
+        'authenticated': True,
+        'message': 'Token present'
+    })
+
+@token_required
+def api_save_job(request):
+    """
+    保存工作API - 简单粗暴的实现
+    """
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
     try:
-        print(f"[DEBUG] Processing OAuth tokens from client")
+        user_info = request.supabase_user
+        data = json.loads(request.body)
         
-        # 获取tokens
-        access_token = request.POST.get('access_token')
-        refresh_token = request.POST.get('refresh_token')
-        expires_at = request.POST.get('expires_at')
-        provider_token = request.POST.get('provider_token')
+        job_id = data.get('job_id')
+        status = data.get('status', 'viewed')
+        notes = data.get('notes', '')
         
-        print(f"[DEBUG] Received tokens - access_token: {access_token[:20] if access_token else None}...")
-        print(f"[DEBUG] Received tokens - refresh_token: {refresh_token[:20] if refresh_token else None}...")
-        print(f"[DEBUG] Received tokens - expires_at: {expires_at}")
+        if not job_id:
+            return JsonResponse({'error': 'job_id is required'}, status=400)
         
-        if not access_token:
-            return JsonResponse({'error': 'No access token provided'}, status=400)
+        # 获取工作信息
+        from ..models import JobListing
+        job = JobListing.objects.filter(id=job_id).first()
+        if not job:
+            return JsonResponse({'error': 'Job not found'}, status=404)
         
-        # 使用access_token获取用户信息
-        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
+        # 创建已认证的Supabase客户端
+        from ..services.supabase_auth_helper import create_authed_supabase_client
         
-        try:
-            # 使用access_token获取用户信息
-            user_response = supabase.auth.get_user(access_token)
+        # 获取用户token
+        auth_header = request.META.get('HTTP_AUTHORIZATION')
+        user_token = auth_header.split(' ')[1] if auth_header and auth_header.startswith('Bearer ') else None
+        
+        if not user_token:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing user token'
+            }, status=401)
+        
+        # 创建已认证的客户端
+        supabase = create_authed_supabase_client(user_token)
+        
+        # 尝试保存到Supabase
+        from ..services.supabase_saved_job_service import (
+            get_supabase_saved_job,
+            create_supabase_saved_job,
+            update_supabase_saved_job_status
+        )
+        
+        # 检查是否已存在
+        existing_job = get_supabase_saved_job(supabase, job.id)
+        if existing_job:
+            # 更新状态
+            update_supabase_saved_job_status(supabase, job.id, status, notes)
+            return JsonResponse({
+                'success': True,
+                'message': 'Job status updated',
+                'job_id': job_id,
+                'status': status
+            })
+        else:
+            # 创建新记录
+            create_data = {
+                "status": status,
+                "notes": notes,
+                "original_job_id": job.id,
+                "company_name": job.company_name,
+                "job_title": job.job_title,
+                "job_description": job.description,
+                "application_url": job.application_url,
+                "location": job.location,
+            }
+            create_supabase_saved_job(supabase, create_data)
+            return JsonResponse({
+                'success': True,
+                'message': 'Job saved successfully',
+                'job_id': job_id,
+                'status': status
+            })
             
-            if user_response and user_response.user:
-                user = user_response.user
-                
-                print(f"[DEBUG] User authenticated via client tokens: {user.email if user else 'No user'}")
-                
-                # 存储用户会话信息到 Django session
-                request.session['supabase_access_token'] = access_token
-                request.session['supabase_refresh_token'] = refresh_token or ''
-                request.session['user_id'] = user.id
-                request.session['user_email'] = user.email
-                request.session['user_name'] = user.user_metadata.get('full_name', '')
-                request.session['user_avatar'] = user.user_metadata.get('picture', '')
-                
-                print(f"[DEBUG] Session data stored successfully via client tokens")
-                
-                # 使用 Django 认证系统
-                from job_hunting_project.auth_backend import SupabaseUserBackend
-                auth_backend = SupabaseUserBackend()
-                django_user = auth_backend.authenticate(request=request, supabase_user=user)
-                
-                if django_user:
-                    login(request, django_user, backend='job_hunting_project.auth_backend.SupabaseUserBackend')
-                    print(f"[DEBUG] Django user logged in successfully via client tokens: {django_user.username}")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'redirect': reverse('matcher:main_page'),
-                        'message': 'Successfully logged in!'
-                    })
-                else:
-                    print("[DEBUG] Failed to create/retrieve Django user via client tokens")
-                    return JsonResponse({'error': 'Could not complete login'}, status=400)
-            else:
-                print("[DEBUG] No user returned from token validation via client")
-                return JsonResponse({'error': 'Could not validate token'}, status=400)
-                
-        except Exception as token_error:
-            print(f"[DEBUG] Error validating token via client: {str(token_error)}")
-            import traceback
-            print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-            return JsonResponse({'error': f'Token validation failed: {str(token_error)}'}, status=400)
-            
+    except json.JSONDecodeError:
+        return JsonResponse({'error': 'Invalid JSON'}, status=400)
     except Exception as e:
-        print(f"[DEBUG] Error in process_oauth_tokens: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        return JsonResponse({'error': 'Internal server error'}, status=500)
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
 
 
-# ===================================
-# Supabase 用户会话管理辅助函数
-# ===================================
-
-def get_current_user_info(request):
-    """获取当前用户信息"""
+@token_required  
+def api_saved_jobs(request):
+    """
+    获取保存的工作列表API - 简单粗暴的实现
+    """
+    if request.method != 'GET':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+    
     try:
-        access_token = request.session.get('supabase_access_token')
-        if not access_token:
-            return None
+        user_info = request.supabase_user
         
-        # 从 session 获取用户信息（推荐，更快）
-        user_info = {
-            'id': request.session.get('user_id'),
-            'email': request.session.get('user_email'),
-            'name': request.session.get('user_name'),
-            'avatar': request.session.get('user_avatar'),
-        }
+        # 创建已认证的Supabase客户端
+        from ..services.supabase_auth_helper import create_authed_supabase_client
         
-        if user_info['id']:
-            return user_info
+        # 获取用户token
+        auth_header = request.META.get('HTTP_AUTHORIZATION')
+        user_token = auth_header.split(' ')[1] if auth_header and auth_header.startswith('Bearer ') else None
         
-        return None
+        if not user_token:
+            return JsonResponse({
+                'success': False,
+                'error': 'Missing user token'
+            }, status=401)
+        
+        # 创建已认证的客户端
+        supabase = create_authed_supabase_client(user_token)
+        
+        # 获取保存的工作
+        from ..services.supabase_saved_job_service import list_supabase_saved_jobs
+        saved_jobs = list_supabase_saved_jobs(supabase)
+        
+        return JsonResponse({
+            'success': True,
+            'jobs': saved_jobs or [],
+            'count': len(saved_jobs) if saved_jobs else 0
+        })
         
     except Exception as e:
-        print(f"[DEBUG] Error getting current user: {str(e)}")
-        return None
-
-
-def logout_user(request):
-    """登出用户"""
-    try:
-        # 从 Supabase 登出
-        access_token = request.session.get('supabase_access_token')
-        if access_token:
-            try:
-                supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-                supabase.auth.sign_out()
-            except Exception as e:
-                print(f"[DEBUG] Warning: Error signing out from Supabase: {str(e)}")
-        
-        # 清除 Django session
-        request.session.flush()
-        
-        return redirect('matcher:login_page')
-    except Exception as e:
-        print(f"[DEBUG] Error during logout: {str(e)}")
-        request.session.flush()
-        return redirect('matcher:login_page')
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

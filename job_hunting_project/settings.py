@@ -52,24 +52,12 @@ INSTALLED_APPS = [
     "django.contrib.staticfiles",
     "matcher",
     "corsheaders",
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
 ]
 
 MIDDLEWARE = [
-    "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
-    "corsheaders.middleware.CorsMiddleware",
-    "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
-    "job_hunting_project.auth_middleware.SupabaseAuthMiddleware", # 新的中间件
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    # "job_hunting_project.supabase_middleware.SupabaseAuthMiddleware", # 将被新的中间件取代
     "django.contrib.messages.middleware.MessageMiddleware",
-    "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "django.middleware.locale.LocaleMiddleware",
 ]
 
 ROOT_URLCONF = "job_hunting_project.urls"
@@ -85,6 +73,7 @@ TEMPLATES = [
                 "django.template.context_processors.request",
                 "django.contrib.auth.context_processors.auth",
                 "django.contrib.messages.context_processors.messages",
+                "job_hunting_project.context_processors.supabase_config",
             ],
         },
     },
@@ -210,3 +199,6 @@ CACHES = {
 
 SITE_ID = 1
 LOGIN_REDIRECT_URL = '/'
+
+SECURE_REFERRER_POLICY = "strict-origin-when-cross-origin"
+SECURE_CROSS_ORIGIN_OPENER_POLICY = "same-origin-allow-popups"

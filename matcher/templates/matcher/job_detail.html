@@ -33,11 +33,11 @@
               <h4 class="mb-1">{{ job.job_title }}</h4>
               <p class="text-muted fw-normal mb-2">{{ job.company_name }}</p>
             </div>
-            {% if user.is_authenticated %}
-            <span class="badge status-badge status-{{ supa_saved_job.status|default_if_none:'not-applied'|lower }}">
-              {{ supa_saved_job.status|default:"Not Applied"|capfirst }}
-            </span>
-            {% endif %}
+            <div class="auth-required" style="display: none;">
+              <span class="badge status-badge status-{{ supa_saved_job.status|default_if_none:'not-applied'|lower }}">
+                {{ supa_saved_job.status|default:"Not Applied"|capfirst }}
+              </span>
+            </div>
           </div>
         </div>
         <div class="card-body p-4">
@@ -171,50 +171,157 @@
     </div>
 
     <div class="col-lg-4">
-      {% if user.is_authenticated %}
-      <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
-        <div class="card-header bg-light border-bottom-0 py-3">
-            <h5 class="h6 mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
-        </div>
-        <div class="card-body p-4">
-          <form method="post" 
-                action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}"
-                id="applicationStatusForm">
-            {% csrf_token %}
-            
-            <div class="mb-3">
-                <label for="id_status" class="form-label small"><strong>Status</strong></label>
-                <select name="status" id="id_status" class="form-select">
-                    {% for value, display in status_choices %}
-                        <option value="{{ value }}" {% if supa_saved_job.status == value %}selected{% endif %}>{{ display }}</option>
-                    {% endfor %}
-                </select>
-            </div>
-            
-            <div class="mb-3">
-                <label for="id_notes" class="form-label small"><strong>Notes</strong></label>
-                <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ supa_saved_job.notes|default:"" }}</textarea>
-            </div>
-            
-            <button type="submit" class="btn btn-primary w-100" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
-            {% if supa_saved_job and supa_saved_job.updated_at %}
-                <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ supa_saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
-            {% endif %}
-          </form>
-        </div>
-      </div>
-      {% else %}
-      <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
-        <div class="card-header bg-light border-bottom-0 py-3">
-            <h5 class="h6 mb-0"><i class="fas fa-lock me-2 text-primary"></i>Save Your Progress</h5>
-        </div>
-        <div class="card-body p-4 text-center">
-            <p>Please log in or sign up to save jobs, track your application status, and take notes.</p>
-            <a href="{% url 'matcher:profile_page' %}" class="btn btn-primary" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;">Log In / Sign Up</a>
+      <!-- 认证用户内容 -->
+      <div class="auth-required" style="display: none;">
+        <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
+          <div class="card-header bg-light border-bottom-0 py-3">
+              <h5 class="h6 mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
+          </div>
+          <div class="card-body p-4">
+            <form method="post" 
+                  action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}"
+                  id="applicationStatusForm">
+              {% csrf_token %}
+              
+              <div class="mb-3">
+                  <label for="id_status" class="form-label small"><strong>Status</strong></label>
+                  <select name="status" id="id_status" class="form-select">
+                      {% for value, display in status_choices %}
+                          <option value="{{ value }}" {% if supa_saved_job.status == value %}selected{% endif %}>{{ display }}</option>
+                      {% endfor %}
+                  </select>
+              </div>
+              
+              <div class="mb-3">
+                  <label for="id_notes" class="form-label small"><strong>Notes</strong></label>
+                  <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ supa_saved_job.notes|default:"" }}</textarea>
+              </div>
+              
+              <button type="submit" class="btn btn-primary w-100" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
+              {% if supa_saved_job and supa_saved_job.updated_at %}
+                  <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ supa_saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
+              {% endif %}
+            </form>
+          </div>
         </div>
       </div>
-      {% endif %}
+      
+      <!-- 游客用户内容 -->
+      <div class="guest-only" style="display: none;">
+        <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
+          <div class="card-header bg-light border-bottom-0 py-3">
+              <h5 class="h6 mb-0"><i class="fas fa-lock me-2 text-primary"></i>Save Your Progress</h5>
+          </div>
+          <div class="card-body p-4 text-center">
+              <p>Please log in or sign up to save jobs, track your application status, and take notes.</p>
+              <a href="{% url 'matcher:profile_page' %}" class="btn btn-primary" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;">Log In / Sign Up</a>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('[工作详情页] 开始初始化认证状态处理');
+    
+    // 监听认证状态变化
+    function handleAuthStateChange(isAuthenticated) {
+        console.log(`[工作详情页] 认证状态变化: ${isAuthenticated}`);
+        
+        if (isAuthenticated) {
+            // 显示需要认证的内容
+            const authRequiredElements = document.querySelectorAll('.auth-required');
+            authRequiredElements.forEach(el => {
+                el.style.display = 'block';
+            });
+            
+            // 隐藏游客提示内容
+            const guestOnlyElements = document.querySelectorAll('.guest-only');
+            guestOnlyElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 加载工作详情用户数据
+            loadJobDetailUserData();
+        } else {
+            // 隐藏需要认证的内容
+            const authRequiredElements = document.querySelectorAll('.auth-required');
+            authRequiredElements.forEach(el => {
+                el.style.display = 'none';
+            });
+            
+            // 显示游客提示内容
+            const guestOnlyElements = document.querySelectorAll('.guest-only');
+            guestOnlyElements.forEach(el => {
+                el.style.display = 'block';
+            });
+        }
+    }
+    
+    // 加载工作详情用户数据
+    async function loadJobDetailUserData() {
+        console.log('[工作详情页] 开始加载用户数据');
+        
+        try {
+            // 检查是否有认证管理器
+            if (!window.authManager) {
+                console.log('[工作详情页] 认证管理器未就绪，稍后重试');
+                setTimeout(loadJobDetailUserData, 1000);
+                return;
+            }
+            
+            // 获取当前工作ID
+            const jobId = getJobIdFromUrl();
+            if (jobId) {
+                // 获取保存的工作状态
+                const savedJobs = await window.authManager.getSavedJobs();
+                const currentJobStatus = savedJobs.find(job => job.original_job_id === jobId);
+                
+                if (currentJobStatus) {
+                    // 更新状态显示
+                    updateJobStatusDisplay(currentJobStatus);
+                }
+            }
+        } catch (error) {
+            console.error('[工作详情页] 加载用户数据失败:', error);
+        }
+    }
+    
+    // 从URL获取工作ID
+    function getJobIdFromUrl() {
+        const path = window.location.pathname;
+        const matches = path.match(/\/jobs\/(\d+)\//);
+        return matches ? matches[1] : null;
+    }
+    
+    // 更新工作状态显示
+    function updateJobStatusDisplay(jobStatus) {
+        const statusBadge = document.querySelector('.status-badge');
+        if (statusBadge) {
+            statusBadge.textContent = jobStatus.status || 'Not Applied';
+            statusBadge.className = `badge status-badge status-${jobStatus.status || 'not-applied'}`;
+        }
+        
+        const statusSelect = document.getElementById('id_status');
+        if (statusSelect) {
+            statusSelect.value = jobStatus.status || 'viewed';
+        }
+        
+        const notesTextarea = document.getElementById('id_notes');
+        if (notesTextarea) {
+            notesTextarea.value = jobStatus.notes || '';
+        }
+    }
+    
+    // 初始检查认证状态
+    setTimeout(function() {
+        if (window.authManager) {
+            const isAuthenticated = window.authManager.getCurrentUser() !== null;
+            handleAuthStateChange(isAuthenticated);
+        }
+    }, 500);
+});
+</script>
 {% endblock %}
