@@ -290,20 +290,49 @@ def _generate_match_jobs_prompt(structured_user_profile, jobs_json_string):
     Each job object in your response MUST contain the following keys:
     - "id": The original ID of the job from the input list (string).
     - "match_score": An integer between 0 and 100, representing the overall suitability of the job for the candidate.
-                     Consider all aspects of the profile: skills, experience, preferences (role, location, work model, salary if mentioned), language skills (especially German), and education.
-    - "match_reason": A concise string (2-3 sentences) explaining the main factors contributing to the score. Highlight key alignments or mismatches.
-    - "job_insights": A string providing 2-3 bullet points of specific insights about this job in relation to the candidate. 
-                      Example: "* Pro: Strong alignment with preferred 'Backend Engineer' role. * Con: Location 'Munich' differs from preference 'Berlin'. * Neutral: Industry X is not specified in preferences but skills are transferable."
-    - "application_tips": A string offering 1-2 bullet points of actionable advice for the candidate if they were to apply for this job. 
-                          Example: "* Emphasize your Python and Django experience as listed in key_skills. * Mention your B2 German proficiency as it is valuable in the German market, even if the job is in English."
+    - "analysis_data": A JSON object containing structured analysis:
+      {{
+        "reasoning": "A concise explanation (2-3 sentences) of the main factors contributing to the score",
+        "pros": ["Array of advantages", "Why this job fits the candidate"],
+        "cons": ["Array of disadvantages", "Potential challenges or mismatches"],
+        "key_insights": ["Specific insights about this job", "Important considerations for the candidate"],
+        "match_details": {{
+          "skill_alignment": "How well do the candidate's skills match the job requirements",
+          "culture_fit": "Assessment of cultural and work environment fit",
+          "growth_potential": "Career growth opportunities this position offers"
+        }}
+      }}
+    - "application_tips": A JSON object containing actionable advice:
+      {{
+        "specific_advice": "Overall advice for this specific application",
+        "tips": ["Specific action item 1", "Specific action item 2"],
+        "recommendations": ["Strategic recommendation 1", "Strategic recommendation 2"],
+        "cover_letter_suggestions": ["Key point to mention in cover letter"],
+        "interview_preparation": ["Important topic to prepare for interview"]
+      }}
 
     Example for a single job object in the output array:
     {{ 
         "id": "some_job_id", 
         "match_score": 85, 
-        "match_reason": "Excellent skills match for a backend role. User's preference for remote work aligns well. German B2 is a plus.",
-        "job_insights": "* Pro: Role type matches user preference. * Pro: Desired salary range seems achievable. * Con: Company culture preference for 'fast-paced' might not align with this traditionally structured company.",
-        "application_tips": "* Highlight your 5 years of experience with microservices. * Tailor your CV summary to mention the specific industry if you have relevant experience, even if not listed as a key skill."
+        "analysis_data": {{
+          "reasoning": "Excellent skills match for a backend role. User's preference for remote work aligns well. German B2 is a plus.",
+          "pros": ["Strong Python/Django experience matches requirements", "Remote work preference aligns", "German language skills valuable"],
+          "cons": ["Location Munich differs from Berlin preference", "Salary range not specified"],
+          "key_insights": ["Role type matches user preference perfectly", "Company culture seems traditional vs fast-paced preference", "Industry experience transferable"],
+          "match_details": {{
+            "skill_alignment": "90% - Python, Django, and backend skills directly match",
+            "culture_fit": "70% - Traditional company culture vs fast-paced preference",
+            "growth_potential": "85% - Senior role with team leadership opportunities"
+          }}
+        }},
+        "application_tips": {{
+          "specific_advice": "Emphasize your microservices experience and German proficiency",
+          "tips": ["Highlight 5 years of Python/Django experience", "Mention B2 German proficiency", "Include specific microservices projects"],
+          "recommendations": ["Tailor CV for German market standards", "Research company culture thoroughly"],
+          "cover_letter_suggestions": ["Mention specific interest in German market", "Reference relevant project experience"],
+          "interview_preparation": ["Prepare for German business culture questions", "Review microservices architecture patterns"]
+        }}
     }}
 
     Ensure the output is ONLY the JSON array, starting with '[' and ending with ']'. No other text or explanations.
@@ -323,12 +352,17 @@ def _parse_match_jobs_response(api_response_text, _api_response_object, original
             print(f"WARNING: Job ID {job_id_str} from API response not found in the processed job listings. Skipping.")
             continue
 
+        # 新格式：直接使用JSONB结构
         processed_matches.append({
             'job': original_job_dict,
             'score': int(item.get('match_score', 0)),
-            'reason': str(item.get('match_reason', 'N/A')),
-            'insights': str(item.get('job_insights', 'N/A')),
-            'tips': str(item.get('application_tips', 'N/A'))
+            'analysis_data': item.get('analysis_data', {}),
+            'application_tips': item.get('application_tips', {}),
+            
+            # 为了向后兼容，保留旧字段
+            'reason': item.get('analysis_data', {}).get('reasoning', 'N/A'),
+            'insights': '. '.join(item.get('analysis_data', {}).get('key_insights', [])),
+            'tips': item.get('application_tips', {}).get('specific_advice', 'N/A')
         })
 
     processed_matches.sort(key=lambda x: x['score'], reverse=True)
@@ -403,6 +437,26 @@ def simulate_match_jobs(structured_user_profile, job_listings, max_jobs_to_proce
         matched_results.append({
             'job': enhanced_job,
             'score': score,
+            # 新的JSONB格式
+            'analysis_data': {
+                'reasoning': " ".join(reason_fragments),
+                'key_insights': insights_fragments[1:],  # 去掉第一个标题
+                'pros': [f"技能匹配 {score}%", "模拟优势分析"],
+                'cons': ["模拟劣势分析"] if score < 80 else [],
+                'match_details': {
+                    'skill_alignment': f"{score}% - 基于用户技能的模拟匹配",
+                    'culture_fit': f"{random.randint(60, 90)}% - 模拟文化匹配度",
+                    'growth_potential': f"{random.randint(70, 95)}% - 模拟发展潜力"
+                }
+            },
+            'application_tips': {
+                'specific_advice': " ".join(tips_fragments),
+                'tips': tips_fragments[1:] if len(tips_fragments) > 1 else ["模拟申请建议"],
+                'recommendations': ["针对此职位的模拟建议", "模拟战略建议"],
+                'cover_letter_suggestions': ["模拟求职信建议"],
+                'interview_preparation': ["模拟面试准备建议"]
+            },
+            # 为了向后兼容，保留旧字段
             'reason': " ".join(reason_fragments),
             'insights': " ".join(insights_fragments),
             'tips': " ".join(tips_fragments)
