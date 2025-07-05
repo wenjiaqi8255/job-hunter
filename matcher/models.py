@@ -24,6 +24,10 @@ class UserProfile(models.Model):
     user_preferences_text = models.TextField(blank=True, null=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
+    
+    # 新增：双写同步机制字段
+    supabase_synced_at = models.DateTimeField(null=True, blank=True, help_text="最后同步到Supabase的时间")
+    cv_analysis_cache = models.JSONField(null=True, blank=True, help_text="用户画像分析结果缓存")
 
     def __str__(self):
         return f"Profile for user {self.user.username}"

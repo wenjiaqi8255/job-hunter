@@ -1,0 +1,246 @@
+/**
+ * 匹配历史组件的样式
+ * 根据MATCH_HISTORY_MIGRATION_PLAN第5步要求实现
+ * 提供现代化的UI样式
+ */
+
+/* 工作匹配卡片样式 */
+.job-match-card {
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  background: #fff;
+}
+
+.job-match-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: #0d6efd;
+}
+
+/* 匹配分数样式 */
+.job-match-card .match-score {
+  font-weight: bold;
+  font-size: 1.5rem;
+}
+
+/* 状态徽章样式 */
+.badge-new {
+  background-color: #6c757d;
+  color: white;
+}
+
+.badge-viewed {
+  background-color: #0dcaf0;
+  color: white;
+}
+
+.badge-applied {
+  background-color: #198754;
+  color: white;
+}
+
+.badge-rejected {
+  background-color: #dc3545;
+  color: white;
+}
+
+/* 手风琴样式优化 */
+.job-match-card .accordion-button {
+  font-size: 0.875rem;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.job-match-card .accordion-button:not(.collapsed) {
+  color: #0d6efd;
+  background-color: transparent;
+}
+
+.job-match-card .accordion-button:focus {
+  box-shadow: none;
+  border-color: transparent;
+}
+
+.job-match-card .accordion-body {
+  padding: 0.5rem 1rem;
+  background-color: #f8f9fa;
+}
+
+/* 优势/劣势列表样式 */
+.pros-cons-list {
+  margin-bottom: 0;
+}
+
+.pros-cons-list li {
+  margin-bottom: 0.25rem;
+  padding-left: 0.25rem;
+}
+
+.pros-cons-list .text-success {
+  color: #198754 !important;
+}
+
+.pros-cons-list .text-danger {
+  color: #dc3545 !important;
+}
+
+/* 申请建议样式 */
+.application-tips {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-top: 1rem;
+}
+
+.application-tips h6 {
+  color: #495057;
+  margin-bottom: 0.5rem;
+}
+
+.application-tips ul {
+  margin-bottom: 0.5rem;
+}
+
+.application-tips li {
+  margin-bottom: 0.25rem;
+}
+
+/* 匹配历史列表样式 */
+.match-history-list {
+  margin-top: 1rem;
+}
+
+.match-session-header {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+  padding: 1rem;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.match-session-summary {
+  background-color: #f8f9fa;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* 响应式设计 */
+@media (max-width: 768px) {
+  .job-match-card {
+    margin-bottom: 1rem;
+  }
+  
+  .match-score {
+    font-size: 1.25rem !important;
+  }
+  
+  .accordion-button {
+    font-size: 0.8rem !important;
+  }
+}
+
+/* 加载状态样式 */
+.loading-skeleton {
+  animation: skeleton-loading 1s infinite alternate;
+}
+
+@keyframes skeleton-loading {
+  0% {
+    background-color: #e9ecef;
+  }
+  100% {
+    background-color: #f8f9fa;
+  }
+}
+
+/* 空状态样式 */
+.empty-state {
+  text-align: center;
+  padding: 3rem 1rem;
+  color: #6c757d;
+}
+
+.empty-state i {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+/* 错误状态样式 */
+.error-state {
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 6px;
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+.error-state .btn-link {
+  color: #721c24;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.error-state .btn-link:hover {
+  color: #491217;
+  text-decoration: underline;
+}
+
+/* 模态框样式优化 */
+.modal-content {
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+  border-bottom: 1px solid #dee2e6;
+  padding: 1rem 1.5rem;
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.modal-footer {
+  border-top: 1px solid #dee2e6;
+  padding: 1rem 1.5rem;
+}
+
+/* 按钮组样式 */
+.btn-group-sm .btn {
+  padding: 0.25rem 0.5rem;
+  font-size: 0.875rem;
+}
+
+/* 工具提示样式 */
+.tooltip {
+  font-size: 0.75rem;
+}
+
+/* 进度条样式 */
+.progress-bar {
+  background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+}
+
+/* 自定义滚动条 */
+.custom-scrollbar::-webkit-scrollbar {
+  width: 6px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #888;
+  border-radius: 3px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
