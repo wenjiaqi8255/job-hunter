@@ -10,9 +10,10 @@ from .job_views import job_detail_page
 from .application_views import (
     generate_cover_letter_page, 
     generate_custom_resume_page,
-    download_custom_resume,
     my_applications_page,
-    update_job_application_status
+    update_job_application_status,
+    api_generate_cover_letter,
+    api_get_cover_letter
 )
 from .experience_views import experience_list, experience_delete, experience_completed_callback, api_user_experiences
 
@@ -35,9 +36,10 @@ __all__ = [
     'job_detail_page',
     'generate_cover_letter_page',
     'generate_custom_resume_page', 
-    'download_custom_resume',
     'my_applications_page',
     'update_job_application_status',
+    'api_generate_cover_letter',
+    'api_get_cover_letter',
     'experience_list',
     'experience_delete',
     'experience_completed_callback',

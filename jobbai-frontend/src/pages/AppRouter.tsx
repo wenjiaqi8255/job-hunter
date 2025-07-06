@@ -5,6 +5,8 @@ import HomePage from './HomePage'
 import LoginPage from './LoginPage'
 import AuthCallbackPage from './AuthCallbackPage'
 import JobDetailPage from './JobDetailPage'
+import CoverLetterPage from './CoverLetterPage'
+import CustomCVPage from './CustomCVPage'
 import ProfilePage from './ProfilePage'
 import ApplicationsPage from './ApplicationsPage'
 import DebugSessionPage from './DebugSessionPage'
@@ -36,6 +38,8 @@ function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/applications" element={<ApplicationsPage />} />
         <Route path="/jobs/:id" element={<JobDetailPage />} />
+        <Route path="/jobs/:id/cover-letter" element={<CoverLetterPage />} />
+        <Route path="/jobs/:id/custom-cv" element={<CustomCVPage />} />
         <Route path="/sessions/:sessionId/jobs/:id" element={<JobDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
         <Route path="/debug-session" element={<DebugSessionPage />} />

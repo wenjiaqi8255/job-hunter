@@ -35,26 +35,39 @@ def verify_supabase_token(token):
     返回：(is_valid, user_info, error_message)
     """
     try:
+        print(f"[verify_supabase_token] 开始验证令牌，长度: {len(token)}")
+        
         # 调用Supabase API验证token
         headers = {
             'Authorization': f'Bearer {token}',
             'apikey': settings.SUPABASE_KEY
         }
         
-        response = requests.get(
-            f"{settings.SUPABASE_URL}/auth/v1/user",
-            headers=headers
-        )
+        supabase_url = f"{settings.SUPABASE_URL}/auth/v1/user"
+        print(f"[verify_supabase_token] 调用Supabase API: {supabase_url}")
+        
+        response = requests.get(supabase_url, headers=headers)
+        print(f"[verify_supabase_token] Supabase API 响应状态: {response.status_code}")
         
         if response.status_code == 200:
             user_data = response.json()
+            print(f"[verify_supabase_token] 用户验证成功，ID: {user_data.get('id')}")
             return True, user_data, None
         else:
-            return False, None, f"Token verification failed: {response.status_code}"
+            error_msg = f"Token verification failed: {response.status_code}"
+            print(f"[verify_supabase_token] 验证失败: {error_msg}")
+            try:
+                error_detail = response.json()
+                print(f"[verify_supabase_token] 错误详情: {error_detail}")
+            except:
+                print(f"[verify_supabase_token] 响应文本: {response.text}")
+            return False, None, error_msg
             
     except Exception as e:
-        logger.error(f"Token verification error: {str(e)}")
-        return False, None, f"Token verification error: {str(e)}"
+        error_msg = f"Token verification error: {str(e)}"
+        print(f"[verify_supabase_token] 异常: {error_msg}")
+        logger.error(error_msg)
+        return False, None, error_msg
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -106,18 +119,24 @@ def token_required(view_func):
     def wrapper(request, *args, **kwargs):
         # 获取Authorization header
         auth_header = request.META.get('HTTP_AUTHORIZATION')
+        print(f"[token_required] 检查认证头部: {auth_header[:50] if auth_header else 'None'}...")
+        
         if not auth_header or not auth_header.startswith('Bearer '):
+            print(f"[token_required] 认证失败: 缺少或无效的认证头部")
             return JsonResponse({
                 'authenticated': False,
                 'error': 'Authentication required'
             }, status=401)
         
         token = auth_header.split(' ')[1]
+        print(f"[token_required] 提取的令牌长度: {len(token)}")
         
         # 验证token
         is_valid, user_info, error = verify_supabase_token(token)
+        print(f"[token_required] 令牌验证结果: is_valid={is_valid}, user_info={bool(user_info)}, error={error}")
         
         if not is_valid or not user_info:
+            print(f"[token_required] 认证失败: 令牌无效或用户信息为空")
             return JsonResponse({
                 'authenticated': False,
                 'error': error or 'Invalid token'
@@ -125,6 +144,7 @@ def token_required(view_func):
         
         # 将用户信息添加到request对象
         request.supabase_user = user_info
+        print(f"[token_required] 认证成功，用户ID: {user_info.get('id')}")
         
         return view_func(request, *args, **kwargs)
     
@@ -457,134 +477,3 @@ def api_user_status_public(request):
         'authenticated': True,
         'message': 'Token present'
     })
-
-@token_required
-def api_save_job(request):
-    """
-    保存工作API - 简单粗暴的实现
-    """
-    if request.method != 'POST':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
-    try:
-        user_info = request.supabase_user
-        data = json.loads(request.body)
-        
-        job_id = data.get('job_id')
-        status = data.get('status', 'viewed')
-        notes = data.get('notes', '')
-        
-        if not job_id:
-            return JsonResponse({'error': 'job_id is required'}, status=400)
-        
-        # 获取工作信息
-        from ..models import JobListing
-        job = JobListing.objects.filter(id=job_id).first()
-        if not job:
-            return JsonResponse({'error': 'Job not found'}, status=404)
-        
-        # 创建已认证的Supabase客户端
-        from ..services.supabase_auth_helper import create_authed_supabase_client
-        
-        # 获取用户token
-        auth_header = request.META.get('HTTP_AUTHORIZATION')
-        user_token = auth_header.split(' ')[1] if auth_header and auth_header.startswith('Bearer ') else None
-        
-        if not user_token:
-            return JsonResponse({
-                'success': False,
-                'error': 'Missing user token'
-            }, status=401)
-        
-        # 创建已认证的客户端
-        supabase = create_authed_supabase_client(user_token)
-        
-        # 尝试保存到Supabase
-        from ..services.supabase_saved_job_service import (
-            get_supabase_saved_job,
-            create_supabase_saved_job,
-            update_supabase_saved_job_status
-        )
-        
-        # 检查是否已存在
-        existing_job = get_supabase_saved_job(supabase, job.id)
-        if existing_job:
-            # 更新状态
-            update_supabase_saved_job_status(supabase, job.id, status, notes)
-            return JsonResponse({
-                'success': True,
-                'message': 'Job status updated',
-                'job_id': job_id,
-                'status': status
-            })
-        else:
-            # 创建新记录
-            create_data = {
-                "status": status,
-                "notes": notes,
-                "original_job_id": job.id,
-                "company_name": job.company_name,
-                "job_title": job.job_title,
-                "job_description": job.description,
-                "application_url": job.application_url,
-                "location": job.location,
-            }
-            create_supabase_saved_job(supabase, create_data)
-            return JsonResponse({
-                'success': True,
-                'message': 'Job saved successfully',
-                'job_id': job_id,
-                'status': status
-            })
-            
-    except json.JSONDecodeError:
-        return JsonResponse({'error': 'Invalid JSON'}, status=400)
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)
-
-
-@token_required  
-def api_saved_jobs(request):
-    """
-    获取保存的工作列表API - 简单粗暴的实现
-    """
-    if request.method != 'GET':
-        return JsonResponse({'error': 'Method not allowed'}, status=405)
-    
-    try:
-        user_info = request.supabase_user
-        
-        # 创建已认证的Supabase客户端
-        from ..services.supabase_auth_helper import create_authed_supabase_client
-        
-        # 获取用户token
-        auth_header = request.META.get('HTTP_AUTHORIZATION')
-        user_token = auth_header.split(' ')[1] if auth_header and auth_header.startswith('Bearer ') else None
-        
-        if not user_token:
-            return JsonResponse({
-                'success': False,
-                'error': 'Missing user token'
-            }, status=401)
-        
-        # 创建已认证的客户端
-        supabase = create_authed_supabase_client(user_token)
-        
-        # 获取保存的工作
-        from ..services.supabase_saved_job_service import list_supabase_saved_jobs
-        saved_jobs = list_supabase_saved_jobs(supabase)
-        
-        return JsonResponse({
-            'success': True,
-            'jobs': saved_jobs or [],
-            'count': len(saved_jobs) if saved_jobs else 0
-        })
-        
-    except Exception as e:
-        return JsonResponse({
-            'success': False,
-            'error': str(e)
-        }, status=500)

@@ -13,7 +13,7 @@ import type { Job } from '../types'
 function JobDetailPage() {
   const { id, sessionId } = useParams<{ id: string; sessionId?: string }>()
   const navigate = useNavigate()
-  const { getJobById, jobs, fetchMatchedJobs } = useJobsStore()
+  const { getJobById, fetchMatchedJobs, jobs, loading: jobsLoading } = useJobsStore()
   const { isAuthenticated } = useAuthStore()
   const { currentSession } = useSessionStore()
   const [job, setJob] = useState<Job | null>(null)
@@ -21,6 +21,7 @@ function JobDetailPage() {
   const [error, setError] = useState<string | null>(null)
   const [savedJobStatus, setSavedJobStatus] = useState<string>('not_applied')
   const [savedJobNotes, setSavedJobNotes] = useState<string>('')
+  const [loadingSavedStatus, setLoadingSavedStatus] = useState(false)
 
   useEffect(() => {
     if (!id) {
@@ -39,9 +40,33 @@ function JobDetailPage() {
         if (isInMatchContext) {
           // 场景1: 匹配上下文中的工作 - 从 jobsStore 获取数据
           console.log('[工作详情页] 获取匹配上下文中的工作信息')
+          console.log('[工作详情页] 查找工作ID:', id)
+          
+          // 等待一段时间，让store完成数据加载
+          if (jobsLoading) {
+            console.log('[工作详情页] 等待store完成数据加载...')
+            // 等待store完成加载
+            let attempts = 0
+            while (jobsLoading && attempts < 50) { // 最多等待5秒
+              await new Promise(resolve => setTimeout(resolve, 100))
+              attempts++
+            }
+            console.log('[工作详情页] 等待完成，尝试次数:', attempts)
+          }
           
           // 首先尝试从 jobsStore 获取工作数据
-          const jobFromStore = getJobById(id)
+          let jobFromStore = getJobById(id)
+          console.log('[工作详情页] 从store获取到的工作:', jobFromStore)
+          console.log('[工作详情页] 当前store中的工作数量:', jobs.length)
+          
+          // 如果store中没有数据，并且store不在加载状态，则主动获取数据
+          if (!jobFromStore && !jobsLoading && jobs.length === 0) {
+            console.log('[工作详情页] store中无数据且未在加载，主动获取匹配的工作')
+            await fetchMatchedJobs(true) // 强制刷新
+            jobFromStore = getJobById(id) // 重新尝试获取
+            console.log('[工作详情页] 获取数据后重新查找工作:', jobFromStore)
+          }
+          
           if (jobFromStore) {
             console.log('[工作详情页] 使用 jobsStore 中的工作数据')
             setJob(jobFromStore)
@@ -53,12 +78,13 @@ function JobDetailPage() {
               // 但根据新架构，会话信息应该在获取工作数据时就已经设置了
             }
           } else {
-            // 如果store中没有数据，重新获取最新匹配结果
-            console.log('[工作详情页] 重新获取匹配结果')
-            await fetchMatchedJobs()
-            const jobFromRefresh = jobs.find((j: Job) => j.id === id)
-            if (jobFromRefresh) {
-              setJob(jobFromRefresh)
+            // 如果store中仍然没有数据，直接从API获取工作详情
+            console.log('[工作详情页] store中仍无数据，从API获取工作详情')
+            const response = await jobsApi.getJobDetail(id)
+            
+            if (response.success && response.data?.job) {
+              console.log('[工作详情页] 从API获取到工作详情')
+              setJob(response.data.job)
             } else {
               throw new Error('未找到指定工作')
             }
@@ -68,7 +94,18 @@ function JobDetailPage() {
           console.log('[工作详情页] 获取普通工作详情')
           
           // 步骤1: 先尝试从store中获取工作数据
-          const existingJob = getJobById(id)
+          let existingJob = getJobById(id)
+          console.log('[工作详情页] 从store获取到的工作:', existingJob)
+          console.log('[工作详情页] 当前store中的工作数量:', jobs.length)
+          
+          // 如果store中没有数据，并且用户已登录，尝试获取匹配的工作
+          if (!existingJob && isAuthenticated && !jobsLoading && jobs.length === 0) {
+            console.log('[工作详情页] store中无数据且用户已登录，尝试获取匹配的工作')
+            await fetchMatchedJobs(true) // 强制刷新
+            existingJob = getJobById(id) // 重新尝试获取
+            console.log('[工作详情页] 获取匹配数据后重新查找工作:', existingJob)
+          }
+          
           if (existingJob) {
             console.log('[工作详情页] 从store获取到工作数据')
             setJob(existingJob)
@@ -86,6 +123,11 @@ function JobDetailPage() {
           }
         }
         
+        // 如果用户已登录，加载保存状态
+        if (isAuthenticated) {
+          await loadSavedJobStatus(id)
+        }
+        
       } catch (error) {
         console.error('[工作详情页] 获取工作数据时出错:', error)
         setError(error instanceof Error ? error.message : '网络错误，请检查网络连接后重试。')
@@ -95,7 +137,40 @@ function JobDetailPage() {
     }
 
     fetchJobData()
-  }, [id, sessionId, getJobById, navigate])
+  }, [id, sessionId, getJobById, navigate, isAuthenticated, fetchMatchedJobs, jobs, jobsLoading])
+
+  // 加载用户保存的工作状态
+  const loadSavedJobStatus = async (jobId: string) => {
+    if (!isAuthenticated) {
+      console.log('[工作详情页] 用户未登录，跳过加载保存状态')
+      return
+    }
+    
+    try {
+      setLoadingSavedStatus(true)
+      console.log('[工作详情页] 开始加载保存状态')
+      
+      const response = await jobsApi.getJobSavedStatus(jobId)
+      
+      if (response.success && response.data) {
+        console.log('[工作详情页] 加载保存状态成功:', response.data)
+        const savedData = response.data as import('../types').JobSavedStatusApiResponse
+        setSavedJobStatus(savedData.status || 'not_applied')
+        setSavedJobNotes(savedData.notes || '')
+      } else {
+        console.log('[工作详情页] 该工作未保存，使用默认状态')
+        setSavedJobStatus('not_applied')
+        setSavedJobNotes('')
+      }
+    } catch (error) {
+      console.error('[工作详情页] 加载保存状态失败:', error)
+      // 失败时使用默认状态
+      setSavedJobStatus('not_applied')
+      setSavedJobNotes('')
+    } finally {
+      setLoadingSavedStatus(false)
+    }
+  }
 
   // 构建面包屑导航项 - 利用 sessionStore 的数据
   const buildBreadcrumbItems = () => {
@@ -136,11 +211,17 @@ function JobDetailPage() {
 
   const handleSaveJob = async (status: string, notes: string) => {
     if (!job || !isAuthenticated) {
+      console.error('[工作详情页] 保存工作失败:', { 
+        hasJob: !!job, 
+        isAuthenticated,
+        jobId: job?.id 
+      })
       throw new Error('用户未登录或工作信息不存在')
     }
     
     try {
       console.log('[工作详情页] 保存工作状态:', { jobId: job.id, status, notes })
+      console.log('[工作详情页] 认证状态检查:', { isAuthenticated })
       
       const response = await jobsApi.saveJob(job.id, status, notes)
       
@@ -380,6 +461,7 @@ function JobDetailPage() {
                 onSave={handleSaveJob}
                 initialStatus={savedJobStatus}
                 initialNotes={savedJobNotes}
+                jobId={id}
               />
             ) : (
               <GuestJobPrompt />

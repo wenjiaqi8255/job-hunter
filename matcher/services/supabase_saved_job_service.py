@@ -16,27 +16,33 @@ def get_supabase_saved_job(supabase: Client, original_job_id: str):
     return None
 
 # 创建申请记录（含岗位快照）
-def create_supabase_saved_job(supabase: Client, data: dict):
-    """创建一个新的 saved_job 记录"""
+def create_supabase_saved_job(supabase: Client, data: dict, user_id: str):
+    """
+    创建一个新的 saved_job 记录
+    
+    Args:
+        supabase: 已认证的 Supabase 客户端
+        data: 工作数据
+        user_id: 用户ID（RLS策略会验证权限）
+    """
     if 'original_job_id' not in data:
         raise ValueError("Missing required field 'original_job_id' in saved_job data")
     
-    # 调试：检查当前用户会话
-    try:
-        user_response = supabase.auth.get_user()
-        if user_response and user_response.user:
-            print(f"[SavedJobService] Creating job for user: {user_response.user.id}")
-        else:
-            print(f"[SavedJobService] Warning: No authenticated user found")
-    except Exception as e:
-        print(f"[SavedJobService] Error checking user: {e}")
+    print(f"[SavedJobService] Creating saved_job record for job: {data.get('original_job_id')}, user: {user_id}")
     
     # 确保 created_at 和 updated_at 存在
     now = datetime.utcnow().isoformat()
     data.setdefault('created_at', now)
     data.setdefault('updated_at', now)
+    
+    # ✅ 正确：明确设置user_id，RLS确保不能插入其他用户的数据
+    data['user_id'] = user_id
+    print(f"[SavedJobService] Added user_id to data: {user_id}")
+    print(f"[SavedJobService] Data now contains user_id: {'user_id' in data}")
 
+    print(f"[SavedJobService] Attempting to insert data with keys: {list(data.keys())}")
     resp = supabase.table('saved_jobs').insert(data).execute()
+    print(f"[SavedJobService] Insert response: {resp}")
     return resp.data[0] if hasattr(resp, 'data') and resp.data else None
 
 # 更新申请状态和备注
