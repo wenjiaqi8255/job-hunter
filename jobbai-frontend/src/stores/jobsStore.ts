@@ -93,25 +93,30 @@ export const useJobsStore = create<JobsState>()((set, get) => ({
         // 数据转换和验证
         if (response.data.jobs && Array.isArray(response.data.jobs)) {
           // 转换MatchedJob到Job类型（使用统一的字段）
-          const jobs: Job[] = response.data.jobs.map((matchedJob: any) => ({
-            id: matchedJob.id,
-            job_id: matchedJob.job_id,
-            title: matchedJob.title,
-            company: matchedJob.company,
-            location: matchedJob.location,
-            level: matchedJob.level,
-            industry: matchedJob.industry,
-            flexibility: matchedJob.flexibility,
-            salaryRange: matchedJob.salaryRange,
-            description: matchedJob.description,
-            applicationUrl: matchedJob.applicationUrl,
-            created_at: matchedJob.created_at,
-            updated_at: matchedJob.updated_at,
-            score: matchedJob.score,
-            status: matchedJob.status,
-            analysis: matchedJob.analysis,
-            application_tips: matchedJob.application_tips,
-          }))
+          const jobs: Job[] = response.data.jobs.map((matchedJob: any) => {
+            console.log('[JobsStore] Processing job:', matchedJob.id, 'title:', matchedJob.title)
+            return {
+              id: String(matchedJob.id), // 确保ID是字符串
+              job_id: matchedJob.job_id,
+              title: matchedJob.title,
+              company: matchedJob.company,
+              location: matchedJob.location,
+              level: matchedJob.level,
+              industry: matchedJob.industry,
+              flexibility: matchedJob.flexibility,
+              salaryRange: matchedJob.salaryRange,
+              description: matchedJob.description,
+              applicationUrl: matchedJob.applicationUrl,
+              created_at: matchedJob.created_at,
+              updated_at: matchedJob.updated_at,
+              score: matchedJob.score,
+              status: matchedJob.status,
+              analysis: matchedJob.analysis,
+              application_tips: matchedJob.application_tips,
+            }
+          })
+          
+          console.log('[JobsStore] Converted jobs:', jobs.map(job => ({ id: job.id, title: job.title, idType: typeof job.id })))
           
           set({ 
             jobs: jobs,
@@ -171,25 +176,30 @@ export const useJobsStore = create<JobsState>()((set, get) => ({
         // 数据转换和验证
         if (response.data.jobs && Array.isArray(response.data.jobs)) {
           // 转换MatchedJob到Job类型（使用统一的字段）
-          const jobs: Job[] = response.data.jobs.map((matchedJob: any) => ({
-            id: matchedJob.id,
-            job_id: matchedJob.job_id,
-            title: matchedJob.title,
-            company: matchedJob.company,
-            location: matchedJob.location,
-            level: matchedJob.level,
-            industry: matchedJob.industry,
-            flexibility: matchedJob.flexibility,
-            salaryRange: matchedJob.salaryRange,
-            description: matchedJob.description,
-            applicationUrl: matchedJob.applicationUrl,
-            created_at: matchedJob.created_at,
-            updated_at: matchedJob.updated_at,
-            score: matchedJob.score,
-            status: matchedJob.status,
-            analysis: matchedJob.analysis,
-            application_tips: matchedJob.application_tips,
-          }))
+          const jobs: Job[] = response.data.jobs.map((matchedJob: any) => {
+            console.log('[JobsStore] Processing job from trigger:', matchedJob.id, 'title:', matchedJob.title)
+            return {
+              id: String(matchedJob.id), // 确保ID是字符串
+              job_id: matchedJob.job_id,
+              title: matchedJob.title,
+              company: matchedJob.company,
+              location: matchedJob.location,
+              level: matchedJob.level,
+              industry: matchedJob.industry,
+              flexibility: matchedJob.flexibility,
+              salaryRange: matchedJob.salaryRange,
+              description: matchedJob.description,
+              applicationUrl: matchedJob.applicationUrl,
+              created_at: matchedJob.created_at,
+              updated_at: matchedJob.updated_at,
+              score: matchedJob.score,
+              status: matchedJob.status,
+              analysis: matchedJob.analysis,
+              application_tips: matchedJob.application_tips,
+            }
+          })
+          
+          console.log('[JobsStore] Converted jobs from trigger:', jobs.map(job => ({ id: job.id, title: job.title, idType: typeof job.id })))
           
           set({ 
             jobs: jobs,
@@ -226,6 +236,19 @@ export const useJobsStore = create<JobsState>()((set, get) => ({
   // 根据ID获取工作
   getJobById: (id: string) => {
     const { jobs } = get()
-    return jobs.find(job => job.id === id)
+    console.log('[JobsStore] getJobById called with id:', id, 'type:', typeof id)
+    console.log('[JobsStore] Available jobs:', jobs.map(job => ({ id: job.id, title: job.title, idType: typeof job.id })))
+    
+    const foundJob = jobs.find(job => job.id === id)
+    console.log('[JobsStore] Found job:', foundJob ? `${foundJob.title} (${foundJob.id})` : 'NOT FOUND')
+    
+    // 尝试使用字符串转换进行匹配
+    if (!foundJob) {
+      const foundJobStr = jobs.find(job => String(job.id) === String(id))
+      console.log('[JobsStore] Found job with string conversion:', foundJobStr ? `${foundJobStr.title} (${foundJobStr.id})` : 'NOT FOUND')
+      return foundJobStr
+    }
+    
+    return foundJob
   }
 }))

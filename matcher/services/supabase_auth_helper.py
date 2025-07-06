@@ -21,11 +21,18 @@ def create_authed_supabase_client(user_jwt: str) -> Client:
     Returns:
         Client: 已认证的Supabase客户端，所有请求都会自动带上正确的Authorization头
     """
+    print(f"[create_authed_supabase_client] 创建已认证的Supabase客户端，令牌长度: {len(user_jwt)}")
+    
     # 创建ClientOptions，设置Authorization头
     client_options = ClientOptions()
     client_options.headers = {"Authorization": f"Bearer {user_jwt}"}
     
+    print(f"[create_authed_supabase_client] 设置认证头部: Bearer {user_jwt[:20]}...")
+    
     # 创建客户端，supabase-py会智能合并headers：
     # - 保留默认的apikey头
     # - 用我们提供的Authorization头覆盖默认的错误Authorization头
-    return create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY, options=client_options)
+    client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY, options=client_options)
+    
+    print(f"[create_authed_supabase_client] Supabase客户端创建成功")
+    return client

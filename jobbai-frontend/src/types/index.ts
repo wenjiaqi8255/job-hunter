@@ -135,3 +135,84 @@ export interface HealthStatusApiResponse {
     last_sync: string;
   };
 }
+
+// 保存工作相关类型
+export interface SavedJob {
+  id: string;
+  user_id: string;
+  original_job_id: string;
+  status: 'not_applied' | 'bookmarked' | 'applied' | 'interviewing' | 'offer_received' | 'rejected' | 'withdrawn';
+  notes: string;
+  company_name: string;
+  job_title: string;
+  job_description?: string;
+  application_url?: string;
+  location?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 保存工作API响应
+export interface SaveJobApiResponse {
+  success: boolean;
+  message?: string;
+  job_id?: string;
+  status?: string;
+  error?: string;
+}
+
+// 获取保存工作状态API响应
+export interface JobSavedStatusApiResponse {
+  success: boolean;
+  job_saved: boolean;
+  status: string;
+  notes: string;
+  updated_at?: string;
+  error?: string;
+}
+
+// 获取保存工作列表API响应
+export interface SavedJobsApiResponse {
+  success: boolean;
+  jobs: SavedJob[];
+  count: number;
+  error?: string;
+}
+
+// 求职信相关类型
+export interface CoverLetter {
+  id: string;
+  user_id: string;
+  original_job_id: string;
+  company_name: string;
+  job_title: string;
+  content: string;
+  created_at: string;
+  updated_at: string;
+}
+
+// 求职信API响应类型
+export interface CoverLetterApiResponse {
+  success: boolean;
+  cover_letter?: {
+    content: string;
+    job_title: string;
+    company_name: string;
+    created_at?: string;
+    updated_at?: string;
+  };
+  error?: string;
+}
+
+// 定制简历API响应类型
+export interface CustomCvApiResponse {
+  success: boolean;
+  custom_cv?: {
+    content: string;
+    customization_notes?: string;
+    job_title: string;
+    company_name: string;
+    created_at?: string;
+  };
+  error?: string;
+}

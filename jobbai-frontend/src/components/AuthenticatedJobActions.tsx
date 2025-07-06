@@ -1,9 +1,11 @@
 import { useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface AuthenticatedJobActionsProps {
   onSave: (status: string, notes: string) => Promise<void>
   initialStatus?: string
   initialNotes?: string
+  jobId?: string
 }
 
 // 状态选择选项
@@ -20,8 +22,10 @@ const STATUS_OPTIONS = [
 function AuthenticatedJobActions({ 
   onSave, 
   initialStatus = 'not_applied',
-  initialNotes = ''
+  initialNotes = '',
+  jobId
 }: AuthenticatedJobActionsProps) {
+  const navigate = useNavigate()
   const [status, setStatus] = useState(initialStatus)
   const [notes, setNotes] = useState(initialNotes)
   const [saving, setSaving] = useState(false)
@@ -110,6 +114,28 @@ function AuthenticatedJobActions({
             </>
           )}
         </button>
+        
+        {/* 生成求职信按钮 */}
+        {jobId && (
+          <button
+            onClick={() => navigate(`/jobs/${jobId}/cover-letter`)}
+            className="w-full mt-3 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+          >
+            <i className="fas fa-file-alt mr-2"></i>
+            生成求职信
+          </button>
+        )}
+
+        {/* 生成定制简历按钮 */}
+        {jobId && (
+          <button
+            onClick={() => navigate(`/jobs/${jobId}/custom-cv`)}
+            className="w-full mt-3 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+          >
+            <i className="fas fa-file-user mr-2"></i>
+            定制简历
+          </button>
+        )}
 
         {/* 成功/错误消息 */}
         {successMessage && (

@@ -8,12 +8,23 @@ const API_BASE_URL = import.meta.env.VITE_API_BASE_URL
 const getAuthHeaders = async (): Promise<Record<string, string>> => {
   const { data: { session } } = await supabase.auth.getSession()
   
+  console.log('[API] 获取认证头部 - 会话状态:', {
+    hasSession: !!session,
+    hasAccessToken: !!session?.access_token,
+    tokenLength: session?.access_token?.length,
+    userId: session?.user?.id,
+    userEmail: session?.user?.email
+  })
+  
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
   }
   
   if (session?.access_token) {
     headers['Authorization'] = `Bearer ${session.access_token}`
+    console.log('[API] 添加认证头部:', `Bearer ${session.access_token.substring(0, 20)}...`)
+  } else {
+    console.warn('[API] 警告: 无认证令牌')
   }
   
   return headers
@@ -134,12 +145,17 @@ export const jobsApi = {
   
   // 保存工作
   saveJob: async (jobId: string, status: string, notes?: string) => {
-    return apiClient.post('/api/jobs/save/', { job_id: jobId, status, notes })
+    return apiClient.post<import('../types').SaveJobApiResponse>('/api/jobs/save/', { job_id: jobId, status, notes })
   },
   
   // 获取用户保存的工作
   getSavedJobs: async () => {
-    return apiClient.get('/api/jobs/saved/')
+    return apiClient.get<import('../types').SavedJobsApiResponse>('/api/jobs/saved/')
+  },
+  
+  // 获取单个工作的保存状态
+  getJobSavedStatus: async (jobId: string) => {
+    return apiClient.get<import('../types').JobSavedStatusApiResponse>(`/api/jobs/${jobId}/saved-status/`)
   }
 }
 
@@ -181,21 +197,6 @@ export const matchApi = {
     return apiClient.get<import('../types').MatchApiResponse>('/api/match/latest/')
   },
   
-  // ===============================
-  // 已废弃的 API 端点 - 将在未来版本中移除
-  // ===============================
-  
-  // @deprecated - 不再使用，数据统一从 /api/match/latest/ 获取
-  getMatchHistory: async (limit?: number) => {
-    const params = limit ? `?limit=${limit}` : ''
-    return apiClient.get<import('../types/matching').MatchHistoryResponse>(`/api/match/history/${params}`)
-  },
-  
-  // @deprecated - 不再使用，会话信息统一从 /api/match/latest/ 获取
-  getSessionById: async (sessionId: string) => {
-    return apiClient.get<{ success: boolean; session: import('../types').MatchSession }>(`/api/match/sessions/${sessionId}/`)
-  },
-  
   // 获取匹配工作详情 (新的语义化端点)
   getMatchJobDetails: async (jobMatchId: string) => {
     return apiClient.get<import('../types/matching').MatchJobDetailsResponse>(`/api/match/session/${jobMatchId}/`)
@@ -210,4 +211,43 @@ export const matchApi = {
 // 开发环境日志
 if (import.meta.env.VITE_NODE_ENV === 'development') {
   console.log('[API] Client initialized with base URL:', API_BASE_URL)
+}
+
+// 求职信相关API调用
+export const coverLetterApi = {
+  // 生成求职信
+  generateCoverLetter: async (jobId: string) => {
+    return apiClient.post<import('../types').CoverLetterApiResponse>(`/api/jobs/${jobId}/cover-letter/`)
+  },
+  
+  // 获取求职信
+  getCoverLetter: async (jobId: string) => {
+    return apiClient.get<import('../types').CoverLetterApiResponse>(`/api/jobs/${jobId}/cover-letter/get/`)
+  },
+  
+  // 更新求职信
+  updateCoverLetter: async (jobId: string, content: string) => {
+    return apiClient.put<import('../types').CoverLetterApiResponse>(`/api/jobs/${jobId}/cover-letter/update/`, { content })
+  }
+}
+
+// 定制简历相关API调用
+export const customCvApi = {
+  // 生成定制简历
+  generateCustomCv: async (jobId: string) => {
+    return apiClient.post<import('../types').CustomCvApiResponse>(`/api/jobs/${jobId}/custom-cv/`)
+  },
+  
+  // 获取定制简历
+  getCustomCv: async (jobId: string) => {
+    return apiClient.get<import('../types').CustomCvApiResponse>(`/api/jobs/${jobId}/custom-cv/get/`)
+  },
+  
+  // 更新定制简历
+  updateCustomCv: async (jobId: string, content: string, customizationNotes?: string) => {
+    return apiClient.put<import('../types').CustomCvApiResponse>(`/api/jobs/${jobId}/custom-cv/update/`, { 
+      content, 
+      customization_notes: customizationNotes 
+    })
+  }
 }

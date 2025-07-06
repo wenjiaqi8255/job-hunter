@@ -1,7 +1,7 @@
 from django.urls import path
 from . import views
 from .views import auth_views as auth_views_module
-from .views import profile_views, job_views
+from .views import profile_views, job_views, application_views
 from .views import main_views
 
 app_name = 'matcher'
@@ -16,7 +16,6 @@ urlpatterns = [
     path('job/<str:job_id>/generate-cover-letter/', views.generate_cover_letter_page, name='generate_cover_letter_page'),
     path('job/<str:job_id>/generate-custom-resume/', views.generate_custom_resume_page, name='generate_custom_resume_page'),
     path('job/<str:job_id>/update_status/', views.update_job_application_status, name='update_job_application_status'),
-    path('job/<str:job_id>/download-custom-resume-pdf/', views.download_custom_resume, name='download_custom_resume_pdf'),
     
     # 用户相关页面
     path('my-applications/', views.my_applications_page, name='my_applications_page'),
@@ -47,9 +46,20 @@ urlpatterns = [
     
     # 工作相关API端点 - job_views.py
     path('api/jobs/', job_views.api_jobs_list, name='api_jobs_list'),
-    path('api/jobs/<str:job_id>/', job_views.api_job_detail, name='api_job_detail'),
     path('api/jobs/save/', job_views.api_save_job, name='api_save_job'),
     path('api/jobs/saved/', job_views.api_saved_jobs, name='api_saved_jobs'),
+    path('api/jobs/<str:job_id>/', job_views.api_job_detail, name='api_job_detail'),
+    path('api/jobs/<str:job_id>/saved-status/', job_views.api_job_saved_status, name='api_job_saved_status'),
+    
+    # 求职信相关API端点 - application_views.py
+    path('api/jobs/<str:job_id>/cover-letter/', application_views.api_generate_cover_letter, name='api_generate_cover_letter'),
+    path('api/jobs/<str:job_id>/cover-letter/get/', application_views.api_get_cover_letter, name='api_get_cover_letter'),
+    path('api/jobs/<str:job_id>/cover-letter/update/', application_views.api_update_cover_letter, name='api_update_cover_letter'),
+    
+    # 定制简历相关API端点 - application_views.py
+    path('api/jobs/<str:job_id>/custom-cv/', application_views.api_generate_custom_cv, name='api_generate_custom_cv'),
+    path('api/jobs/<str:job_id>/custom-cv/get/', application_views.api_get_custom_cv, name='api_get_custom_cv'),
+    path('api/jobs/<str:job_id>/custom-cv/update/', application_views.api_update_custom_cv, name='api_update_custom_cv'),
     
     # 匹配相关API端点 - main_views.py (新的语义化命名)
     path('api/match/trigger/', main_views.api_trigger_match, name='api_trigger_match'),
