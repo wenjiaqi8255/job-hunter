@@ -8,9 +8,8 @@ from django.conf import settings
 
 import fitz  # PyMuPDF
 
-from ..models import UserProfile
+from ..models import UserProfile, SavedJob
 from ..services.experience_service import get_user_experiences
-from ..services.supabase_saved_job_service import list_supabase_saved_jobs
 
 
 @login_required
@@ -55,9 +54,8 @@ def profile_page(request):
     experiences = get_user_experiences(request.supabase)
     experience_count = len(experiences) if experiences else 0
 
-    # Fetch saved jobs from Supabase to get an accurate count
-    saved_jobs_from_supabase = list_supabase_saved_jobs(request.supabase)
-    application_count = len(saved_jobs_from_supabase) if saved_jobs_from_supabase else 0
+    # Fetch saved jobs count from Django's SavedJob model
+    application_count = SavedJob.objects.filter(user=request.user).count()
     already_saved_minutes = application_count * 20
     
     n8n_chat_url = settings.N8N_CHAT_URL

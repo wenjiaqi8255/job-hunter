@@ -17,12 +17,6 @@ import textwrap
 
 from ..models import JobListing, SavedJob, CoverLetter, CustomResume, UserProfile
 from .. import gemini_utils
-from ..services.supabase_saved_job_service import (
-    get_supabase_saved_job,
-    create_supabase_saved_job,
-    update_supabase_saved_job_status,
-    list_supabase_saved_jobs
-)
 
 
 @login_required
@@ -34,19 +28,6 @@ def generate_cover_letter_page(request, job_id):
     cover_letter_content = ""
     generation_error = False
     has_existing_cover_letter = False
-
-    # Ensure the job is saved in Supabase before proceeding
-    supa_saved_job = get_supabase_saved_job(request.supabase, job.id)
-    if not supa_saved_job:
-        create_data = {
-            "status": 'viewed',
-            "original_job_id": job.id,
-            "company_name": job.company_name,
-            "job_title": job.job_title,
-        }
-        create_supabase_saved_job(request.supabase, create_data)
-
-    # Local SavedJob mirror is no longer needed for CoverLetter relationship
 
     # 构造 job dict
     job_dict = {
@@ -62,7 +43,6 @@ def generate_cover_letter_page(request, job_id):
         'level': job.level,
     }
 
-    from django.urls import reverse
     if request.method == 'POST':
         if not user_cv_text:
             cover_letter_content = "Please complete your CV in your profile before generating a cover letter."
@@ -125,7 +105,7 @@ def generate_cover_letter_page(request, job_id):
         'has_existing_cover_letter': has_existing_cover_letter,
         'user_cv_text': user_cv_text, # Pass CV text for display
     }
-    return render(request, 'matcher/generate_cover_letter.html', context)
+    return render(request, 'matcher/cover_letter_page.html', context)
 
 
 @login_required
@@ -160,19 +140,6 @@ def generate_custom_resume_page(request, job_id):
             if custom_resume_content.startswith("(Error generating"):
                 generation_error = True
             else:
-                # Also save the job to Supabase and locally to mark interest
-                # user.username no longer needed
-                supa_saved_job = get_supabase_saved_job(request.supabase, job.id)
-                if not supa_saved_job:
-                    create_data = {
-                        # "user_id" is now handled by RLS
-                        "status": 'viewed',
-                        "original_job_id": job.id,
-                        "company_name": job.company_name,
-                        "job_title": job.job_title,
-                    }
-                    create_supabase_saved_job(request.supabase, create_data)
-
                 SavedJob.objects.get_or_create(
                     job_listing=job,
                     user=user,
@@ -203,7 +170,7 @@ def generate_custom_resume_page(request, job_id):
         'user_cv_text': user_cv_text, # Pass CV text for display
         'has_existing_resume': has_existing_resume, # Pass flag to template
     }
-    return render(request, 'matcher/generate_custom_resume.html', context)
+    return render(request, 'matcher/custom_resume_page.html', context)
 
 
 @login_required
@@ -248,53 +215,30 @@ def download_custom_resume(request, job_id):
 def my_applications_page(request):
     """
     Displays a list of jobs the user has saved, with filtering by status.
-    Data is fetched from Supabase.
+    Now solely relies on the local Django `SavedJob` model.
     """
-    selected_status = request.GET.get('status', 'applied') # Default to 'applied'
-    # user_id is no longer needed, RLS handles it
+    status_filter = request.GET.get('status')
 
-    # Fetch all saved jobs for the user from Supabase
-    all_saved_jobs = list_supabase_saved_jobs(request.supabase)
+    saved_jobs_query = SavedJob.objects.filter(user=request.user).select_related('job_listing')
 
-    # Define the status choices, matching what's used elsewhere
-    status_choices = [
-        ('applied', 'Applied'),
-        ('viewed', 'Viewed'),
-        ('interviewing', 'Interviewing'),
-        ('offer', 'Offer'),
-        ('rejected', 'Rejected'),
-        ('not_applied', 'Not Applied'),
-    ]
+    if status_filter and status_filter in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
+        saved_jobs_query = saved_jobs_query.filter(status=status_filter)
 
-    # Calculate counts for each status
-    status_counts = {status: 0 for status, _ in status_choices}
-    if all_saved_jobs:
-        for job in all_saved_jobs:
-            status = job.get('status', 'not_applied')
-            if status in status_counts:
-                status_counts[status] += 1
+    # Order by updated_at descending to show the most recently updated jobs first
+    saved_jobs = saved_jobs_query.order_by('-updated_at')
 
-    # Filter jobs based on the selected status
-    if selected_status and all_saved_jobs:
-        filtered_jobs = [job for job in all_saved_jobs if job.get('status') == selected_status]
-    else:
-        filtered_jobs = all_saved_jobs or []
-
-    # Check for existing cover letters for the filtered jobs
-    job_ids = [job['original_job_id'] for job in filtered_jobs]
-    existing_cover_letters = CoverLetter.objects.filter(
-        saved_job__job_listing_id__in=job_ids,
-        saved_job__user=request.user
-    ).values_list('saved_job__job_listing_id', flat=True)
-
-    # Augment the job data with cover letter info
-    for job in filtered_jobs:
-        job['has_cover_letter'] = job['original_job_id'] in existing_cover_letters
+    status_choices = SavedJob.STATUS_CHOICES
+    
+    # For the right rail summary
+    status_counts = {status[0]: 0 for status in status_choices}
+    all_user_jobs = SavedJob.objects.filter(user=request.user)
+    for job in all_user_jobs:
+        status_counts[job.status] = status_counts.get(job.status, 0) + 1
 
     context = {
-        'saved_jobs': filtered_jobs,
+        'saved_jobs': saved_jobs,
         'status_choices': status_choices,
-        'selected_status': selected_status,
+        'current_status': status_filter,
         'status_counts': status_counts,
     }
     return render(request, 'matcher/my_applications.html', context)
@@ -302,46 +246,31 @@ def my_applications_page(request):
 
 @login_required
 def update_job_application_status(request, job_id):
-    user = request.user
-    # user.username no longer needed
-    supa_saved_job = get_supabase_saved_job(request.supabase, job_id)
-    
-    try:
-        data = json.loads(request.body)
-        new_status = data.get('status')
-    except json.JSONDecodeError:
-        return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
+    if request.method == 'POST':
+        try:
+            data = json.loads(request.body)
+            new_status = data.get('status')
+        except json.JSONDecodeError:
+            return JsonResponse({'success': False, 'error': 'Invalid JSON.'}, status=400)
 
-    if new_status and new_status in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
-        job = get_object_or_404(JobListing, id=job_id) # Get job once.
+        job_listing = get_object_or_404(JobListing, id=job_id)
 
-        if supa_saved_job:
-            # user.username no longer needed
-            update_supabase_saved_job_status(request.supabase, job_id, new_status=new_status)
-        else:
-            # If it doesn't exist in Supabase, create it.
-            create_data = {
-                # "user_id" is now handled by RLS
-                "status": new_status,
-                "original_job_id": job.id,
-                "company_name": job.company_name,
-                "job_title": job.job_title,
-                "job_description": job.description,
-                "application_url": job.application_url,
-                "location": job.location,
-                "salary_range": job.salary_range,
-                "industry": job.industry,
-            }
-            create_supabase_saved_job(request.supabase, create_data)
+        if not new_status or new_status not in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
+            return JsonResponse({'success': False, 'error': 'Invalid status value.'}, status=400)
 
-        # Sync local SavedJob mirror
-        SavedJob.objects.update_or_create(
-            user=user,
-            job_listing=job,
+        saved_job, created = SavedJob.objects.get_or_create(
+            user=request.user,
+            job_listing=job_listing,
             defaults={'status': new_status}
         )
-        
-        mapping = dict(SavedJob.STATUS_CHOICES)
-        return JsonResponse({'success': True, 'new_status_display': mapping.get(new_status, new_status), 'new_status': new_status})
-    else:
-        return JsonResponse({'success': False, 'error': 'Invalid status value.'}, status=400)
+
+        if not created:
+            saved_job.status = new_status
+            saved_job.save(update_fields=['status'])
+
+        return JsonResponse({
+            'success': True, 
+            'new_status_display': saved_job.get_status_display(),
+            'new_status': saved_job.status
+        })
+    return JsonResponse({'success': False, 'error': 'Only POST method is allowed.'}, status=405)
