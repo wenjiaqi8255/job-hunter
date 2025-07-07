@@ -13,6 +13,7 @@ interface JobsState {
   // 动作
   fetchJobs: () => Promise<void>
   fetchMatchedJobs: (forceRefresh?: boolean) => Promise<void>
+  fetchJobsBySession: (sessionId: string) => Promise<void>
   triggerAIMatch: () => Promise<void>
   clearError: () => void
   
@@ -54,6 +55,33 @@ export const useJobsStore = create<JobsState>()((set, get) => ({
     }
   },
   
+  // 获取特定会话的工作
+  fetchJobsBySession: async (sessionId: string) => {
+    console.log(`[JobsStore] Fetching jobs for session: ${sessionId}...`)
+    set({ loading: true, error: null })
+
+    try {
+      const response = await matchApi.getJobsForSession(sessionId)
+      
+      if (response.success && response.data) {
+        console.log(`[JobsStore] Jobs for session ${sessionId} fetched successfully:`, response.data.count)
+        set({ 
+          jobs: response.data.jobs, 
+          loading: false,
+          lastFetch: Date.now() 
+        })
+      } else {
+        throw new Error(response.error || `Failed to fetch jobs for session ${sessionId}`)
+      }
+    } catch (error) {
+      console.error(`[JobsStore] Error fetching jobs for session ${sessionId}:`, error)
+      set({ 
+        error: error instanceof Error ? error.message : 'Unknown error',
+        loading: false 
+      })
+    }
+  },
+  
   // 获取用户匹配的工作（需要认证）- 带缓存优化
   fetchMatchedJobs: async (forceRefresh = false) => {
     console.log('[JobsStore] Fetching matched jobs...')
@@ -76,18 +104,8 @@ export const useJobsStore = create<JobsState>()((set, get) => ({
         console.log('[JobsStore] Matched jobs fetched successfully:', response.data.count)
         
         // 同时设置会话信息到 sessionStore
-        if (response.data.session_id && response.data.matched_at) {
-          const sessionInfo = {
-            id: response.data.session_id,
-            matched_at: response.data.matched_at,
-            user_id: response.data.user_id,
-            created_at: response.data.matched_at,
-            skills_text: '',
-            user_preferences_text: '',
-            structured_user_profile_json: {},
-            job_count: response.data.jobs?.length || 0
-          }
-          useSessionStore.getState().setCurrentSession(sessionInfo)
+        if (response.data.session_id) {
+          useSessionStore.getState().setSelectedSessionId(response.data.session_id)
         }
         
         // 数据转换和验证
@@ -159,18 +177,8 @@ export const useJobsStore = create<JobsState>()((set, get) => ({
         console.log('[JobsStore] AI match completed successfully:', response.data.count)
         
         // 同时设置会话信息到 sessionStore
-        if (response.data.session_id && response.data.matched_at) {
-          const sessionInfo = {
-            id: response.data.session_id,
-            matched_at: response.data.matched_at,
-            user_id: response.data.user_id,
-            created_at: response.data.matched_at,
-            skills_text: '',
-            user_preferences_text: '',
-            structured_user_profile_json: {},
-            job_count: response.data.jobs?.length || 0
-          }
-          useSessionStore.getState().setCurrentSession(sessionInfo)
+        if (response.data.session_id) {
+          useSessionStore.getState().setSelectedSessionId(response.data.session_id)
         }
         
         // 数据转换和验证

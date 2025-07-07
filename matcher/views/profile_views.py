@@ -38,7 +38,7 @@ def profile_page(request):
         'n8n_chat_url': getattr(settings, 'N8N_CHAT_URL', ''),
     }
     
-    return render(request, 'matcher/profile.html', context)
+    return render(request, 'matcher/profile_page.html', context)
 
 
 # ==========================================================================

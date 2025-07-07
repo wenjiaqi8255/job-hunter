@@ -196,6 +196,16 @@ export const matchApi = {
   getLatestMatch: async () => {
     return apiClient.get<import('../types').MatchApiResponse>('/api/match/latest/')
   },
+
+  // 获取匹配会话列表 (新增)
+  getMatchSessions: async (limit: number = 20) => {
+    return apiClient.get<{ sessions: import('../types').MatchSession[] }>(`/api/match/sessions/?limit=${limit}`)
+  },
+
+  // 获取特定会话的所有工作 (新增)
+  getJobsForSession: async (sessionId: string) => {
+    return apiClient.get<import('../types').MatchApiResponse>(`/api/match/session/${sessionId}/jobs/`)
+  },
   
   // 获取匹配工作详情 (新的语义化端点)
   getMatchJobDetails: async (jobMatchId: string) => {

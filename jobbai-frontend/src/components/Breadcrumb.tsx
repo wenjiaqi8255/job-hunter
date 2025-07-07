@@ -12,22 +12,22 @@ interface BreadcrumbProps {
 
 function Breadcrumb({ items }: BreadcrumbProps) {
   return (
-    <nav aria-label="breadcrumb" className="mb-6">
-      <ol className="flex items-center space-x-2 text-sm">
+    <nav aria-label="breadcrumb" className="mb-4">
+      <ol className="flex items-center space-x-2 text-sm text-textSecondary">
         {items.map((item, index) => (
           <li key={index} className="flex items-center">
             {index > 0 && (
-              <i className="fas fa-chevron-right text-gray-400 mx-2"></i>
+              <span className="mx-2">/</span>
             )}
             
             {item.active ? (
-              <span className="text-gray-600 font-medium">
+              <span className="font-medium text-textPrimary">
                 {item.label}
               </span>
             ) : (
               <Link
                 to={item.href || '#'}
-                className="text-blue-600 hover:text-blue-800 hover:underline"
+                className="text-textSecondary hover:text-textPrimary hover:underline"
               >
                 {item.label}
               </Link>

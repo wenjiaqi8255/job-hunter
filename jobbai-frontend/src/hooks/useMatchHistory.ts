@@ -6,6 +6,7 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useJobsStore } from '../stores/jobsStore'
+import { matchApi } from '../services/api' // 确保导入 matchApi
 // import { useSessionStore } from '../stores/sessionStore' // 保留供未来使用
 import type { MatchSession, Job } from '../types'
 import type { MatchJobStatusUpdate } from '../types/matching'
@@ -42,9 +43,12 @@ export const useMatchHistory = (limit: number = 10): UseMatchHistoryReturn => {
   const loadMatchHistory = useCallback(async () => {
     try {
       setError(null)
-      console.log('[useMatchHistory] loadMatchHistory is deprecated, use jobsStore instead')
-      // 暂时留空，历史功能在后续版本中实现
-      setSessions([])
+      const response = await matchApi.getMatchSessions(limit)
+      if (response.success && response.data) {
+        setSessions(response.data.sessions)
+      } else {
+        setError(response.error || 'Failed to load match history')
+      }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Unknown error')
     }
@@ -111,7 +115,8 @@ export const useMatchHistory = (limit: number = 10): UseMatchHistoryReturn => {
   // 初始化加载
   useEffect(() => {
     loadLatestMatch()
-  }, [loadLatestMatch])
+    loadMatchHistory() // 新增：加载匹配历史
+  }, [loadLatestMatch, loadMatchHistory])
 
   return {
     // 数据状态
