@@ -34,8 +34,8 @@
               <p class="text-muted fw-normal mb-2">{{ job.company_name }}</p>
             </div>
             {% if user.is_authenticated %}
-            <span class="badge status-badge status-{{ supa_saved_job.status|default_if_none:'not-applied'|lower }}">
-              {{ supa_saved_job.status|default:"Not Applied"|capfirst }}
+            <span class="badge status-badge status-{{ saved_job.status|default_if_none:'not-applied'|lower }}">
+              {{ saved_job.get_status_display|default:"Not Applied"|capfirst }}
             </span>
             {% endif %}
           </div>
@@ -186,19 +186,19 @@
                 <label for="id_status" class="form-label small"><strong>Status</strong></label>
                 <select name="status" id="id_status" class="form-select">
                     {% for value, display in status_choices %}
-                        <option value="{{ value }}" {% if supa_saved_job.status == value %}selected{% endif %}>{{ display }}</option>
+                        <option value="{{ value }}" {% if saved_job.status == value %}selected{% endif %}>{{ display }}</option>
                     {% endfor %}
                 </select>
             </div>
             
             <div class="mb-3">
                 <label for="id_notes" class="form-label small"><strong>Notes</strong></label>
-                <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ supa_saved_job.notes|default:"" }}</textarea>
+                <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ saved_job.notes|default:"" }}</textarea>
             </div>
             
             <button type="submit" class="btn btn-primary w-100" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
-            {% if supa_saved_job and supa_saved_job.updated_at %}
-                <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ supa_saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
+            {% if saved_job and saved_job.updated_at %}
+                <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
             {% endif %}
           </form>
         </div>
