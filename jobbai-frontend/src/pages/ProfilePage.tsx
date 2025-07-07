@@ -20,10 +20,9 @@ function ProfilePage() {
   useEffect(() => {
     if (!isAuthenticated) {
       navigate('/login')
-      return
+    } else {
+      fetchProfile()
     }
-    
-    fetchProfile()
   }, [isAuthenticated, navigate, fetchProfile])
 
   useEffect(() => {
@@ -36,19 +35,17 @@ function ProfilePage() {
   }, [profile])
 
   const handleSave = async () => {
-    try {
-      await updateProfile(formData)
-      setIsEditing(false)
-    } catch (error) {
-      console.error('Failed to update profile:', error)
-    }
+    await updateProfile(formData)
+    setIsEditing(false)
   }
 
   const handleCancel = () => {
-    setFormData({
-      cv_text: profile?.cv_text || '',
-      preferences_text: profile?.preferences_text || ''
-    })
+    if (profile) {
+      setFormData({
+        cv_text: profile.cv_text || '',
+        preferences_text: profile.preferences_text || ''
+      })
+    }
     setIsEditing(false)
   }
 
@@ -57,167 +54,93 @@ function ProfilePage() {
   }
 
   return (
-    <PageLayout>
-      {/* 主内容 */}
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* 页面标题 */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">{t('personal_profile')}</h1>
-          <p className="mt-2 text-gray-600">{t('manage_info')}</p>
-        </div>
+    <PageLayout className="max-w-4xl mx-auto p-4 md:p-6">
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-textPrimary">{t('personal_profile')}</h1>
+        <p className="mt-1 text-textSecondary">{t('manage_info_and_cv')}</p>
+      </div>
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200">
-          <div className="px-6 py-8">
-            {/* 用户信息 */}
-            <div className="mb-8">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">用户信息</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="bg-white rounded-xl shadow-sm border border-border">
+        {loading ? (
+          <div className="p-6 text-center">
+            <LoadingSpinner />
+          </div>
+        ) : error ? (
+          <div className="p-6 text-center text-danger">
+            <p>{error}</p>
+          </div>
+        ) : (
+          <div className="divide-y divide-border">
+            {/* User Info Section */}
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-textPrimary mb-4">User Information</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    姓名
-                  </label>
-                  <div className="text-gray-900">
-                    {user?.user_metadata?.name || user?.user_metadata?.full_name || '未设置'}
-                  </div>
+                  <label className="font-medium text-textSecondary">Name</label>
+                  <p className="text-textPrimary mt-1">{user?.user_metadata?.name || 'Not set'}</p>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    邮箱
-                  </label>
-                  <div className="text-gray-900">{user?.email}</div>
+                  <label className="font-medium text-textSecondary">Email</label>
+                  <p className="text-textPrimary mt-1">{user?.email}</p>
                 </div>
               </div>
             </div>
 
-            {loading ? (
-              <div className="flex justify-center items-center py-8">
-                <LoadingSpinner />
-                <span className="ml-3 text-gray-600">加载个人资料中...</span>
-              </div>
-            ) : error ? (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-                <p className="text-red-700">加载个人资料时出错: {error}</p>
-              </div>
-            ) : (
-              <>
-                {/* CV编辑区域 */}
-                <div className="mb-8">
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">
-                      <i className="fas fa-file-alt text-gray-600 mr-2"></i>
-                      简历内容
-                    </h3>
-                    {!isEditing && (
-                      <button
-                        onClick={() => setIsEditing(true)}
-                        className="bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium hover:bg-blue-700"
-                      >
-                        <i className="fas fa-edit mr-2"></i>
-                        编辑
-                      </button>
-                    )}
-                  </div>
-                  
-                  {isEditing ? (
-                    <div>
-                      <textarea
-                        value={formData.cv_text}
-                        onChange={(e) => setFormData({...formData, cv_text: e.target.value})}
-                        rows={10}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="请输入您的简历内容..."
-                      />
-                    </div>
-                  ) : (
-                    <div className="border border-gray-300 rounded-md p-4 bg-gray-50 min-h-[200px]">
-                      {profile?.cv_text ? (
-                        <div className="text-gray-700 whitespace-pre-wrap">
-                          {profile.cv_text}
-                        </div>
-                      ) : (
-                        <div className="text-gray-500 italic">
-                          还没有上传简历。点击"编辑"按钮来添加您的简历内容。
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* 偏好设置编辑区域 */}
-                <div className="mb-8">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    <i className="fas fa-heart text-red-600 mr-2"></i>
-                    工作偏好
-                  </h3>
-                  
-                  {isEditing ? (
-                    <div>
-                      <textarea
-                        value={formData.preferences_text}
-                        onChange={(e) => setFormData({...formData, preferences_text: e.target.value})}
-                        rows={6}
-                        className="w-full border border-gray-300 rounded-md px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        placeholder="请输入您的工作偏好，例如：期望薪资、工作地点、工作类型等..."
-                      />
-                    </div>
-                  ) : (
-                    <div className="border border-gray-300 rounded-md p-4 bg-gray-50 min-h-[120px]">
-                      {profile?.preferences_text ? (
-                        <div className="text-gray-700 whitespace-pre-wrap">
-                          {profile.preferences_text}
-                        </div>
-                      ) : (
-                        <div className="text-gray-500 italic">
-                          还没有设置工作偏好。点击"编辑"按钮来添加您的偏好。
-                        </div>
-                      )}
-                    </div>
-                  )}
-                </div>
-
-                {/* 编辑模式按钮 */}
-                {isEditing && (
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      onClick={handleCancel}
-                      className="bg-gray-100 text-gray-700 px-4 py-2 rounded-md border border-gray-300 hover:bg-gray-200"
-                    >
-                      取消
-                    </button>
-                    <button
-                      onClick={handleSave}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
-                    >
-                      保存
-                    </button>
-                  </div>
+            {/* CV Section */}
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-2">
+                <h3 className="text-lg font-bold text-textPrimary">📄 Your CV</h3>
+                {!isEditing && (
+                  <button onClick={() => setIsEditing(true)} className="bg-primaryLight text-textPrimary text-sm font-bold py-2 px-4 rounded-lg">
+                    Edit
+                  </button>
                 )}
-
-                {/* 个人资料状态 */}
-                <div className="mt-8 pt-6 border-t border-gray-200">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">
-                    <i className="fas fa-info-circle text-blue-600 mr-2"></i>
-                    个人资料状态
-                  </h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-500 mb-1">创建时间</div>
-                      <div className="text-gray-900">
-                        {profile?.created_at ? new Date(profile.created_at).toLocaleString() : '未知'}
-                      </div>
-                    </div>
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="text-sm text-gray-500 mb-1">最后更新</div>
-                      <div className="text-gray-900">
-                        {profile?.updated_at ? new Date(profile.updated_at).toLocaleString() : '未知'}
-                      </div>
-                    </div>
-                  </div>
+              </div>
+              {isEditing ? (
+                <textarea
+                  value={formData.cv_text}
+                  onChange={(e) => setFormData({ ...formData, cv_text: e.target.value })}
+                  rows={12}
+                  className="w-full border-border rounded-md p-2 text-sm"
+                  placeholder="Paste your CV here..."
+                />
+              ) : (
+                <div className="text-sm text-textSecondary whitespace-pre-wrap p-4 bg-gray-50 rounded-lg min-h-[150px]">
+                  {profile?.cv_text || 'No CV provided.'}
                 </div>
-              </>
+              )}
+            </div>
+
+            {/* Preferences Section */}
+            <div className="p-6">
+              <h3 className="text-lg font-bold text-textPrimary mb-2">❤️ Job Preferences</h3>
+              {isEditing ? (
+                <textarea
+                  value={formData.preferences_text}
+                  onChange={(e) => setFormData({ ...formData, preferences_text: e.target.value })}
+                  rows={6}
+                  className="w-full border-border rounded-md p-2 text-sm"
+                  placeholder="e.g., Desired salary, locations, remote work..."
+                />
+              ) : (
+                <div className="text-sm text-textSecondary whitespace-pre-wrap p-4 bg-gray-50 rounded-lg min-h-[100px]">
+                  {profile?.preferences_text || 'No preferences set.'}
+                </div>
+              )}
+            </div>
+            
+            {isEditing && (
+              <div className="p-6 flex justify-end gap-3 bg-gray-50">
+                <button onClick={handleCancel} className="bg-gray-200 text-textPrimary text-sm font-bold py-2 px-4 rounded-lg">
+                  Cancel
+                </button>
+                <button onClick={handleSave} className="bg-primary text-textPrimary text-sm font-bold py-2 px-4 rounded-lg hover:bg-primaryHover">
+                  Save Changes
+                </button>
+              </div>
             )}
           </div>
-        </div>
+        )}
       </div>
     </PageLayout>
   )

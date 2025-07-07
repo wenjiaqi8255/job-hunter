@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import { useAuthStore } from '../stores/authStore'
 import { matchApi } from '../services/api'
 import type { MatchSession } from '../types'
+import { supabase } from '../services/supabase'
+import { useSessionStore } from '../stores/sessionStore'
 
 function Sidebar() {
   const { isAuthenticated } = useAuthStore()
   const [matchHistory, setMatchHistory] = useState<MatchSession[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const { selectedSessionId, setSelectedSessionId } = useSessionStore()
 
   // 获取匹配历史
   const fetchMatchHistory = async () => {
@@ -17,14 +20,32 @@ function Sidebar() {
     setError(null)
     
     try {
-      const response = await matchApi.getMatchHistory(10)
-      if (response.success && response.data) {
-        setMatchHistory(response.data.sessions)
-      } else {
-        setError(response.error || 'Failed to fetch match history')
+      const { data: sessions, error: sessionsError } = await supabase
+        .from('match_sessions')
+        .select(`
+          id,
+          matched_at,
+          job_count:matched_jobs(count)
+        `)
+        .order('matched_at', { ascending: false })
+        .limit(20)
+
+      if (sessionsError) {
+        throw sessionsError
       }
+
+      // Supabase apg-js v2 returns an array where the count is an object.
+      // We need to transform it to be a flat structure.
+      const formattedSessions = sessions.map(s => ({
+        ...s,
+        job_count: Array.isArray(s.job_count) ? s.job_count[0].count : 0,
+      })) as MatchSession[]
+
+      setMatchHistory(formattedSessions)
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error'
+      setError(errorMessage)
+      console.error('[Sidebar] Failed to fetch match history:', errorMessage)
     } finally {
       setLoading(false)
     }
@@ -119,7 +140,15 @@ function Sidebar() {
                   </div>
                 )}
                 {todayMatches.map(session => (
-                  <div key={session.id} className="p-2 text-sm bg-blue-50 rounded hover:bg-blue-100 cursor-pointer">
+                  <div 
+                    key={session.id} 
+                    className={`p-2 text-sm rounded cursor-pointer ${
+                      selectedSessionId === session.id
+                        ? 'bg-blue-200 font-semibold'
+                        : 'bg-blue-50 hover:bg-blue-100'
+                    }`}
+                    onClick={() => setSelectedSessionId(session.id)}
+                  >
                     <i className="fas fa-calendar-day mr-2 text-blue-600"></i>
                     <span>{formatDate(session.matched_at)} - {session.job_count} jobs</span>
                   </div>
@@ -140,7 +169,15 @@ function Sidebar() {
                   </div>
                 )}
                 {historyMatches.map(session => (
-                  <div key={session.id} className="p-2 text-sm bg-gray-50 rounded hover:bg-gray-100 cursor-pointer">
+                  <div 
+                    key={session.id} 
+                    className={`p-2 text-sm rounded cursor-pointer ${
+                      selectedSessionId === session.id
+                        ? 'bg-gray-200 font-semibold'
+                        : 'bg-gray-50 hover:bg-gray-100'
+                    }`}
+                    onClick={() => setSelectedSessionId(session.id)}
+                  >
                     <i className="fas fa-history mr-2 text-gray-600"></i>
                     <span>{formatDate(session.matched_at)} - {session.job_count} jobs</span>
                   </div>

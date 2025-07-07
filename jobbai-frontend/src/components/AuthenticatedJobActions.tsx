@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 
 interface AuthenticatedJobActionsProps {
@@ -10,13 +10,12 @@ interface AuthenticatedJobActionsProps {
 
 // 状态选择选项
 const STATUS_OPTIONS = [
-  { value: 'not_applied', label: '未申请' },
-  { value: 'bookmarked', label: '已收藏' },
-  { value: 'applied', label: '已申请' },
-  { value: 'interviewing', label: '面试中' },
-  { value: 'offer_received', label: '已获得Offer' },
-  { value: 'rejected', label: '已拒绝' },
-  { value: 'withdrawn', label: '已撤回' },
+  { value: 'not_applied', label: 'Not Applied' },
+  { value: 'bookmarked', label: 'Bookmarked' },
+  { value: 'applied', label: 'Applied' },
+  { value: 'interviewing', label: 'Interviewing' },
+  { value: 'offer_received', label: 'Offer Received' },
+  { value: 'rejected', label: 'Rejected' },
 ]
 
 function AuthenticatedJobActions({ 
@@ -32,46 +31,43 @@ function AuthenticatedJobActions({
   const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [errorMessage, setErrorMessage] = useState<string | null>(null)
 
+  useEffect(() => {
+    setStatus(initialStatus)
+    setNotes(initialNotes)
+  }, [initialStatus, initialNotes])
+
   const handleSave = async () => {
     if (saving) return
     
+    setSaving(true)
+    setErrorMessage(null)
+    setSuccessMessage(null)
+    
     try {
-      setSaving(true)
-      setErrorMessage(null)
-      setSuccessMessage(null)
-      
       await onSave(status, notes)
-      setSuccessMessage('状态已保存')
-      
-      // 3秒后清除成功消息
+      setSuccessMessage('Status saved successfully!')
       setTimeout(() => setSuccessMessage(null), 3000)
-      
     } catch (error) {
-      console.error('保存工作状态失败:', error)
-      setErrorMessage('保存失败，请稍后重试')
+      setErrorMessage('Failed to save. Please try again.')
     } finally {
       setSaving(false)
     }
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 sticky top-6">
-      <div className="p-6">
-        <div className="flex items-center mb-4">
-          <i className="fas fa-clipboard-check text-blue-600 mr-3"></i>
-          <h3 className="text-lg font-medium text-gray-900">申请状态与笔记</h3>
-        </div>
-        
-        {/* 状态选择器 */}
-        <div className="mb-4">
-          <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-2">
-            申请状态
+    <div className="bg-white rounded-lg p-4">
+      <h3 className="text-lg font-bold text-textPrimary mb-4">Application Actions</h3>
+      
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="status" className="block text-sm font-medium text-textSecondary mb-1">
+            Application Status
           </label>
           <select
             id="status"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            className="w-full border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
           >
             {STATUS_OPTIONS.map((option) => (
               <option key={option.value} value={option.value}>
@@ -81,81 +77,57 @@ function AuthenticatedJobActions({
           </select>
         </div>
 
-        {/* 笔记输入框 */}
-        <div className="mb-4">
-          <label htmlFor="notes" className="block text-sm font-medium text-gray-700 mb-2">
-            笔记
+        <div>
+          <label htmlFor="notes" className="block text-sm font-medium text-textSecondary mb-1">
+            Notes
           </label>
           <textarea
             id="notes"
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
             rows={4}
-            className="w-full border border-gray-300 rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            placeholder="添加关于这个职位的笔记..."
+            className="w-full border-border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary"
+            placeholder="Add your notes here..."
           />
         </div>
 
-        {/* 保存按钮 */}
         <button
           onClick={handleSave}
           disabled={saving}
-          className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed flex items-center justify-center"
+          className="w-full bg-primary text-textPrimary py-2 px-4 rounded-lg text-sm font-bold hover:bg-primaryHover disabled:bg-gray-300"
         >
-          {saving ? (
-            <>
-              <i className="fas fa-spinner fa-spin mr-2"></i>
-              保存中...
-            </>
-          ) : (
-            <>
-              <i className="fas fa-save mr-2"></i>
-              保存状态与笔记
-            </>
-          )}
+          {saving ? 'Saving...' : 'Save Status & Notes'}
         </button>
-        
-        {/* 生成求职信按钮 */}
-        {jobId && (
+      </div>
+      
+      {jobId && (
+        <div className="mt-4 space-y-2">
           <button
             onClick={() => navigate(`/jobs/${jobId}/cover-letter`)}
-            className="w-full mt-3 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+            className="w-full bg-primaryLight text-textPrimary py-2 px-4 rounded-lg text-sm font-bold"
           >
-            <i className="fas fa-file-alt mr-2"></i>
-            生成求职信
+            Generate Cover Letter
           </button>
-        )}
-
-        {/* 生成定制简历按钮 */}
-        {jobId && (
           <button
             onClick={() => navigate(`/jobs/${jobId}/custom-cv`)}
-            className="w-full mt-3 inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
+            className="w-full bg-primaryLight text-textPrimary py-2 px-4 rounded-lg text-sm font-bold"
           >
-            <i className="fas fa-file-user mr-2"></i>
-            定制简历
+            Customize CV
           </button>
-        )}
+        </div>
+      )}
 
-        {/* 成功/错误消息 */}
-        {successMessage && (
-          <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-md">
-            <div className="flex items-center">
-              <i className="fas fa-check-circle text-green-600 mr-2"></i>
-              <span className="text-sm text-green-800">{successMessage}</span>
-            </div>
-          </div>
-        )}
-        
-        {errorMessage && (
-          <div className="mt-3 p-3 bg-red-50 border border-red-200 rounded-md">
-            <div className="flex items-center">
-              <i className="fas fa-exclamation-circle text-red-600 mr-2"></i>
-              <span className="text-sm text-red-800">{errorMessage}</span>
-            </div>
-          </div>
-        )}
-      </div>
+      {successMessage && (
+        <div className="mt-3 p-3 bg-success/10 text-success text-sm rounded-lg">
+          {successMessage}
+        </div>
+      )}
+      
+      {errorMessage && (
+        <div className="mt-3 p-3 bg-danger/10 text-danger text-sm rounded-lg">
+          {errorMessage}
+        </div>
+      )}
     </div>
   )
 }

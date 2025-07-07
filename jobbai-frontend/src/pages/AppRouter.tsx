@@ -9,7 +9,6 @@ import CoverLetterPage from './CoverLetterPage'
 import CustomCVPage from './CustomCVPage'
 import ProfilePage from './ProfilePage'
 import ApplicationsPage from './ApplicationsPage'
-import DebugSessionPage from './DebugSessionPage'
 
 function AppRouter() {
   const { initialize, isLoading } = useAuthStore()
@@ -42,7 +41,6 @@ function AppRouter() {
         <Route path="/jobs/:id/custom-cv" element={<CustomCVPage />} />
         <Route path="/sessions/:sessionId/jobs/:id" element={<JobDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/debug-session" element={<DebugSessionPage />} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
       </Routes>
     </Router>

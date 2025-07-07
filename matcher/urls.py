@@ -66,6 +66,7 @@ urlpatterns = [
     path('api/match/latest/', main_views.api_get_latest_match, name='api_get_latest_match'),
     path('api/match/history/', main_views.api_get_match_history, name='api_get_match_history'),
     path('api/match/session/<str:job_match_id>/', main_views.api_get_match_session, name='api_get_match_session'),
+    path('api/match/session/<str:session_id>/jobs/', main_views.api_get_jobs_for_session, name='api_get_jobs_for_session'),
     path('api/match/sessions/<str:session_id>/', main_views.api_get_session_by_id, name='api_get_session_by_id'),
     
     # 系统监控API端点 - main_views.py

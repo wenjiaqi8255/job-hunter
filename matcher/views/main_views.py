@@ -718,3 +718,68 @@ def api_get_session_by_id(request, session_id):
             'success': False,
             'error': f'内部服务器错误: {str(e)}'
         }, status=500)
+
+@csrf_exempt
+@require_http_methods(["GET"])
+def api_get_jobs_for_session(request, session_id):
+    """
+    通过会话ID获取特定匹配会话的所有工作岗位。
+    """
+    auth_header = request.META.get('HTTP_AUTHORIZATION')
+    if not auth_header or not auth_header.startswith('Bearer '):
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+    
+    token = auth_header.split(' ')[1]
+    is_valid, user_info, error = verify_supabase_token(token)
+    if not is_valid or not user_info:
+        return JsonResponse({'success': False, 'error': error or 'Invalid token'}, status=401)
+    
+    user_id = user_info.get('id')
+    
+    try:
+        from ..services.supabase_match_service import supabase_match_service
+        
+        result = supabase_match_service.get_session_by_id(session_id, user_id, token)
+
+        if not result.get('success'):
+            return JsonResponse({'success': False, 'error': result.get('error', 'Failed to fetch session details')}, status=result.get('status', 500))
+
+        if not result.get('session'):
+            return JsonResponse({'success': False, 'error': 'Session not found or you do not have permission to view it.'}, status=404)
+
+        session = result['session']
+        formatted_jobs = []
+        for job in session.get('matched_jobs', []):
+            job_listing = job.get('job_listing', {})
+            job_info = {
+                'id': job.get('job_id', job.get('id')),
+                'title': job_listing.get('job_title', ''),
+                'company': job_listing.get('company_name', ''),
+                'location': job_listing.get('location', ''),
+                'description': job_listing.get('description', ''),
+                'level': job_listing.get('level', ''),
+                'industry': job_listing.get('industry', ''),
+                'flexibility': job_listing.get('flexibility', ''),
+                'salaryRange': job_listing.get('salary_range', ''),
+                'applicationUrl': job_listing.get('application_url', ''),
+                'created_at': job_listing.get('created_at'),
+                'updated_at': job.get('created_at'),
+                'score': job.get('score', 0),
+                'status': job.get('status', 'new'),
+                'analysis': job.get('analysis'),
+                'application_tips': job.get('application_tips'),
+            }
+            formatted_jobs.append(job_info)
+
+        return JsonResponse({
+            'success': True,
+            'jobs': formatted_jobs,
+            'count': len(formatted_jobs),
+            'session_id': session.get('id'),
+            'matched_at': session.get('matched_at'),
+            'user_id': session.get('user_id'),
+        })
+
+    except Exception as e:
+        logger.error(f"Error fetching jobs for session {session_id}: {str(e)}")
+        return JsonResponse({'success': False, 'error': 'Internal server error'}, status=500)
