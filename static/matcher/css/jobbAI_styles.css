@@ -1,6 +1,8 @@
 body {
     background-color: #F8FAF8; /* Light gray background as per Figma */
     font-family: 'Be Vietnam Pro', sans-serif; /* Assuming this font is available or imported */
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
 }
 
 .jobbAI-main-container {
@@ -114,8 +116,8 @@ body {
     padding-left: 24px !important; /* Figma specified padding */
     padding-right: 24px !important;
     padding-top: 20px !important;
-    margin-left: 320px; /* Space for the sidebar */
-    width: calc(100% - 320px); /* Occupy remaining width */
+    margin-left: 0 !important;
+    width: 100% !important;
     box-sizing: border-box; /* Ensure correct width calculation with padding */
     transition: margin-left 0.3s ease-in-out, width 0.3s ease-in-out; /* Add width to transition */
     min-height: calc(100vh - 70px); /* Full height minus top nav */
@@ -365,39 +367,105 @@ button[data-bs-target="#sidebarMenu"] {
 }
 
 /* Tab styling for My Applications page */
+
+.glass-card {
+    background: rgba(255, 255, 255, 0.2);
+    backdrop-filter: blur(16px) saturate(180%);
+    -webkit-backdrop-filter: blur(16px) saturate(180%);
+    border-radius: 1rem;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    padding: 2rem;
+    margin: 2rem auto;
+    max-width: 1200px;
+    box-shadow: 0 8px 32px rgba(31, 38, 135, 0.1);
+}
+
+.gradient-border-wrapper {
+    background: linear-gradient(270deg, #d0ecfb, #1098f7, #d0ecfb);
+    background-size: 400% 400%;
+    animation: animated-gradient 6s ease infinite;
+    padding: 3px; /* Border thickness */
+    border-radius: 4rem;
+    max-height: 100px;
+    max-width: 300px;
+    margin: 1rem auto;
+    box-sizing: border-box;
+}
+
+.alert-info {
+    background: rgba(240, 250, 255, 0.25);
+    color: #1098F7;
+    border-radius: 4rem; /* SAME as wrapper */
+    padding: 2rem;
+    box-sizing: border-box;
+    text-align: center;
+    font-family: 'Montserrat', sans-serif;
+    font-size: 1rem;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+@keyframes animated-gradient {
+    0% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+    100% {
+        background-position: 0% 50%;
+    }
+}
+
+.nav-tabs {
+    border: none;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
 .nav-tabs .nav-link {
-    color: #6B827D; /* Muted text color from sidebar heading */
-    border: 1px solid transparent;
-    border-bottom-color: #E5E8EB; /* Match border from top nav */
-    margin-bottom: -1px; /* Align with content border */
+    font-family: 'Montserrat', sans-serif;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    color: #6B827D;
     font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transform: translateY(0);
 }
 
 .nav-tabs .nav-link:hover,
 .nav-tabs .nav-link:focus {
-    border-color: #E5E8EB #E5E8EB #E5E8EB;
-    color: #121717; /* Darker text on hover/focus */
+    background: rgba(16, 152, 247, 0.2);
+    color: #1098F7;
+    transform: translateY(-2px);
 }
 
-.nav-tabs .nav-link.active,
-.nav-tabs .nav-item.show .nav-link {
-    color: #1098F7; /* Blue for active tab text */
-    background-color: #F8FAF8; /* Page background color */
-    border-color: #E5E8EB #E5E8EB #F8FAF8; /* Active tab border connects with content */
-    border-bottom-color: #F8FAF8; /* Hide bottom border for active tab */
-    font-weight: 700;
+.nav-tabs .nav-link.active {
+    background: #1098F7;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(16, 152, 247, 0.3);
 }
 
 .nav-tabs .nav-link .badge {
-    background-color: #E5E8EB; /* Default badge background in tabs */
-    color: #6B827D; /* Muted text for badge */
-    transition: background-color 0.15s ease-in-out, color 0.15s ease-in-out;
+    background-color: rgba(16, 152, 247, 0.3);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35em 0.6em;
+    border-radius: 1rem;
 }
 
 .nav-tabs .nav-link.active .badge,
 .nav-tabs .nav-link:hover .badge {
-    background-color: #1098F7; /* Blue badge background for active/hover tab */
-    color: #FFFFFF; /* White text for badge */
+    background-color: white;
+    color: white;
 }
 
 
@@ -407,7 +475,6 @@ body {
     background-attachment: fixed;
     font-family: 'Montserrat', sans-serif;
 }
-
 
 .login-wrapper::before {
     content: "";
@@ -433,39 +500,40 @@ body {
 
 
 .login-card {
-  position: relative;
-  z-index: 2;
-  backdrop-filter: blur(40px) saturate(150%);
-  -webkit-backdrop-filter: blur(40px) saturate(150%);
-  background-color: rgba(255, 255, 255, 0.08); /* More transparent */
-  border: 1px solid rgba(255, 255, 255, 0.2);
-  border-radius: 20px;
-  padding: 3rem 2rem;
-  max-width: 400px;
-  width: 100%;
-  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
-  text-align: center;
-  transition: all 0.3s ease;
-  animation: fadeInUp 0.6s ease-out both;
-
-    .login-card::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%;
-    height: 100%;
-    background: url('/static/matcher/images/noise_pic.png') repeat;
-    opacity: 0.08; /* Adjust for subtlety */
-    pointer-events: none; /* So it doesn’t block clicks */
-    z-index: 3;
-    border-radius: 20px;
-}
-
-.login-card {
     position: relative;
     z-index: 2;
-    overflow: hidden; /* ensures noise stays inside rounded corners */
-}
+    backdrop-filter: blur(40px) saturate(150%);
+    -webkit-backdrop-filter: blur(40px) saturate(150%);
+    background-color: rgba(255, 255, 255, 0.08); /* More transparent */
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    border-radius: 20px;
+    padding: 3rem 2rem;
+    max-width: 400px;
+    width: 100%;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.15);
+    text-align: center;
+    transition: all 0.3s ease;
+    animation: fadeInUp 0.6s ease-out both;
+
+    .login-card::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: url('/static/matcher/images/noise_pic.png') repeat;
+        opacity: 0.08; /* Adjust for subtlety */
+        pointer-events: none; /* So it doesn’t block clicks */
+        z-index: 3;
+        border-radius: 20px;
+    }
+
+    .login-card {
+        position: relative;
+        z-index: 2;
+        overflow: hidden; /* ensures noise stays inside rounded corners */
+    }
 
 
 }
@@ -565,4 +633,5 @@ body {
     letter-spacing: 0.5px;
 }
 
-/* ────────────────────────────────────────────────────────────────────────── */
+/* ──── Main page Styles ────────────────────────────────────────────────────────────── */
+
