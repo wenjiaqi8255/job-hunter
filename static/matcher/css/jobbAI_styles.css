@@ -12,28 +12,62 @@ body {
 }
 
 .jobbAI-top-nav {
-    /* Styles from Figma: white background, border */
-    background-color: #FFFFFF;
-    border-bottom: 1px solid #E5E8EB;
-    padding-top: 12px;
-    padding-bottom: 12px;
+    background: transparent !important;
+    backdrop-filter: blur(16px) saturate(120%);
+    -webkit-backdrop-filter: blur(16px) saturate(120%);
+    border-bottom: 1px solid rgba(229, 232, 235, 0.6);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04);
+    z-index: 1050;
+    transition: background 0.3s ease-in-out, box-shadow 0.3s ease-in-out;
+    font-family: 'Montserrat', sans-serif !important;
+    margin-right: auto;
 }
 .jobbAI-top-nav .nav-link {
-    color: #121717; /* Dark text for nav links */
-    font-weight: 500; /* Medium weight */
-    font-size: 14px; /* Figma specified 14px */
-    padding-left: 18px; /* Spacing between nav items */
-    padding-right: 18px;
+  color: #121717;
+  font-weight: 500;
+  font-size: 12px;
+  padding: 8px 16px;
+  border-radius: 12px;
+  transition: background 0.2s ease-in-out, color 0.2s ease-in-out;
 }
-.jobbAI-top-nav .nav-link.active,
-.jobbAI-top-nav .nav-link:hover {
-    color: #1098F7; /* Blue for active/hover - assuming from general theme */
+.jobbAI-top-nav .nav-link:hover,
+.jobbAI-top-nav .nav-link.active {
+    background-color: rgba(16, 152, 247, 0.1);
+    color: #1098F7;
 }
- .jobbAI-top-nav .fa-user-circle {
-    color: #6B827D; /* User icon color from Figma */
-    /* Add margin if needed */
+.jobbAI-top-nav .fa-user-circle {
+    color: #6B827D;
+    font-size: 18px;
+    margin-left: 8px;
 }
+.navbar .form-select {
+  font-size: 13px;
+  padding: 2px 8px;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+  background: rgba(255, 255, 255, 0.4);
+  backdrop-filter: blur(10px);
+}
+.glass-navbar-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  min-height: 64px;
+  padding: 0 2rem;
 
+  display: flex;
+  align-items: center;
+
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px) saturate(160%);
+  -webkit-backdrop-filter: blur(12px) saturate(160%);
+
+  border-bottom: 1px solid rgba(229, 232, 235, 0.6);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+
+  z-index: 1050;
+}
 
 .jobbAI-content-wrapper {
    flex-grow: 1;
@@ -53,6 +87,65 @@ body {
     overflow-y: auto;
     transition: margin-left 0.3s ease-in-out;
 }
+.pt-nav {
+  padding-top: 64px; /* ensures space under fixed navbar */
+}
+/* Shared button style */
+.sidebar-toggle-btn-open {
+  position: relative;
+  top: 20px;
+  left: 40px;
+  width: 90px;
+  height: 36px;
+  border: none;
+  border-radius: 10%;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+.sidebar-toggle-btn-close {
+  position: relative;
+  top: 20px;
+  left: 40px;
+  width: 90px;
+  height: 36px;
+  border: none;
+  border-radius: 10%;
+  background-color: #ffffff;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1100;
+  cursor: pointer;
+  transition: background 0.3s ease;
+}
+
+.sidebar-toggle-btn:hover {
+  background-color: #f2f2f2;
+}
+
+.sidebar-toggle-btn-open i,
+.sidebar-toggle-btn-close i {
+  color: #1098F7;
+  font-size: 16px;
+}
+
+
+/* Show/hide based on state */
+#sidebarMenu.collapsed .toggle-close {
+  display: none;
+}
+
+#sidebarMenu:not(.collapsed) .toggle-open {
+  display: none;
+}
+
 
 .jobbAI-sidebar.collapsed {
     margin-left: -320px; /* Hide sidebar */
@@ -366,7 +459,7 @@ button[data-bs-target="#sidebarMenu"] {
     /* display: none !important; */ /* Let Bootstrap handle it, or integrate with new top nav toggler */
 }
 
-/* Tab styling for My Applications page */
+/* ─── Applications page Styles ────────────────────────────────────────────────────── */
 
 .glass-card {
     background: rgba(255, 255, 255, 0.2);

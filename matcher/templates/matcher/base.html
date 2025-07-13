@@ -23,9 +23,6 @@
             font-family: 'Montserrat', sans-serif;
         }
         h1,
-        .navbar-brand,
-        .form-select,
-        .btn-link,
         .form-label {
             font-family: 'Courier New', Courier, monospace !important;
         }
@@ -48,10 +45,12 @@
 
 </head>
 <body data-is-authenticated="{{ user.is_authenticated|yesno:'true,false' }}">
-    <nav class="navbar navbar-expand-lg navbar-light bg-white fixed-top">
-        <div class="container-fluid px-4">
+<!-- TOP NAV: GLASS CONTAINER -->
+  <div class="glass-navbar-wrapper fixed-top">
+    <nav class="navbar navbar-expand-lg navbar-light">
+      <div class="container-fluid px-4 d-flex justify-content-between">
             <a class="navbar-brand" href="{% url 'matcher:main_page' %}">
-                <img src="{% static 'matcher/images/logo.svg' %}" alt="JobbAI Logo" style="height: 24px;" > 
+                <img src="{% static 'matcher/images/logo.svg' %}" alt="JobbAI Logo" style="height: 24px;" >
             </a>
             <!-- <a class="navbar-brand" href="{% url 'matcher:main_page' %}">Job Matcher MVP</a> -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
@@ -81,7 +80,7 @@
                         </li>
                     {% endif %}
                 </ul>
-                
+
                 {% get_current_language as CURRENT_LANGUAGE_CODE %}
                 <form action="{% url 'set_language' %}" method="post" class="d-flex ms-lg-2">
                     {% csrf_token %}
@@ -96,10 +95,11 @@
                     </select>
                 </form>
             </div>
-        </div>
+      </div>
     </nav>
+  </div>
 
-    <div class="content-wrapper">
+    <div class="content-wrapper pt-nav">
         {% block content %}
         {% endblock %}
     </div>
@@ -214,7 +214,8 @@
             handleOAuthFragment();
         }
     </script>
-    
+
     {% block scripts %}{% endblock scripts %}
+</div>
 </body>
 </html>
