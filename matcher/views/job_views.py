@@ -9,11 +9,6 @@ from uuid import UUID
 
 from ..models import JobListing, MatchSession, MatchedJob, SavedJob, UserProfile
 from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis
-from ..services.supabase_saved_job_service import (
-    get_supabase_saved_job,
-    create_supabase_saved_job,
-    update_supabase_saved_job_status
-)
 from ..services.job_listing_service import fetch_anomaly_analysis_for_jobs_from_supabase
 
 
@@ -22,7 +17,7 @@ def job_detail_page(request, job_id, match_session_id=None):
     user = request.user
     user_profile = None
     user_cv_text = ""
-    supa_saved_job = None
+    saved_job = None
     active_match_session = None
     reason_for_match = None
     tips_for_match = None
@@ -31,8 +26,7 @@ def job_detail_page(request, job_id, match_session_id=None):
     if user.is_authenticated:
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
         user_cv_text = user_profile.user_cv_text or ""
-        # user.username no longer needed, RLS handles it
-        supa_saved_job = get_supabase_saved_job(request.supabase, job.id)
+        saved_job = SavedJob.objects.filter(user=user, job_listing=job).first()
 
         session_id_to_use = match_session_id or request.session.get('last_match_session_id')
 
@@ -69,51 +63,27 @@ def job_detail_page(request, job_id, match_session_id=None):
         new_status = request.POST.get('status')
         notes = request.POST.get('notes')
         
-        if supa_saved_job:
-            # user.username no longer needed
-            update_supabase_saved_job_status(request.supabase, job.id, new_status, notes)
-            messages.success(request, "Application status updated.")
-        else:
-            create_data = {
-                # "user_id" is now handled by RLS, so it's removed from here
-                "status": new_status or 'viewed',
-                "notes": notes,
-                "original_job_id": job.id,
-                "company_name": job.company_name,
-                "job_title": job.job_title,
-                "job_description": job.description,
-                "application_url": job.application_url,
-                "location": job.location,
-            }
-            create_supabase_saved_job(request.supabase, create_data)
-            messages.success(request, "Application saved.")
-        
-        # Sync local SavedJob mirror
-        SavedJob.objects.update_or_create(
+        saved_job, created = SavedJob.objects.update_or_create(
             user=request.user,
             job_listing=job,
             defaults={'status': new_status or 'viewed', 'notes': notes}
         )
         
+        if created:
+            messages.success(request, "Application saved.")
+        else:
+            messages.success(request, "Application status updated.")
+
         if active_match_session:
             return redirect('matcher:job_detail_page', job_id=job.id, match_session_id=active_match_session.id)
         else:
             return redirect('matcher:job_detail_page_no_session', job_id=job.id)
 
-    # The old SavedJobForm is no longer needed.
-    # We now pass the data directly to the template.
-    status_choices = [
-        ('not_applied', 'Not Applied'),
-        ('viewed', 'Viewed'),
-        ('applied', 'Applied'),
-        ('interviewing', 'Interviewing'),
-        ('offer', 'Offer'),
-        ('rejected', 'Rejected'),
-    ]
+    status_choices = SavedJob.STATUS_CHOICES
 
     context = {
         'job': job,
-        'supa_saved_job': supa_saved_job,
+        'saved_job': saved_job,
         'status_choices': status_choices,
         'active_match_session': active_match_session,
         'reason_for_match': reason_for_match,
