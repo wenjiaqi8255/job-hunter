@@ -23,7 +23,6 @@ from ..models import (
 )
 from .. import gemini_utils
 from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis
-from ..services.supabase_saved_job_service import list_supabase_saved_jobs
 from ..services.job_listing_service import (
     fetch_todays_job_listings_from_supabase,
     fetch_anomaly_analysis_for_jobs_from_supabase
@@ -59,17 +58,16 @@ def main_page(request):
     user = request.user
     user_profile = None
     match_history = []
-    supa_saved_jobs = []
-    supa_status_map = {}
+    saved_job_map = {}
 
     if user.is_authenticated:
         user_profile, created = UserProfile.objects.get_or_create(user=user)
         # Fetch match history for the sidebar, ordered by most recent
         match_history = MatchSession.objects.filter(user=user).order_by('-matched_at')
-        # Use the user's ID (which is the Supabase user ID) to fetch their saved jobs
-        # The user_id is now handled by RLS via the authenticated supabase client
-        supa_saved_jobs = list_supabase_saved_jobs(request.supabase)
-        supa_status_map = {sj['original_job_id']: sj['status'] for sj in supa_saved_jobs}
+        
+        # Fetch user's saved jobs and create a status map
+        saved_jobs = SavedJob.objects.filter(user=user)
+        saved_job_map = {str(sj.job_listing_id): sj.status for sj in saved_jobs}
 
     current_match_session_id_str = request.GET.get('session_id')
     processed_job_matches = []
@@ -81,7 +79,7 @@ def main_page(request):
 
     if current_match_session_id_str:
         return _handle_session_view_get(
-            request, current_match_session_id_str, user, user_profile, supa_status_map
+            request, current_match_session_id_str, user, user_profile, saved_job_map
         )
 
     # Fetch all job listings for the "All Available Job Listings" section
@@ -90,11 +88,11 @@ def main_page(request):
     # Annotate all jobs with their saved status for the current user
     all_jobs_annotated = []
     for job in all_jobs:
-        # supa_status_map is empty for anonymous users, so status will be None
-        supa_status = supa_status_map.get(str(job.id)) # Use string of job.id for matching
+        # saved_job_map is empty for anonymous users, so status will be None
+        saved_status = saved_job_map.get(str(job.id))
         all_jobs_annotated.append({
             'job_object': job,
-            'saved_status': supa_status or None
+            'saved_status': saved_status
         })
 
     # Fetch today's job listings count for display
@@ -377,7 +375,7 @@ def _save_job_matches_to_db(request, job_matches_from_api, new_match_session):
             )
 
 
-def _handle_session_view_get(request, current_match_session_id_str, user, user_profile, supa_status_map):
+def _handle_session_view_get(request, current_match_session_id_str, user, user_profile, saved_job_map):
     """处理查看特定匹配会话的GET请求"""
     if not user.is_authenticated:
         messages.error(request, "You must be logged in to view a specific match session.")
@@ -385,35 +383,49 @@ def _handle_session_view_get(request, current_match_session_id_str, user, user_p
 
     print(f"--- [GET] Request with session_id '{current_match_session_id_str}' received. ---")
     try:
-        current_match_session_id_uuid = UUID(current_match_session_id_str)
-        # Ensure the session belongs to the current user
-        current_match_session = get_object_or_404(MatchSession, id=current_match_session_id_uuid, user=request.user)
-        selected_session_object = current_match_session
+        current_match_session_id = UUID(current_match_session_id_str)
+        query_conditions = Q(id=current_match_session_id)
+        if user.is_authenticated:
+            query_conditions &= Q(user=user)
+        else:
+            query_conditions &= Q(user__isnull=True)
+            # Potentially add session_key check here if needed for anonymous users in future
+            
+        selected_session_object = get_object_or_404(MatchSession, query_conditions)
         
         if user_profile: # Check if user_profile exists
-            user_profile.user_cv_text = current_match_session.skills_text
-            user_profile.user_preferences_text = current_match_session.user_preferences_text
+            user_profile.user_cv_text = selected_session_object.skills_text
+            user_profile.user_preferences_text = selected_session_object.user_preferences_text
             user_profile.save()
             cv_preview = user_profile.user_cv_text or ""
             print(f"--- [GET] UserProfile updated from MatchSession. New CV: '{cv_preview[:70]}' ---")
         
-        processed_job_matches = _process_matched_jobs_for_session(
-            request, current_match_session, supa_status_map
-        )
+        processed_job_matches, no_match_reason = _process_matched_jobs_for_session(request, selected_session_object, saved_job_map)
         
-        no_match_reason = None
-        if not processed_job_matches:
-            no_match_reason = request.session.pop('no_match_reason', None)
-        
+        # Fetch all job listings (this might be redundant if only showing matched jobs)
+        all_jobs_annotated = []
+        all_jobs = JobListing.objects.all().order_by('company_name', 'job_title')
+        for job in all_jobs:
+            saved_status = saved_job_map.get(str(job.id))
+            all_jobs_annotated.append({
+                'job_object': job,
+                'saved_status': saved_status
+            })
+        all_jobs_count = len(all_jobs)
+
+        match_history = []
+        if user.is_authenticated:
+            match_history = MatchSession.objects.filter(user=user).order_by('-matched_at')
+
         context = {
             'user_cv_text': user_profile.user_cv_text if user_profile else "",
             'user_preferences_text': user_profile.user_preferences_text if user_profile else "",
             'processed_job_matches': processed_job_matches,
-            'all_jobs_annotated': [],
-            'all_jobs_count': 0,
+            'all_jobs_annotated': all_jobs_annotated,
+            'all_jobs_count': all_jobs_count,
             'current_match_session_id': current_match_session_id_str,
             'selected_session_object': selected_session_object,
-            'match_history': MatchSession.objects.filter(user=user).order_by('-matched_at'),
+            'match_history': match_history,
             'today_date_str': date.today().isoformat(),
             'no_match_reason': no_match_reason,
             'user': request.user,
@@ -425,42 +437,48 @@ def _handle_session_view_get(request, current_match_session_id_str, user, user_p
         return redirect(reverse('matcher:main_page'))
 
 
-def _process_matched_jobs_for_session(request, current_match_session, supa_status_map):
-    """处理匹配会话中的工作列表"""
-    # WORKAROUND for linter issue: Use direct filter instead of reverse relation
-    matched_jobs_for_session = MatchedJob.objects.filter(
+def _process_matched_jobs_for_session(request, current_match_session, saved_job_map):
+    """
+    Processes matched jobs for a given session, annotating them with insights and saved status.
+    """
+    if not current_match_session:
+        return [], "No session provided."
+
+    matched_jobs_query = MatchedJob.objects.filter(
         match_session=current_match_session
     ).select_related('job_listing').order_by('-score')
 
-    # Fetch anomaly data from Supabase for all matched jobs at once
-    job_ids_for_anomaly_check = [mj.job_listing.id for mj in matched_jobs_for_session]
-    anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(request.supabase, job_ids_for_anomaly_check)
-    
-    # Check if we have temporary anomaly data from simulation mode
-    temp_anomaly_data = getattr(request, '_temp_anomaly_data', {})
-    
     processed_job_matches = []
-    for mj in matched_jobs_for_session:
-        parsed_insights_for_table = parse_and_prepare_insights_for_template(mj.insights)
-        # 用 Supabase 状态
-        supa_status = supa_status_map.get(mj.job_listing.id)
+    
+    if not matched_jobs_query.exists():
+        return [], "No jobs were matched in this session. Try adjusting your CV or preferences."
+
+    job_ids = [mj.job_listing.id for mj in matched_jobs_query]
+    
+    # Fetch anomaly analysis for all matched jobs in one go
+    anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(request.supabase, job_ids)
+
+    for job_match in matched_jobs_query:
+        job = job_match.job_listing
+        parsed_insights = parse_and_prepare_insights_for_template(job_match.insights)
         
-        # Parse anomaly data from Supabase data or temp simulation data
+        # Parse anomaly data if available
         job_anomalies = []
-        analysis_data = anomaly_data_map.get(str(mj.job_listing.id)) or temp_anomaly_data.get(str(mj.job_listing.id))
-        print(f"DEBUG: Job ID {mj.job_listing.id}, analysis_data: {analysis_data}")
+        analysis_data = anomaly_data_map.get(str(job.id))
         if analysis_data:
             job_anomalies = parse_anomaly_analysis(analysis_data)
-            print(f"DEBUG: Parsed anomalies for job {mj.job_listing.id}: {job_anomalies}")
+            
+        # Get saved status from the map
+        saved_status = saved_job_map.get(str(job.id))
 
         processed_job_matches.append({
-            'job': mj.job_listing,
-            'score': mj.score, 
-            'reason': mj.reason, 
-            'parsed_insights_list': parsed_insights_for_table, # New field for structured insights
-            'tips': mj.tips,       # Now directly accessing from model
-            'saved_status': supa_status or None,
-            'anomalies': job_anomalies
+            'job_object': job,
+            'reason': job_match.reason,
+            'score': job_match.score,
+            'tips': job_match.tips,
+            'parsed_insights_list': parsed_insights,
+            'job_anomalies': job_anomalies,
+            'saved_status': saved_status,
         })
     
-    return processed_job_matches
+    return processed_job_matches, None
