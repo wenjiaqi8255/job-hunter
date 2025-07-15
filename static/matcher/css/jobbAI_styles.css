@@ -74,6 +74,9 @@ body {
    flex-grow: 1;
    padding: 0 !important; /* Remove padding for full-width row */
 }
+.pt-nav {
+  padding-top: 64px; /* ensures space under fixed navbar */
+}
 
 /* ─── SIDEBAR ────────────────────────────────────────────────────── */
 .jobbAI-sidebar {
@@ -200,9 +203,10 @@ body {
     color: #1098F7; /* Blue icon on active/hover */
 }
 
-
+/* ─── MAIN PAGE ────────────────────────────────────────────────────── */
 .jobbAI-main-content {
-    background-color: #F8FAF8; /* Main content background */
+    background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center center fixed;
+    background-size: cover;
     padding-left: 24px !important; /* Figma specified padding */
     padding-right: 24px !important;
     padding-top: 20px !important;
@@ -235,21 +239,25 @@ body {
     background-color: #f2f2f2;
 }
 
-/* Job Card Styling */
-.jobbAI-job-card, .jobbAI-job-card-all {
-    background-color: #FFFFFF; /* White card background */
+/* ─── JOB CARD ────────────────────────────────────────────────────── */
+.jobbAI-job-card,
+.jobbAI-job-card-all {
+    background: rgba(255, 255, 255, 0.8);
+    backdrop-filter: blur(16px) saturate(160%);
+    -webkit-backdrop-filter: blur(16px) saturate(160%);
     border-radius: 20px; /* Figma border radius */
-    border: none; /* Remove default bootstrap border if any */
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.05); /* Subtle shadow */
+    border: 1px solid rgba(255, 255, 255, 0.4);
+    box-shadow: 0px 6px 24px rgba(0, 0, 0, 0.05);
     transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out;
 }
+
 .jobbAI-job-card:hover, .jobbAI-job-card-all:hover {
-    transform: translateY(-5px);
-    box-shadow: 0px 8px 20px rgba(0, 0, 0, 0.08);
+    transform: translateY(-4px);
+    box-shadow: 0px 10px 20px rgba(0, 0, 0, 0.08);
 }
 
 .jobbAI-job-card .card-title a {
-    font-size: 16px; /* Figma "Werkstudent..." text */
+    font-size: 20px; /* Figma "Werkstudent..." text */
     font-weight: 700;
     color: #121717;
 }
@@ -276,7 +284,7 @@ body {
 .jobbAI-job-card .status-badge { /* Common styles for all our status badges */
     font-size: 12px;
     font-weight: 500;
-    border-radius: 10px;
+    border-radius: 30px;
     padding: 0.4em 0.7em;
 }
 
@@ -321,7 +329,7 @@ body {
 }
 
 .jobbAI-job-card .accordion-sm .accordion-button {
-    font-size: 0.8rem;
+    font-size: 0.9rem;
     background-color: transparent;
     border-bottom: 1px solid #eee;
 }
@@ -466,7 +474,7 @@ button[data-bs-target="#sidebarMenu"] {
 }
 
 .alert-info {
-    background: linear-gradient(270deg, #ffffff, #A7C7E7, #d0ecfb);
+    background: linear-gradient(270deg, #ffffff, #d0ecfb, #ffffff);
     background-size: 400% 400%;
     animation: animated-gradient 6s ease infinite;
     color: #000000;
