@@ -74,8 +74,8 @@ body {
    flex-grow: 1;
    padding: 0 !important; /* Remove padding for full-width row */
 }
-.pt-nav {
-  padding-top: 64px; /* ensures space under fixed navbar */
+.with-navbar-padding {
+  padding-top: 20px;
 }
 
 /* ─── SIDEBAR ────────────────────────────────────────────────────── */
@@ -205,7 +205,7 @@ body {
 
 /* ─── MAIN PAGE ────────────────────────────────────────────────────── */
 .jobbAI-main-content {
-    background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center center fixed;
+    background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center top fixed;
     background-size: cover;
     padding-left: 24px !important; /* Figma specified padding */
     padding-right: 24px !important;
@@ -237,6 +237,19 @@ body {
 }
 .jobbAI-main-content .btn-outline-secondary:hover {
     background-color: #f2f2f2;
+}
+.dynamic-white-box {
+  background-color: white;
+  border-radius: 12px;
+  padding: 1rem;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+  color: #121717;
+  font-family: 'Montserrat', sans-serif;
+  font-size: 1rem;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
 }
 
 /* ─── JOB CARD ────────────────────────────────────────────────────── */
@@ -478,7 +491,7 @@ button[data-bs-target="#sidebarMenu"] {
     background-size: 400% 400%;
     animation: animated-gradient 6s ease infinite;
     color: #000000;
-    border-radius: 3rem; /* SAME as wrapper */
+    border-radius: 1rem; /* SAME as wrapper */
     border-color: #A7C7E7;
     padding: 0.8rem;
     box-sizing: border-box;
@@ -499,7 +512,6 @@ button[data-bs-target="#sidebarMenu"] {
     color: #42b2ff;
     text-decoration: none;
     transform: translateY(-2px);
-
 }
 
 @keyframes animated-gradient {
