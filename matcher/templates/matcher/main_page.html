@@ -5,10 +5,10 @@
 {% block title %}JobbAI - Your AI Job Copilot{% endblock %}
 
 {% block content %}
-<div class="jobbAI-main-container container-fluid p-0">
+<div class="jobbAI-main-container container-fluid p-0 with-navbar-padding">
     
 
-    <div class="container-fluid jobbAI-content-wrapper">
+    <div class="container-fluid jobbAI-content-wrapper with-navbar-padding">
         <div class="row g-0">
             <button id="toggleSidebarOpen" class="sidebar-toggle-btn-open toggle-open">
                 <i class="fas fa-bars"></i> History
@@ -106,7 +106,14 @@
                 {% if user.is_authenticated %}
                         <form method="POST" action="{% url 'matcher:main_page' %}" id="startMatchForm">
                             {% csrf_token %}
-                            <div class="row">
+                            <div class="glass-card">
+                                <div class="card-footer text-start">
+                                    <h2 class="alert-heading mb-3">Let's find the best matches for {{ user.username }}!</h2>
+                                        <button type="submit" form="startMatchForm" class="btn btn-outline-dark w-100" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
+                                            <i class="fas fa-search me-1"></i> Find matches
+                                        </button>
+                                </div>
+
                                 <!--<div class="col-lg-6 mb-3 mb-lg-0">
                                     <label class="form-label"><strong>Your Current CV:</strong></label>
                                     {% if user_cv_text %}
@@ -150,10 +157,14 @@
                         {% else %}
                         <div class="glass-card">
                             <h2 class="alert-heading">Welcome, Guest!</h2>
-                            <p class="mb-0">To get personalized job matches, save applications, and use other features, please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">log in or create an account</a>.</p>
+                            <p class="mb-3">To get personalized job matches, save applications, and use other features, please <a href="{% url 'login' %}?next={{ request.path }}" class="alert-link">log in or create an account</a>.</p>
+                            <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-outline-dark w-100">
+                                <i class="fas fa-sign-in-alt me-1"></i> LOG IN or SIGN UP
+                            </a>
                         </div>
                         {% endif %}
-                    <div class="card mt-4 mb-4">
+
+                    <!--<div class="card mt-4 mb-4">
                     <div class="card-header">
                         <h5 class="mb-0">Review Your Profile & Start Match</h5>
                     </div>
@@ -171,7 +182,7 @@
                         </a>
                         {% endif %}
                     </div>
-                </div>
+                </div>-->
                     <div class="d-flex justify-content-between flex-wrap flex-md-nowrap align-items-center pt-3 pb-2 mb-3 border-bottom">
                     </div>
                      <h1 class="h2">
@@ -259,21 +270,21 @@
                                                     <div id="collapseInsights{{ match_item.job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingInsights{{ match_item.job.id }}">
                                                         <div class="accordion-body p-0">
                                                             <table class="table table-sm small table-borderless mb-0">
-                                        <thead>
-                                            <tr>
-                                                                        <th scope="col" class="w-50 ps-2 text-success"><small>Pros</small></th>
-                                                                        <th scope="col" class="w-50 ps-2 text-danger"><small>Cons</small></th>
-                                            </tr>
-                                        </thead>
-                                        <tbody>
-                                            {% for pro_insight, con_insight in match_item.parsed_insights_list %}
-                                            <tr>
+                                                                <thead>
+                                                                <tr>
+                                                                    <th scope="col" class="w-50 ps-2 text-success"><small>Pros</small></th>
+                                                                    <th scope="col" class="w-50 ps-2 text-danger"><small>Cons</small></th>
+                                                                </tr>
+                                                                </thead>
+                                                                <tbody>
+                                                                {% for pro_insight, con_insight in match_item.parsed_insights_list %}
+                                                                    <tr>
                                                                         <td class="ps-2 align-top"><small>{% if pro_insight %}<i class="fas fa-check-circle text-success me-1"></i>{{ pro_insight }}{% endif %}</small></td>
                                                                         <td class="ps-2 align-top"><small>{% if con_insight %}<i class="fas fa-times-circle text-danger me-1"></i>{{ con_insight }}{% endif %}</small></td>
-                                            </tr>
-                                            {% endfor %}
-                                        </tbody>
-                                    </table>
+                                                                    </tr>
+                                                                {% endfor %}
+                                                                </tbody>
+                                                            </table>
                                                         </div>
                                                     </div>
                                                 </div>
@@ -352,9 +363,9 @@
                     </div>
             </div>
             {% elif not processed_job_matches and current_match_session_id %}
-                 <div class="mt-5 text-center">
+                 <div class="glass-card text-center">
                     <i class="fas fa-search fa-3x text-muted mb-3"></i>
-                    <h4>No Specific Matches Found</h4>
+                    <h4>Oops, no matches found at the moment</h4>
                     <p class="text-muted">
                         {% if no_match_reason %}
                             {{ no_match_reason }}
@@ -363,7 +374,7 @@
                             Try updating them or browse all available jobs.
                         {% endif %}
                     </p>
-                     <button type="button" class="btn btn-primary me-2" data-bs-toggle="modal" data-bs-target="#matchModal">
+                     <button type="button" class="btn btn-outline-dark w-100" data-bs-toggle="modal" data-bs-target="#matchModal">
                         <i class="fas fa-edit me-1"></i> Update CV/Preferences
                     </button>
                     {# Optional: Add button to show all jobs if not already visible #}
@@ -452,11 +463,11 @@
                         <div class="glass-card mb-4">
                             <h5>Your CV</h5>
                             {% if user_cv_text %}
-                                <div class="border rounded p-3 bg-light" style="max-height: 200px; overflow-y: auto;">
+                                <div class="dynamic-white-box" style="max-height: 200px; overflow-y: auto;">
                                     <small class="text-muted">{{ user_cv_text|truncatewords:20 |linebreaksbr }}</small>
                                 </div>
                                 <div class="mt-2">
-                                    <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary mt-2">
+                                    <a href="{% url 'matcher:profile_page' %}" class="btn btn-outline-dark w-100">
                                         <i class="fas fa-edit me-1"></i> Edit CV
                                     </a>
                                 </div>
@@ -471,11 +482,11 @@
                         <div class="glass-card">
                             <h5>Your Preferences</h5>
                             {% if user_preferences_text %}
-                                <div class="border rounded p-3 bg-light" style="max-height: 150px; overflow-y: auto;">
+                                <div class="dynamic-white-box" style="max-height: 150px; overflow-y: auto;">
                                     <small class="text-muted">{{ user_preferences_text|linebreaksbr }}</small>
                                 </div>
                                 <div class="mt-2">
-                                    <a href="{% url 'matcher:profile_page' %}" class="btn btn-sm btn-outline-secondary mt-2">
+                                    <a href="{% url 'matcher:profile_page' %}" class="btn btn-outline-dark w-100">
                                         <i class="fas fa-edit me-1"></i> Edit Preferences
                                     </a>
                                 </div>
