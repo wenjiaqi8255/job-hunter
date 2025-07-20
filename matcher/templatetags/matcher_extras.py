@@ -44,3 +44,14 @@ def get_insights_list(insights_str):
         return []
     # Split by '* ', then filter out empty strings that might result from splitting
     return [item.strip() for item in insights_str.split('* ') if item.strip()] 
+
+@register.simple_tag
+def get_recent_sessions(user, count=5):
+    """
+    Retrieves the most recent 'count' match sessions for a given user.
+    """
+    if not user.is_authenticated:
+        return []
+    
+    from ..models import MatchSession
+    return MatchSession.objects.filter(user=user).order_by('-matched_at')[:count] 

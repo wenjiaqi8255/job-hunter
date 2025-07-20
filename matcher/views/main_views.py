@@ -10,6 +10,9 @@ from django.db import transaction
 from django.utils import timezone
 from django.db.models import Q
 from django.conf import settings
+from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 
 from datetime import date
 from uuid import UUID
@@ -33,8 +36,7 @@ from .auth_views import get_current_user_info
 def main_page(request):
     """
     Renders the main page, handling job matching and user interactions.
-    Allows anonymous users to view a limited version of the page.
-    Also handles OAuth callbacks if they arrive here.
+    Accepts an optional session_id to display a specific match session.
     """
     # ===================================
     # 调试：打印所有请求参数
@@ -74,9 +76,6 @@ def main_page(request):
     selected_session_object = None
     no_match_reason = None
 
-    if request.method == 'POST':
-        return _handle_job_matching_post(request, user, user_profile)
-
     if current_match_session_id_str:
         return _handle_session_view_get(
             request, current_match_session_id_str, user, user_profile, saved_job_map
@@ -113,6 +112,59 @@ def main_page(request):
         'user': request.user,
     }
     return render(request, 'matcher/main_page.html', context)
+
+
+@login_required
+@require_POST
+def start_new_match_session(request):
+    """
+    Creates a new match session for the logged-in user.
+    This view handles the core job matching logic.
+    """
+    user_profile = get_object_or_404(UserProfile, user=request.user)
+
+    if not user_profile.user_cv_text:
+        messages.info(request, "Please complete your profile with a CV before starting a match.")
+        return redirect('matcher:profile_page')
+
+    # Use the CV and preferences stored in the user's profile
+    user_cv_text = user_profile.user_cv_text
+    user_preferences_text = user_profile.user_preferences_text
+
+    # Extract structured data from the profile
+    structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text, user_preferences_text)
+    
+    # Fetch job listings to match against
+    job_listings_for_api = fetch_todays_job_listings_from_supabase(request.supabase)
+    
+    if not job_listings_for_api:
+        messages.warning(request, "There are no new job listings to match against today. Please try again later.")
+        return redirect('matcher:main_page')
+
+    no_match_reason = None
+    
+    # Perform the matching via Gemini API
+    job_matches_from_api = gemini_utils.match_jobs(
+        structured_profile_dict, 
+        job_listings_for_api,
+        max_jobs_to_process=10  # Keeping this low for testing
+    )
+
+    # Create and save the new session and its results
+    with transaction.atomic():
+        new_match_session = MatchSession.objects.create(
+            user=request.user,
+            skills_text=user_cv_text,
+            user_preferences_text=user_preferences_text,
+            structured_user_profile_json=structured_profile_dict
+        )
+        _save_job_matches_to_db(request, job_matches_from_api, new_match_session)
+
+    if no_match_reason:
+        messages.warning(request, no_match_reason)
+
+    # Redirect to the main page, displaying the new session
+    return redirect(f"{reverse('matcher:main_page')}?session_id={new_match_session.id}")
 
 
 def _handle_oauth_callback_on_main_page(request):
@@ -273,65 +325,6 @@ def _handle_oauth_code_exchange(request, oauth_code):
         return redirect(reverse('matcher:main_page'))
 
 
-def _handle_job_matching_post(request, user, user_profile):
-    """处理工作匹配的POST请求"""
-    if not user.is_authenticated:
-        messages.error(request, "You must be logged in to perform a job match.")
-        return redirect(settings.LOGIN_URL)
-
-    print(f"--- [POST] Request received for user {request.user.username}. ---")
-    
-    if not user_profile or not user_profile.user_cv_text:
-        messages.info(request, "Please complete your profile before finding matches.")
-        return redirect('matcher:profile_page')
-    
-    user_cv_text_input = request.POST.get('user_cv_text', '')
-    user_preferences_text_input = request.POST.get('user_preferences_text', '')
-    
-    user_profile.user_cv_text = user_cv_text_input
-    user_profile.user_preferences_text = user_preferences_text_input
-    user_profile.save()
-    cv_preview = user_profile.user_cv_text or ""
-    print(f"--- [POST] UserProfile updated. New CV: '{cv_preview[:70]}' ---")
-
-    if not user_cv_text_input:
-        messages.error(request, "Your CV is empty. Please update your profile before matching jobs.")
-        return redirect('matcher:profile_page')
-
-    structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text_input, user_preferences_text_input)
-    
-    job_listings_for_api = fetch_todays_job_listings_from_supabase(request.supabase)
-    
-    no_match_reason = None
-    if not job_listings_for_api:
-        no_match_reason = "No new job listings found for today. Matching cannot proceed with current day's data."
-    
-    max_jobs_for_testing = 10
-    job_matches_from_api = gemini_utils.match_jobs(
-        structured_profile_dict, 
-        job_listings_for_api,
-        max_jobs_to_process=max_jobs_for_testing
-    )
-
-    new_match_session = MatchSession.objects.create(
-        user=request.user, # Associate with the logged-in user
-        skills_text=user_cv_text_input,
-        user_preferences_text=user_preferences_text_input,
-        structured_user_profile_json=structured_profile_dict
-    )
-    current_match_session_id_str = str(new_match_session.id)
-    print(f"--- [POST] New MatchSession '{current_match_session_id_str}' created. ---")
-    request.session['last_match_session_id'] = current_match_session_id_str
-
-    _save_job_matches_to_db(request, job_matches_from_api, new_match_session)
-    
-    if no_match_reason:
-        request.session['no_match_reason'] = no_match_reason
-    else:
-        request.session.pop('no_match_reason', None)
-    return redirect(f"{reverse('matcher:main_page')}?session_id={current_match_session_id_str}")
-
-
 def _save_job_matches_to_db(request, job_matches_from_api, new_match_session):
     """保存工作匹配结果到数据库"""
     with transaction.atomic():
@@ -383,7 +376,12 @@ def _handle_session_view_get(request, current_match_session_id_str, user, user_p
 
     print(f"--- [GET] Request with session_id '{current_match_session_id_str}' received. ---")
     try:
-        current_match_session_id = UUID(current_match_session_id_str)
+        # Handle both UUID objects (from URL) and strings (from GET params)
+        if isinstance(current_match_session_id_str, UUID):
+            current_match_session_id = current_match_session_id_str
+        else:
+            current_match_session_id = UUID(str(current_match_session_id_str))
+
         query_conditions = Q(id=current_match_session_id)
         if user.is_authenticated:
             query_conditions &= Q(user=user)
@@ -482,3 +480,36 @@ def _process_matched_jobs_for_session(request, current_match_session, saved_job_
         })
     
     return processed_job_matches, None
+
+
+@login_required
+def all_matches_page(request):
+    """
+    Displays a paginated list of all past match sessions for the logged-in user.
+    """
+    match_sessions_list = MatchSession.objects.filter(user=request.user).order_by('-matched_at')
+    
+    paginator = Paginator(match_sessions_list, 10)  # Show 10 sessions per page
+    page_number = request.GET.get('page')
+    
+    try:
+        match_sessions = paginator.page(page_number)
+    except PageNotAnInteger:
+        # If page is not an integer, deliver first page.
+        match_sessions = paginator.page(1)
+    except EmptyPage:
+        # If page is out of range (e.g. 9999), deliver last page of results.
+        match_sessions = paginator.page(paginator.num_pages)
+
+    context = {
+        'page_title': 'All Your Job Matches',
+        'match_sessions': match_sessions,
+        'has_sessions': match_sessions_list.exists(),
+        'active_nav': 'matches'  # For the new sidebar navigation
+    }
+    return render(request, 'matcher/all_matches.html', context)
+
+
+def upload_cv_and_match(request):
+    """
+    """
