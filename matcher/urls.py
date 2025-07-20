@@ -1,6 +1,13 @@
 from django.urls import path
 from . import views
 from django.contrib.auth import views as auth_views
+from matcher.views.main_views import (
+    main_page,  
+    upload_cv_and_match, 
+    start_new_match_session,
+    all_matches_page
+)
+from matcher.views.job_views import job_detail_page
 
 app_name = 'matcher'
 
@@ -10,9 +17,15 @@ urlpatterns = [
 
     # NOTE: OAuth routes are now defined in the main project urls.py to avoid i18n conflicts
 
-    path('', views.main_page, name='main_page'),
-    path('job/<str:job_id>/session/<uuid:match_session_id>/', views.job_detail_page, name='job_detail_page'),
-    path('job/<str:job_id>/', views.job_detail_page, name='job_detail_page_no_session'),
+    # Job and session management
+    path('', main_page, name='main_page'),
+    path('job/<str:job_id>/', job_detail_page, name='job_detail_page_no_session'),
+    path('job/<str:job_id>/session/<uuid:match_session_id>/', job_detail_page, name='job_detail_page'),
+    path('matches/', all_matches_page, name='all_matches'),
+
+    # Actions
+    path('match/new/', start_new_match_session, name='start_new_match_session'),
+    path('upload_cv_and_match/', upload_cv_and_match, name='upload_cv_and_match'),
     path('job/<str:job_id>/generate-cover-letter/', views.generate_cover_letter_page, name='generate_cover_letter_page'),
     path('job/<str:job_id>/generate-custom-resume/', views.generate_custom_resume_page, name='generate_custom_resume_page'),
     path('my-applications/', views.my_applications_page, name='my_applications_page'),
