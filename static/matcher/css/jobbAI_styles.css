@@ -67,6 +67,10 @@
       color: #6c757d;
   }
   
+  .welcome-page-background {
+    background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center center fixed;
+    background-size: cover;
+  }
   
   /* -------------------------------------------------------------------
       SIDEBAR (Figma Aligned)
@@ -348,10 +352,10 @@
       background: rgba(255, 255, 255, 0.5);
       backdrop-filter: blur(16px) saturate(180%);
       -webkit-backdrop-filter: blur(16px) saturate(180%);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-lg);
       border: 1px solid rgba(255, 255, 255, 0.4);
       padding: var(--spacing-lg);
-      box-shadow: 0 4px 24px rgba(31, 38, 135, 0.1);
+      box-shadow: 0 4px 24px rgba(31, 38, 135, 0.05);
   }
   
   .alert-info {
@@ -373,8 +377,8 @@
   
   .alert-link {
       color: var(--brand-secondary);
-      font-weight: 700;
-      font-size: var(--text-base);
+      font-weight: 500;
+      /* font-size: var(--text-base); */
       text-decoration: underline;
   }
   
@@ -832,6 +836,13 @@
   .btn-lg {
       border-radius: var(--radius-xl);
       font-weight: 500;
+  }
+  
+  .btn-outline-secondary {
+    border-color: var(--brand-text-primary);
+    color: var(--brand-text-primary);
+    border-radius: var(--radius-xl);
+    font-weight: 500;
   }
   
   /* 表单控件 */
