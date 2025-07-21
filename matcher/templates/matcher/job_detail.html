@@ -12,7 +12,9 @@
 <div class="container-fluid py-4 px-md-5 mb-5">
   <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
-      <li class="breadcrumb-item"><a href="{% url 'matcher:main_page' %}">Home / Job Matches</a></li>
+      <li class="breadcrumb-item">
+        <a href="{% if active_match_session %}{% url 'matcher:main_page' %}?session_id={{ active_match_session.id }}{% else %}{% url 'matcher:main_page' %}{% endif %}">Home / Job Matches</a>
+      </li>
       {% if active_match_session %}
       <li class="breadcrumb-item">
         <a href="{% url 'matcher:main_page' %}?session_id={{ active_match_session.id }}">
@@ -210,13 +212,30 @@
   </div>
 </div>
 
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div id="loginRequiredToast" class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+    <div class="toast-header">
+      <i class="fas fa-info-circle me-2"></i>
+      <strong class="me-auto">Authentication Required</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+    </div>
+    <div class="toast-body">
+      Please log in to use this feature. Redirecting you to the login page...
+    </div>
+  </div>
+</div>
+
 {% if job.application_url or True %}
 <nav class="navbar fixed-bottom navbar-light bg-light shadow-lg py-3">
   <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
-    <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" class="btn btn-lg btn-outline-secondary">
+    <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" 
+       class="btn btn-lg btn-outline-secondary requires-login"
+       data-login-url="{% url 'matcher:login_page' %}?next={% url 'matcher:generate_cover_letter_page' job.id %}">
         <i class="fas fa-envelope me-2"></i>Generate Cover Letter
     </a>
-    <a href="{% url 'matcher:generate_custom_resume_page' job.id %}" class="btn btn-lg btn-outline-primary">
+    <a href="{% url 'matcher:generate_custom_resume_page' job.id %}"
+       class="btn btn-lg btn-outline-primary requires-login"
+       data-login-url="{% url 'matcher:login_page' %}?next={% url 'matcher:generate_custom_resume_page' job.id %}">
         <i class="fas fa-file-alt me-2"></i>Customize CV
     </a>
     {% if job.application_url %}
@@ -228,4 +247,31 @@
 </nav>
 {% endif %}
 
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const userIsAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+    const toastEl = document.getElementById('loginRequiredToast');
+    if (!toastEl) return;
+    const toast = new bootstrap.Toast(toastEl);
+
+    document.querySelectorAll('.requires-login').forEach(button => {
+        button.addEventListener('click', function (event) {
+            if (!userIsAuthenticated) {
+                event.preventDefault(); // Stop the link from navigating immediately
+                
+                const loginUrl = this.dataset.loginUrl;
+
+                toast.show();
+
+                setTimeout(() => {
+                    window.location.href = loginUrl;
+                }, 1500); // Wait 1.5 seconds for the user to read the toast
+            }
+        });
+    });
+});
+</script>
 {% endblock %}
