@@ -1,4 +1,5 @@
 {% extends 'matcher/base.html' %}
+{% load matcher_extras %}
 
 {% block title %}Custom Resume for {{ job.job_title }}{% endblock %}
 
@@ -17,7 +18,7 @@
     
     <div class="card mt-3">
         <div class="card-header">
-            AI-Customized CV
+            AI-Customized CV Preview
         </div>
         <div class="card-body">
             {% if generation_error %}
@@ -29,7 +30,11 @@
                     </a>
                 </div>
             {% else %}
-                <textarea id="customResumeContent" class="form-control" rows="20">{{ custom_resume_content }}</textarea>
+                <div id="customResumePreview" class="resume-preview p-4 border rounded bg-white">
+                    {{ custom_resume_content|format_resume_text|safe }}
+                </div>
+                <!-- Hidden textarea for copy functionality -->
+                <textarea id="customResumeContent" class="d-none" readonly>{{ custom_resume_content }}</textarea>
             {% endif %}
         </div>
         <div class="card-footer">

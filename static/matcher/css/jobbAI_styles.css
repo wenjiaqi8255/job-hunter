@@ -915,3 +915,53 @@
   color: var(--brand-text);
   font-weight: 500;
 }
+
+/* Custom Resume Preview Styles */
+.resume-preview {
+    background-color: #ffffff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.25rem;
+    padding: 2rem;
+    font-family: 'Times New Roman', Times, serif;
+    color: #212529;
+    line-height: 1.6;
+}
+
+.resume-preview h2 {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #343a40;
+    margin-top: 1.2rem;
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.3rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.resume-preview p {
+    margin-bottom: 1rem;
+}
+
+.resume-preview ul {
+    list-style-type: disc;
+    padding-left: 2rem;
+    margin-bottom: 1rem;
+}
+
+.resume-preview li {
+    margin-bottom: 0.5rem;
+}
+
+@media print {
+    body, .container {
+        margin: 0;
+        padding: 0;
+    }
+    .resume-preview {
+        border: none;
+        box-shadow: none;
+        padding: 0;
+    }
+    .breadcrumb, .card-header, .card-footer, .h2, .text-muted {
+        display: none !important;
+    }
+}
