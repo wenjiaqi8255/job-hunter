@@ -73,7 +73,7 @@
         <!-- History Section -->
         {% if user.is_authenticated %}
         <div class="sidebar-history">
-            <h6 class="sidebar-history-title">Recent Searches</h6>
+            <h6 class="sidebar-history-title h6">Recent Searches</h6>
             <ul class="list-unstyled">
                 {% get_recent_sessions request.user as recent_sessions %}
                 {% for session in recent_sessions %}

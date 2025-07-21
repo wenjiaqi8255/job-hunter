@@ -12,7 +12,7 @@
         </ol>
     </nav>
 
-    <h2>Customize CV for: {{ job.job_title }} at {{ job.company_name }}</h2>
+    <h2 class="h2">Customize CV for: {{ job.job_title }} at {{ job.company_name }}</h2>
     <p class="text-muted">Based on your CV: "{{ user_cv_text|truncatechars:100 }}"</p>
     
     <div class="card mt-3">
@@ -33,7 +33,7 @@
             {% endif %}
         </div>
         <div class="card-footer">
-            <form method="post" style="display:inline;">
+            <form method="post" class="d-inline">
                 {% csrf_token %}
                 <button type="submit" class="btn btn-warning">
                     <i class="fas fa-sync-alt"></i> 
