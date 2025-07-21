@@ -47,7 +47,7 @@ def get_insights_list(insights_str):
     return [item.strip() for item in insights_str.split('* ') if item.strip()] 
 
 @register.simple_tag
-def get_recent_sessions(user, count=5):
+def get_recent_sessions(user, count=10):
     """
     Retrieves the most recent 'count' match sessions for a given user.
     """
