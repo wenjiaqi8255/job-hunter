@@ -30,7 +30,7 @@
         <div class="card-header bg-light border-bottom-0 py-3">
           <div class="d-flex justify-content-between align-items-start">
             <div>
-              <h4 class="mb-1">{{ job.job_title }}</h4>
+              <h4 class="h4 mb-1">{{ job.job_title }}</h4>
               <p class="text-muted fw-normal mb-2">{{ job.company_name }}</p>
             </div>
             {% if user.is_authenticated %}
@@ -81,25 +81,25 @@
           <div class="mt-4">
             <div class="accordion accordion-flush accordion-sm mb-3" id="accordionInsights{{ job.id }}">
                 <div class="accordion-item border rounded">
-                    <h2 class="accordion-header" id="headingInsights{{ job.id }}">
+                    <h6 class="accordion-header" id="headingInsights{{ job.id }}">
                         <button class="accordion-button p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsights{{ job.id }}" aria-expanded="true" aria-controls="collapseInsights{{ job.id }}">
                             <strong class="h6 mb-0"><i class="fas fa-list-ul me-2 text-primary"></i>Key Insights</strong>
                         </button>
-                    </h2>
+                    </h6>
                     <div id="collapseInsights{{ job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingInsights{{ job.id }}">
                         <div class="accordion-body p-0">
                             <table class="table table-sm small table-borderless mb-0">
                                 <thead>
                                     <tr>
-                                        <th scope="col" class="w-50 ps-3 pt-2 text-success"><small>Pros</small></th>
-                                        <th scope="col" class="w-50 ps-3 pt-2 text-danger"><small>Cons</small></th>
+                                        <th scope="col" class="w-50 ps-3 pt-2 text-success">Pros</th>
+                                        <th scope="col" class="w-50 ps-3 pt-2 text-danger">Cons</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {% for pro_insight, con_insight in parsed_insights_list %}
                                     <tr>
-                                        <td class="ps-3 align-top pb-2"><small>{% if pro_insight %}<i class="fas fa-check-circle text-success me-1"></i>{{ pro_insight }}{% endif %}</small></td>
-                                        <td class="ps-3 align-top pb-2"><small>{% if con_insight %}<i class="fas fa-times-circle text-danger me-1"></i>{{ con_insight }}{% endif %}</small></td>
+                                        <td class="ps-3 align-top pb-2">{% if pro_insight %}<i class="fas fa-check-circle text-success me-1"></i>{{ pro_insight }}{% endif %}</td>
+                                        <td class="ps-3 align-top pb-2">{% if con_insight %}<i class="fas fa-times-circle text-danger me-1"></i>{{ con_insight }}{% endif %}</td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
@@ -126,7 +126,7 @@
           {% if job.description %}
           <div class="mt-4">
             <h5 class="h6 mb-2"><i class="fas fa-file-alt me-2 text-primary"></i>Job Description</h5>
-            <div class="border rounded p-3" style="max-height: 300px; overflow-y: auto; white-space: pre-wrap; background-color: #f8f9fa;">
+            <div class="border rounded p-3 bg-light">
                 {% get_current_language as lang_code %}
                 {% if lang_code != 'de' and job.translated_description %}
                     {{ job.translated_description|linebreaksbr }}
@@ -172,11 +172,8 @@
 
     <div class="col-lg-4">
       {% if user.is_authenticated %}
-      <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
-        <div class="card-header bg-light border-bottom-0 py-3">
-            <h5 class="h6 mb-0"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
-        </div>
-        <div class="card-body p-4">
+      <div class="glass-card mb-4">
+          <h5 class="h6 mb-3"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
           <form method="post" 
                 action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}"
                 id="applicationStatusForm">
@@ -196,22 +193,17 @@
                 <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ saved_job.notes|default:"" }}</textarea>
             </div>
             
-            <button type="submit" class="btn btn-primary w-100" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
+            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
             {% if saved_job and saved_job.updated_at %}
                 <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
             {% endif %}
           </form>
-        </div>
       </div>
       {% else %}
-      <div class="card jobbAI-job-card shadow-sm sticky-top" style="top: 20px;">
-        <div class="card-header bg-light border-bottom-0 py-3">
-            <h5 class="h6 mb-0"><i class="fas fa-lock me-2 text-primary"></i>Save Your Progress</h5>
-        </div>
-        <div class="card-body p-4 text-center">
+      <div class="glass-card mb-4">
+            <h5 class="h6 mb-3"><i class="fas fa-lock me-2 text-primary"></i>Save Your Progress</h5>
             <p>Please log in or sign up to save jobs, track your application status, and take notes.</p>
-            <a href="{% url 'matcher:profile_page' %}" class="btn btn-primary" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;">Log In / Sign Up</a>
-        </div>
+            <a href="{% url 'matcher:profile_page' %}" class="btn btn-primary">Log In / Sign Up</a>
       </div>
       {% endif %}
     </div>
@@ -228,7 +220,7 @@
         <i class="fas fa-file-alt me-2"></i>Customize CV
     </a>
     {% if job.application_url %}
-    <a href="{{ job.application_url }}" class="btn btn-lg" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;" target="_blank">
+    <a href="{{ job.application_url }}" class="btn btn-lg btn-primary" target="_blank">
         <i class="fas fa-external-link-alt me-2"></i>Apply Now
     </a>
     {% endif %}

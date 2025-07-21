@@ -77,7 +77,7 @@
     <div class="row mt-4">
         <div class="col-md-12">
             <div class="placeholder-section">
-                <h4>CV/Resume</h4>
+                <h4 class="h4">CV/Resume</h4>
                 <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}No CV uploaded.{% endif %}</strong></p>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
             </div>
@@ -87,7 +87,7 @@
     <div class="row mt-3">
         <div class="col-md-12">
             <div class="placeholder-section">
-                <h4>Preferences</h4>
+                <h4 class="h4">Preferences</h4>
                 <p>Your default preferences for jobs: <strong>{% if user_preferences_text %}{{ user_preferences_text|truncatewords:10 }}{% else %}Little German required, startup... (Placeholder){% endif %}</strong></p>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
             </div>
@@ -199,7 +199,7 @@
     <div class="row mt-3 mb-5">
         <div class="col-md-12">
             <div class="placeholder-section">
-                <h4>Newsletter</h4>
+                <h4 class="h4">Newsletter</h4>
                 <p>You'll get an actionable email at 8:00am: <strong>{% if user_email %}{{ user_email }}{% else %}No email set.{% endif %}</strong></p>
                 <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#emailModal">Edit Email</button>
             </div>
@@ -251,7 +251,7 @@
             width="100%" 
             height="600px" 
             frameborder="0"
-            style="border-radius: 0 0 .25rem .25rem;">
+            class="rounded-bottom">
         </iframe>
       </div>
     </div>
