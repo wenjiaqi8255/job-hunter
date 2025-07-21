@@ -13,7 +13,7 @@
   <nav aria-label="breadcrumb" class="mb-4">
     <ol class="breadcrumb">
       <li class="breadcrumb-item">
-        <a href="{% if active_match_session %}{% url 'matcher:main_page' %}?session_id={{ active_match_session.id }}{% else %}{% url 'matcher:main_page' %}{% endif %}">Home / Job Matches</a>
+        <a href="{% if current_match_session_id_for_url %}{% url 'matcher:main_page' %}?session_id={{ current_match_session_id_for_url }}{% else %}{% url 'matcher:main_page' %}{% endif %}">Home / Job Matches</a>
       </li>
       {% if active_match_session %}
       <li class="breadcrumb-item">
@@ -85,7 +85,7 @@
                 <div class="accordion-item border rounded">
                     <h6 class="accordion-header" id="headingInsights{{ job.id }}">
                         <button class="accordion-button p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsights{{ job.id }}" aria-expanded="true" aria-controls="collapseInsights{{ job.id }}">
-                            <h6 class="h6 mb-2"><i class="fas fa-list-ul me-2 brand-text-muted"></i>Key Insights</h6>
+                             <h6 class="h6 mb-2"><i class="fas fa-list-ul me-2 brand-text-muted"></i>Key Insights</h6>
                         </button>
                     </h6>
                     <div id="collapseInsights{{ job.id }}" class="accordion-collapse collapse show" aria-labelledby="headingInsights{{ job.id }}">
@@ -113,54 +113,54 @@
           </div>
           {% elif insights_for_match and insights_for_match != 'N/A' %}
           <div class="mt-4">
-            <h5 class="h6 mb-2"><i class="fas fa-search-plus me-2 brand-text-muted"></i>Further Insights</h5>
-            <p class="small">{{ insights_for_match|linebreaksbr }}</p>
+             <h5 class="h6 mb-2"><i class="fas fa-search-plus me-2 brand-text-muted"></i>Further Insights</h5>
+              <p class="small">{{ insights_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
 
           {% if reason_for_match %}
           <div class="mt-4">
-            <h5 class="h6 mb-2"><i class="fas fa-bullseye me-2 brand-text-muted"></i>Reason for Recommendation</h5>
-            <p class="small">{{ reason_for_match|linebreaksbr }}</p>
+             <h5 class="h6 mb-2"><i class="fas fa-bullseye me-2 brand-text-muted"></i>Reason for Recommendation</h5>
+              <p class="small">{{ reason_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
 
           {% if job.description %}
           <div class="mt-4">
-            <h5 class="h6 mb-2"><i class="fas fa-file-alt me-2 brand-text-muted"></i>Job Description</h5>
-            <div class="border rounded p-3 bg-light">
-                {% get_current_language as lang_code %}
-                {% if lang_code != 'de' and job.translated_description %}
-                    {{ job.translated_description|linebreaksbr }}
-                {% else %}
-                    {{ job.description|linebreaksbr }}
-                {% endif %}
+             <h5 class="h6 mb-2"><i class="fas fa-file-alt me-2 brand-text-muted"></i>Job Description</h5>
+              <div class="border rounded p-3 bg-light">
+                  {% get_current_language as lang_code %}
+                  {% if lang_code != 'de' and job.translated_description %}
+                      {{ job.translated_description|linebreaksbr }}
+                  {% else %}
+                      {{ job.description|linebreaksbr }}
+                  {% endif %}
 
-                {% if job.source %}
-                <p class="mt-3 mb-0 text-muted small">Source: {{ job.source }}</p>
-                {% endif %}
-            </div>
+                  {% if job.source %}
+                  <p class="mt-3 mb-0 text-muted small">Source: {{ job.source }}</p>
+                  {% endif %}
+              </div>
           </div>
           {% endif %}
 
           {% if tips_for_match and tips_for_match != 'N/A' %}
           <div class="mt-4">
-            <h5 class="h6 mb-2"><i class="fas fa-magic me-2 brand-text-muted"></i>Application Tips</h5>
-            <p class="small">{{ tips_for_match|linebreaksbr }}</p>
+             <h5 class="h6 mb-2"><i class="fas fa-magic me-2 brand-text-muted"></i>Application Tips</h5>
+              <p class="small">{{ tips_for_match|linebreaksbr }}</p>
           </div>
           {% endif %}
 
           {% if job_anomalies %}
           <div class="mt-4">
-            <h5 class="h6 mb-2"><i class="fas fa-shield-alt me-2 brand-text-muted"></i> Anomaly Detection</h5>
-            <ul class="list-group">
-              {% for anomaly in job_anomalies %}
-                <li class="list-group-item">
-                  <span class="badge bg-warning text-dark me-2">{{ anomaly.type }}</span>
-                  {{ anomaly.chunk }}
-                </li>
-              {% endfor %}
-            </ul>
+             <h5 class="h6 mb-2"><i class="fas fa-shield-alt me-2 brand-text-muted"></i> Anomaly Detection</h5>
+              <ul class="list-group">
+                {% for anomaly in job_anomalies %}
+                  <li class="list-group-item">
+                    <span class="badge bg-warning text-dark me-2">{{ anomaly.type }}</span>
+                    {{ anomaly.chunk }}
+                  </li>
+                {% endfor %}
+              </ul>
           </div>
           {% endif %}
 
@@ -250,9 +250,10 @@
 {% endblock %}
 
 {% block scripts %}
+{{ user.is_authenticated|json_script:"user-is-authenticated" }}
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    const userIsAuthenticated = {{ user.is_authenticated|yesno:"true,false" }};
+    const userIsAuthenticated = JSON.parse(document.getElementById('user-is-authenticated').textContent);
     const toastEl = document.getElementById('loginRequiredToast');
     if (!toastEl) return;
     const toast = new bootstrap.Toast(toastEl);
