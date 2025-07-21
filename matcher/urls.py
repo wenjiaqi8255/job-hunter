@@ -8,6 +8,7 @@ from matcher.views.main_views import (
     all_matches_page
 )
 from matcher.views.job_views import job_detail_page
+from .views.auth_views import register_view  # 新增注册视图导入
 
 app_name = 'matcher'
 
@@ -44,4 +45,5 @@ urlpatterns = [
     
     # API 端点
     path('api/check-auth/', views.api_check_auth, name='api_check_auth'),
+    path('register/', register_view, name='register'),  # 新增注册路由
 ]
