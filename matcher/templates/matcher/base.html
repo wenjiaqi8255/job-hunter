@@ -19,7 +19,7 @@
             display: flex;
             flex-direction: column;
             min-height: 100vh;
-            padding-top: 56px; /* Adjust this value based on actual navbar height */
+            padding-top: 30px; /* Adjust this value based on actual navbar height */
             font-family: 'Montserrat', sans-serif;
         }
         h1,
@@ -48,7 +48,7 @@
 <!-- TOP NAV: GLASS CONTAINER -->
   <div class="glass-navbar-wrapper fixed-top">
     <nav class="navbar navbar-expand-lg navbar-light">
-      <div class="container-fluid px-4 d-flex justify-content-between">
+      <div class="container-fluid px-4 d-flex justify-content-between nav-tabs">
             <a class="navbar-brand" href="{% url 'matcher:main_page' %}">
                 <img src="{% static 'matcher/images/logo.svg' %}" alt="JobbAI Logo" style="height: 24px;" >
             </a>
@@ -59,7 +59,7 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link {% if request.resolver_match.url_name == 'main_page' %}active{% endif %}" href="{% url 'matcher:main_page' %}">Home & Matching</a>
+                        <a class="nav-link {% if request.resolver_match.url_name == 'main_page' %}active{% endif %}" href="{% url 'matcher:main_page' %}">Home</a>
                     </li>
                     {% if user.is_authenticated %}
                         <li class="nav-item">
