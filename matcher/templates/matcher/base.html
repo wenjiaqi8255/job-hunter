@@ -77,7 +77,7 @@
             <ul class="list-unstyled">
                 {% get_recent_sessions request.user as recent_sessions %}
                 {% for session in recent_sessions %}
-                <li>
+                <li class="{% if session.id|stringformat:"s" == current_match_session_id %}active{% endif %}">
                     <a href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
                         <span class="history-time">{{ session.matched_at|date:"M d, H:i" }}</span>
                         <span class="history-details">{{ session.skills_text|truncatechars:25 }}</span>
@@ -141,7 +141,7 @@
         </div>
         <footer class="footer mt-auto py-3 bg-light">
             <div class="container text-center">
-                <span class="text-muted">JobbAI &copy; 2025. Powered by Django & Gemini.</span>
+                <span class="text-muted">JobbAI &copy; 2025.</span>
             </div>
         </footer>
     </div>

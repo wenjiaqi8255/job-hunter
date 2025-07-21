@@ -71,7 +71,7 @@ def main_page(request):
         saved_jobs = SavedJob.objects.filter(user=user)
         saved_job_map = {str(sj.job_listing_id): sj.status for sj in saved_jobs}
 
-    current_match_session_id_str = request.GET.get('session_id')
+    current_match_session_id_str = request.GET.get('session_id') or request.session.get('last_match_session_id')
     processed_job_matches = []
     selected_session_object = None
     no_match_reason = None
