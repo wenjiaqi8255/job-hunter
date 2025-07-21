@@ -157,8 +157,7 @@
                                         <label for="user_cv_text_modal" class="form-label"><strong>Or Paste CV / Resume / Key Skills:</strong></label>
                                         <textarea name="user_cv_text" id="user_cv_text_modal" class="form-control" rows="10" placeholder="Paste your full CV, resume, or a detailed list of your key skills and experience here...">{{ user_cv_text }}</textarea>
                                     </div>
-                                    {# Keep preferences in its own modal, or decide if one modal is enough #}
-                                    <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
+                                    {# This hidden input has been removed #}
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -173,7 +172,7 @@
                 <div class="modal fade" id="preferencesModal" tabindex="-1" aria-labelledby="preferencesModalLabel" aria-hidden="true">
                     <div class="modal-dialog modal-lg">
                         <div class="modal-content">
-                             <form method="POST" action="{% url 'matcher:profile_page' %}" id="preferencesForm">
+                            <form method="POST" action="{% url 'matcher:profile_page' %}" id="preferencesForm">
                                 {% csrf_token %}
                                 <input type="hidden" name="form_type" value="preferences_form">
                                 <div class="modal-header">
@@ -185,7 +184,7 @@
                                         <label for="user_preferences_text_modal" class="form-label"><strong>Your Preferences:</strong></label>
                                         <textarea name="user_preferences_text" id="user_preferences_text_modal" class="form-control" rows="6" placeholder="Describe your job preferences: desired roles, location (e.g., Berlin, Remote), work model (Remote, Hybrid), salary expectations (e.g., 60-70k EUR p.a.), company culture, etc.">{{ user_preferences_text }}</textarea>
                                     </div>
-                                    <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
+                                    {# This hidden input has been removed #}
                                 </div>
                                 <div class="modal-footer">
                                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
@@ -222,8 +221,6 @@
                             <label for="user_email_text_modal" class="form-label"><strong>Your Email:</strong></label>
                             <input type="email" name="user_email_text" id="user_email_text_modal" class="form-control" placeholder="We'll send you an actionable email at 8:00am" value="{{ user_email }}">
                         </div>
-                        <input type="hidden" name="user_cv_text" value="{{ user_cv_text }}">
-                        <input type="hidden" name="user_preferences_text" value="{{ user_preferences_text }}">
                     </div>
                     <div class="modal-footer">
                         <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
