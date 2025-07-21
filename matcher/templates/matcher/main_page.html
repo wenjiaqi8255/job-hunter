@@ -23,11 +23,17 @@ welcome-page-background
                     <div class="glass-card p-4 text-center">
                         <h2 class="mb-3 h2">Let's find the best matches for {{ user.username }}!</h2>
                         <p class="text-muted mb-3">Your profile seems ready. Start a new session to discover jobs tailored for you.</p>
-                        <form action="{% url 'matcher:start_new_match_session' %}" method="POST">
+                        <form id="start-match-form" action="{% url 'matcher:start_new_match_session' %}" method="POST">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-primary">
+                            <button id="start-match-btn" type="submit" class="btn btn-primary">
                                 <i class="fas fa-search me-1"></i> Start New Match Session
                             </button>
+                            <div id="start-match-loading" class="mt-3" style="display:none;">
+                                <div class="spinner-border text-primary" role="status" style="width:2rem;height:2rem;">
+                                    <span class="visually-hidden">Loading...</span>
+                                </div>
+                                <div class="mt-2">Matching in progress, please wait...</div>
+                            </div>
                         </form>
                     </div>
                 {% else %}
@@ -95,7 +101,7 @@ welcome-page-background
             <!-- Match Results Header -->
             {% if processed_job_matches %}
                 <div class="d-flex justify-content-between align-items-center mb-3">
-                    <h1 class="h2 mb-0">{{ processed_job_matches|length }} Best Matches</h1>
+                    <h1 class="h1 mb-0">{{ processed_job_matches|length }} Best Matches</h1>
                     <span class="text-muted">
                         Session: {{ selected_session_object.matched_at|date:"F d, Y, P" }}
                     </span>
@@ -302,6 +308,20 @@ welcome-page-background
     </div>
   </div>
 </div>
+<!-- 全局Loading Modal -->
+<div class="modal fade" id="globalLoadingModal" tabindex="-1" aria-labelledby="globalLoadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4">
+      <div class="modal-body">
+        <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 id="globalLoadingModalLabel">Matching in progress, please wait...</h5>
+        <div id="globalLoadingModalSubtext" class="mt-2 text-muted small"></div>
+      </div>
+    </div>
+  </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
@@ -383,6 +403,35 @@ document.addEventListener('DOMContentLoaded', function () {
             alert('An unexpected error occurred.');
         });
     });
+
+    // Start New Match Session loading logic
+    const startMatchForm = document.getElementById('start-match-form');
+    const startMatchBtn = document.getElementById('start-match-btn');
+    const globalLoadingModal = new bootstrap.Modal(document.getElementById('globalLoadingModal'));
+    const globalLoadingModalSubtext = document.getElementById('globalLoadingModalSubtext');
+    if (startMatchForm && startMatchBtn) {
+        startMatchForm.addEventListener('submit', function(e) {
+            startMatchBtn.disabled = true;
+            startMatchBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Matching...';
+            globalLoadingModalSubtext.textContent = '';
+            globalLoadingModal.show();
+        });
+    }
+    // 预留：后端返回防抖信号时可调用如下
+    window.showMatchInProgress = function(msg) {
+        globalLoadingModalSubtext.textContent = msg || 'A match request is already in progress. Please wait.';
+        globalLoadingModal.show();
+    }
+    // 页面加载时检测URL参数，自动弹出loading modal
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('in_progress') === '1') {
+        window.showMatchInProgress('A match request is already in progress. Please wait.');
+        // 如果页面已渲染出匹配结果，则自动关闭modal
+        const hasResults = document.querySelectorAll('.jobbAI-job-card').length > 0;
+        if (hasResults) {
+            setTimeout(() => globalLoadingModal.hide(), 300);
+        }
+    }
 });
 </script>
 {% endblock %}
