@@ -1,4 +1,5 @@
 from django import template
+from django.utils.html import escape
 from django.utils.safestring import mark_safe
 import re
 
@@ -55,3 +56,68 @@ def get_recent_sessions(user, count=5):
     
     from ..models import MatchSession
     return MatchSession.objects.filter(user=user).order_by('-matched_at')[:count] 
+
+@register.filter(name='format_resume_text')
+def format_resume_text(text):
+    """
+    Formats plain text resume content into simple HTML.
+    - Converts newlines to <br> tags.
+    - Escapes HTML to prevent injection attacks.
+    - Handles simple headers and bullet points.
+    """
+    if not text:
+        return ""
+
+    try:
+        # Graceful fallback: escape and convert newlines
+        safe_text = escape(text)
+        
+        lines = safe_text.split('\n')
+        html_lines = []
+        
+        header_keywords = ["Experience", "Education", "Skills", "Projects", "Summary", "Work Experience", "工作经历", "教育背景", "技能", "项目经历", "个人总结"]
+        bullet_patterns = ["*", "-", "•", "▪", "○"]
+
+        in_list = False
+        for line in lines:
+            stripped_line = line.strip()
+
+            # Check for headers
+            is_header = any(keyword.lower() + ":" == stripped_line.lower() or keyword.lower() == stripped_line.lower().rstrip(':') for keyword in header_keywords)
+            
+            if is_header:
+                if in_list:
+                    html_lines.append('</ul>')
+                    in_list = False
+                html_lines.append(f'<h2>{stripped_line}</h2>')
+                continue
+
+            # Check for bullet points
+            is_bullet = any(stripped_line.startswith(p) for p in bullet_patterns)
+            
+            if is_bullet:
+                if not in_list:
+                    html_lines.append('<ul>')
+                    in_list = True
+                # Remove the bullet character for cleaner display
+                content = stripped_line[1:].lstrip()
+                html_lines.append(f'<li>{content}</li>')
+            else:
+                if in_list:
+                    html_lines.append('</ul>')
+                    in_list = False
+                
+                if stripped_line:
+                    html_lines.append(f'<p>{line}</p>')
+                else:
+                    # Keep empty lines as paragraph breaks
+                    html_lines.append('<p>&nbsp;</p>')
+
+        if in_list:
+            html_lines.append('</ul>')
+
+        return mark_safe("".join(html_lines))
+
+    except Exception as e:
+        # Fallback in case of any unexpected error
+        return mark_safe(escape(text).replace('\n', '<br>')) 
