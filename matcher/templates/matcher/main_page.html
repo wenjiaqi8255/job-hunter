@@ -11,22 +11,24 @@
     <div class="container-fluid jobbAI-content-wrapper with-navbar-padding">
         <div class="row g-0">
             <button id="toggleSidebarOpen" class="sidebar-toggle-btn-open toggle-open">
-                <i class="fas fa-bars"></i> History
+                <i class="fas fa-bars"></i>
             </button>
             <!-- Sidebar: Match History & New Match Button -->
             <nav id="sidebarMenu" class="col-md-3 col-lg-4 d-md-block bg-white border-end jobbAI-sidebar collapsed">
                 <button id="toggleSidebarClose" class="sidebar-toggle-btn-close toggle-close">
-                    <i class="fas fa-bars"></i> Hide
+                    <i class="fas fa-bars"></i>
                 </button>
                 <div class="position-sticky pt-3 sidebar-sticky">
-                    <div class="px-3 mb-3">
-                        <a href="{% url 'matcher:main_page' %}" type="button" class="btn btn-primary w-100" >
+                    <div class="px-3 mb-6 mt-4">
+                        <a href="{% url 'matcher:main_page' %}"
+                           type="button"
+                           class="btn btn-outline-dark w-100 ms-auto d-block" >
                             <i class="fas fa-plus-circle me-2"></i>New session
                         </a>
                     </div>
 
                     {% if user.is_authenticated %}
-                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
+                    <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase mt-5">
                         <span>Today's Matches</span>
                     </h6>
                     <ul class="nav flex-column mb-2">
@@ -36,7 +38,7 @@
                                 <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}"
                                    href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
                                     <i class="fas fa-calendar-day me-2"></i>
-                                    <span class="sidebar-text">{{ session.matched_at|date:"H:i" }} - {{ session.skills_text|truncatewords:3 }}</span>
+                                    <span class="sidebar-text">{{ session.matched_at|date:"H:i" }} - {{ session.skills_text|truncatewords:1 }}</span>
                                 a>
                             </li>
                             {% endif %}
@@ -48,7 +50,7 @@
                     </ul>
 
                     <h6 class="sidebar-heading d-flex justify-content-between align-items-center px-3 mt-4 mb-1 text-muted text-uppercase">
-                        <span>Session history</span>
+                        <span>Matching history</span>
                     </h6>
                     <ul class="nav flex-column">
                         {% for session in match_history %}
@@ -57,7 +59,7 @@
                             <a class="nav-link {% if session.id|stringformat:"s" == current_match_session_id %}active fw-bold{% endif %}"
                                href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
                                 <i class="fas fa-history me-2"></i>
-                                    <span class="sidebar-text">{{ session.matched_at|date:"Y-m-d" }} - {{ session.skills_text|truncatewords:3 }}</span>
+                                    <span class="sidebar-text">{{ session.matched_at|date:"Y-m-d" }} - {{ session.skills_text|truncatewords:1 }}</span>
                             </a>
                         </li>
                             {% endif %}
@@ -109,9 +111,13 @@
                             <div class="glass-card">
                                 <div class="card-footer text-start">
                                     <h2 class="alert-heading mb-3">Let's find the best matches for {{ user.username }}!</h2>
-                                        <button type="submit" form="startMatchForm" class="btn btn-outline-dark w-100" {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
+                                            <button
+                                                type="submit"
+                                                form="startMatchForm"
+                                                class="btn btn-outline-dark w-80"
+                                                {% if not user_cv_text %}disabled title="Please complete your profile first"{% endif %}>
                                             <i class="fas fa-search me-1"></i> Find matches
-                                        </button>
+                                            </button>
                                 </div>
 
                                 <!--<div class="col-lg-6 mb-3 mb-lg-0">
