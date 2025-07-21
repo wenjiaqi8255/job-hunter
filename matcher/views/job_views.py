@@ -26,7 +26,20 @@ def job_detail_page(request, job_id, match_session_id=None):
     if user.is_authenticated:
         user_profile, _ = UserProfile.objects.get_or_create(user=user)
         user_cv_text = user_profile.user_cv_text or ""
-        saved_job = SavedJob.objects.filter(user=user, job_listing=job).first()
+        
+        # This is the key logic: when a user views a job, we create a saved record
+        # or update its status to 'viewed' if it was 'not_applied'.
+        saved_job, created = SavedJob.objects.get_or_create(
+            user=user, 
+            job_listing=job,
+            # Defaults are only used on creation
+            defaults={'status': 'viewed'}
+        )
+        
+        # If the job was already saved and its status was 'not_applied', update it to 'viewed'.
+        if not created and saved_job.status == 'not_applied':
+            saved_job.status = 'viewed'
+            saved_job.save(update_fields=['status'])
 
         session_id_to_use = match_session_id or request.session.get('last_match_session_id')
 
@@ -63,10 +76,13 @@ def job_detail_page(request, job_id, match_session_id=None):
         new_status = request.POST.get('status')
         notes = request.POST.get('notes')
         
+        job_listing = get_object_or_404(JobListing, pk=job_id)
+
+        # Use update_or_create to handle both saving and updating
         saved_job, created = SavedJob.objects.update_or_create(
             user=request.user,
-            job_listing=job,
-            defaults={'status': new_status or 'viewed', 'notes': notes}
+            job_listing=job_listing,
+            defaults={'status': new_status or 'not_applied', 'notes': notes}
         )
         
         if created:

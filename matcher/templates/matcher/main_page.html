@@ -67,13 +67,15 @@
 
                                 {% if user.is_authenticated %}
                                     <div class="mb-2">
-                                        {% if match_item.saved_status == 'applied' %}
-                                            <span class="badge status-badge status-applied" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Applied</span>
-                                        {% elif match_item.saved_status == 'viewed' %}
-                                            <span class="badge status-badge status-viewed" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Viewed</span>
-                                        {% else %}
-                                            <span class="badge status-badge status-not-applied" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: {% if match_item.saved_status %}{{ match_item.saved_status|capfirst }}{% else %}Not Applied{% endif %}</span>
-                                        {% endif %}
+                                        <div class="job-status-container">
+                                            {% if match_item.saved_status == 'applied' %}
+                                                <span class="badge status-badge status-applied" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Applied</span>
+                                            {% elif match_item.saved_status == 'viewed' %}
+                                                <span class="badge status-badge status-viewed" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Viewed</span>
+                                            {% elif match_item.is_saved %}
+                                                <span class="badge status-badge status-saved" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Saved</span>
+                                            {% endif %}
+                                        </div>
                                     </div>
                                 {% endif %}
                                 
