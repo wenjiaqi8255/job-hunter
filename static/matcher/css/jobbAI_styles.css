@@ -7,7 +7,7 @@
     --brand-primary-hover: #0acda8;
     --brand-secondary: #1098F7;
     --brand-text: #121717;
-    --brand-text-primary: #139882;
+    --brand-text-primary: #04987f;
     --brand-text-muted: #6B827D;
     --brand-border: #E5E8EB;
     --brand-bg: #F8FAF8;
@@ -133,7 +133,7 @@
       background-color: var(--brand-primary);
       border: none;
       color: var(--brand-text);
-      font-weight: 700;
+      font-weight: 500;
       font-size: 0.95rem;
       padding: var(--spacing-sm) var(--spacing-lg);
       border-radius: var(--radius-md);
@@ -350,7 +350,7 @@
       -webkit-backdrop-filter: blur(16px) saturate(180%);
       border-radius: var(--radius-md);
       border: 1px solid rgba(255, 255, 255, 0.4);
-      padding: var(--spacing-xl);
+      padding: var(--spacing-lg);
       box-shadow: 0 4px 24px rgba(31, 38, 135, 0.1);
   }
   
@@ -558,7 +558,18 @@
       font-size: var(--text-sm);
       color: var(--brand-text-muted) !important;
   }
+
+  .jobbAI-job-card .card-header {
+    background-color: white;
+    border-bottom: 1px solid var(--brand-border);
+    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+    padding: var(--spacing-lg);
+  }
   
+  .jobbAI-job-card .card-body {
+    padding: var(--spacing-lg);
+  }
+
   /* Status-specific badge styles */
   .status-badge {
       font-size: var(--text-xs);
@@ -617,7 +628,7 @@
   }
   
   .jobbAI-job-card .card-footer {
-      background-color: #FAFAFA;
+      background-color: white;
       border-top: 1px solid #f0f0f0;
       border-radius: 0 0 var(--radius-xl) var(--radius-xl);
   }
@@ -626,7 +637,7 @@
       background-color: #DBF2F0;
       border-color: #DBF2F0;
       color: var(--brand-text);
-      font-weight: 700;
+      font-weight: 500;
       font-size: var(--text-sm);
       border-radius: var(--radius-xl);
   }
@@ -639,7 +650,7 @@
       background-color: var(--brand-primary);
       border-color: var(--brand-primary);
       color: var(--brand-text);
-      font-weight: 700;
+      font-weight: 500;
       font-size: var(--text-sm);
       border-radius: var(--radius-xl);
   }
@@ -795,7 +806,7 @@
       color: var(--brand-text);
   }
   .btn-outline-primary {
-    border-color: var(--brand-primary);
+    border-color: var(--brand-text-primary);
     color: var(--brand-text-primary);
     border-radius: var(--radius-xl);
     font-weight: 500;
@@ -820,7 +831,7 @@
   
   .btn-lg {
       border-radius: var(--radius-xl);
-      font-weight: 700;
+      font-weight: 500;
   }
   
   /* 表单控件 */

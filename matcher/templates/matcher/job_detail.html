@@ -29,7 +29,7 @@
   <div class="row">
     <div class="col-lg-8">
       <div class="card jobbAI-job-card shadow-sm mb-4">
-        <div class="card-header bg-light border-bottom-0 py-3">
+        <div class="card-header border-bottom-0">
           <div class="d-flex justify-content-between align-items-start">
             <div>
               <h4 class="h4 mb-1">{{ job.job_title }}</h4>
@@ -175,7 +175,7 @@
     <div class="col-lg-4">
       {% if user.is_authenticated %}
       <div class="glass-card mb-4">
-          <h5 class="h6 mb-3"><i class="fas fa-clipboard-check me-2 text-primary"></i>Application Status & Notes</h5>
+          <h5 class="h6 mb-3"><i class="fas fa-clipboard-check me-2 brand-text-primary"></i>Application Status & Notes</h5>
           <form method="post" 
                 action="{% if current_match_session_id_for_url %}{% url 'matcher:job_detail_page' job.id current_match_session_id_for_url %}{% else %}{% url 'matcher:job_detail_page_no_session' job.id %}{% endif %}"
                 id="applicationStatusForm">
