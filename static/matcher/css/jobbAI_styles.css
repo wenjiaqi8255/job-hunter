@@ -7,6 +7,7 @@
     --brand-primary-hover: #0acda8;
     --brand-secondary: #1098F7;
     --brand-text: #121717;
+    --brand-text-primary: #139882;
     --brand-text-muted: #6B827D;
     --brand-border: #E5E8EB;
     --brand-bg: #F8FAF8;
@@ -791,6 +792,16 @@
       background-color: var(--brand-primary-hover);
       border-color: var(--brand-primary-hover);
       color: var(--brand-text);
+  }
+  .btn-outline-primary {
+    border-color: var(--brand-primary);
+    color: var(--brand-text-primary);
+    border-radius: var(--radius-xl);
+    font-weight: 500;
+  }
+  .btn-outline-primary:hover {
+    background-color: var(--brand-primary);
+    color: white;
   }
   
   .btn-secondary {
