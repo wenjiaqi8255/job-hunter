@@ -41,11 +41,7 @@ def job_detail_page(request, job_id, match_session_id=None):
             saved_job.status = 'viewed'
             saved_job.save(update_fields=['status'])
 
-        # Store the current session ID in the user's session so we can return to it
-        if match_session_id:
-            request.session['last_match_session_id'] = str(match_session_id)
-            
-        session_id_to_use = match_session_id or request.session.get('last_match_session_id')
+        session_id_to_use = match_session_id
 
         if session_id_to_use:
             try:
