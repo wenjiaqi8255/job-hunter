@@ -47,6 +47,11 @@ def profile_page(request):
             user_profile.user_preferences_text = request.POST.get('user_preferences_text', user_profile.user_preferences_text)
             messages.success(request, 'Your preferences have been updated.')
 
+        elif form_type == 'email_form':
+            user_email = request.POST.get('user_email_text', user_profile.user_email)
+            user_profile.user_email = user_email
+            messages.success(request, 'Your email has been updated.')
+
         user_profile.save()
         return redirect('matcher:profile_page')
 
@@ -69,6 +74,7 @@ def profile_page(request):
         'application_count': application_count,
         'user_cv_text': user_profile.user_cv_text or "",
         'user_preferences_text': user_profile.user_preferences_text or "",
+        'user_email': user_profile.user_email or "",
         'experiences': experiences,
         'experience_count': experience_count,
         'tips_to_improve_count': experience_count,
