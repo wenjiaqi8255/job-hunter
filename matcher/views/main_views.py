@@ -13,6 +13,7 @@ from django.conf import settings
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.contrib.auth.decorators import login_required
 from django.views.decorators.http import require_POST
+from django.core.cache import cache
 
 from datetime import date
 from uuid import UUID
@@ -120,6 +121,7 @@ def start_new_match_session(request):
     """
     Creates a new match session for the logged-in user.
     This view handles the core job matching logic.
+    Implements 30秒防抖，防止重复请求。
     """
     user_profile = get_object_or_404(UserProfile, user=request.user)
 
@@ -127,30 +129,35 @@ def start_new_match_session(request):
         messages.info(request, "Please complete your profile with a CV before starting a match.")
         return redirect('matcher:profile_page')
 
+    # 防抖逻辑：30秒内只允许一次请求
+    cache_key = f"matching_in_progress_{request.user.id}"
+    existing_session_id = cache.get(cache_key)
+    if existing_session_id:
+        # 检查该session是否还存在（已被处理完则允许新建）
+        try:
+            session_obj = MatchSession.objects.get(id=existing_session_id, user=request.user)
+            # 直接重定向到该session
+            messages.info(request, "已有匹配请求正在进行，请勿重复提交。")
+            return redirect(f"{reverse('matcher:main_page')}?session_id={session_obj.id}&in_progress=1")
+        except MatchSession.DoesNotExist:
+            # session已被处理完，允许新建
+            pass
+    # 设置防抖标记，有效期30秒
+    # 先创建session对象，后续如有异常可清理
     # Use the CV and preferences stored in the user's profile
     user_cv_text = user_profile.user_cv_text
     user_preferences_text = user_profile.user_preferences_text
-
-    # Extract structured data from the profile
     structured_profile_dict = gemini_utils.extract_user_profile(user_cv_text, user_preferences_text)
-    
-    # Fetch job listings to match against
     job_listings_for_api = fetch_todays_job_listings_from_supabase(request.supabase)
-    
     if not job_listings_for_api:
         messages.warning(request, "There are no new job listings to match against today. Please try again later.")
         return redirect('matcher:main_page')
-
     no_match_reason = None
-    
-    # Perform the matching via Gemini API
     job_matches_from_api = gemini_utils.match_jobs(
         structured_profile_dict, 
         job_listings_for_api,
         max_jobs_to_process=10  # Keeping this low for testing
     )
-
-    # Create and save the new session and its results
     with transaction.atomic():
         new_match_session = MatchSession.objects.create(
             user=request.user,
@@ -159,11 +166,10 @@ def start_new_match_session(request):
             structured_user_profile_json=structured_profile_dict
         )
         _save_job_matches_to_db(request, job_matches_from_api, new_match_session)
-
+        # 设置防抖cache，30秒
+        cache.set(cache_key, str(new_match_session.id), timeout=30)
     if no_match_reason:
         messages.warning(request, no_match_reason)
-
-    # Redirect to the main page, displaying the new session
     return redirect(f"{reverse('matcher:main_page')}?session_id={new_match_session.id}")
 
 
