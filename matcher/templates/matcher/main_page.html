@@ -14,7 +14,7 @@
                 <i class="fas fa-bars"></i> History
             </button>
             <!-- Sidebar: Match History & New Match Button -->
-            <nav id="sidebarMenu" class="col-md-3 col-lg-4 d-md-block bg-white border-end jobbAI-sidebar">
+            <nav id="sidebarMenu" class="col-md-3 col-lg-4 d-md-block bg-white border-end jobbAI-sidebar collapsed">
                 <button id="toggleSidebarClose" class="sidebar-toggle-btn-close toggle-close">
                     <i class="fas fa-bars"></i> Hide
                 </button>
@@ -187,9 +187,9 @@
                     </div>
                      <h1 class="h2">
                             {% if processed_job_matches %}
-                                {{ processed_job_matches|length }} Best Matches, {{ all_jobs_count }} Job Listings
+                                {{ processed_job_matches|length }} MATCHES FROM {{ all_jobs_count }} JOBS
                             {% else %}
-                                {{ all_jobs_count }} Job Listings
+                                {{ all_jobs_count }} JOBS FOUND
                             {% endif %}
                      </h1>
                     <div>
@@ -428,7 +428,7 @@
                                     {% endif %}
                                         <p class="card-text small"><small>{{ item.job_object.description|truncatewords:20 }}</small></p>
                                 </div>
-                                    <div class="card-footer bg-light border-top-0 p-2">
+                                    <div class="card-footer bg-transparent border-top-0 p-2">
                                         <div class="d-flex justify-content-end">
                                             <a href="{% url 'matcher:job_detail_page_no_session' item.job_object.id %}" class="btn btn-outline-secondary btn-sm me-2"><i class="fas fa-info-circle me-1"></i> Details</a>
                                      {% if item.job_object.application_url %}
