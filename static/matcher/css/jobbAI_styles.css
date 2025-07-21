@@ -542,6 +542,13 @@ button[data-bs-target="#sidebarMenu"] {
 }
 
 /* ─── APPLICATIONS PAGE ────────────────────────────────────────────────────── */
+.application_page {
+    background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center top fixed;
+    background-size: cover;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
 .glass-card {
     background: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(16px) saturate(180%);
@@ -806,4 +813,12 @@ body {
     font-family: 'Courier New', Courier, monospace;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+/* ─── PROFILE PAGE ────────────────────────────────────────────────────── */
+.profile_page {
+    background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center top fixed;
+    background-size: cover;
+    min-height: 100vh; /* 🔥 This ensures it stretches to full viewport height */
+    display: flex;
+    flex-direction: column;
 }

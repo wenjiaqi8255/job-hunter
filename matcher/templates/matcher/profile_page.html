@@ -1,5 +1,5 @@
 {% extends 'matcher/base.html' %}
-{% load matcher_extras %} {# Load custom template tags #}
+{% load matcher_extras %}
 {% load static %}
 
 {% block title %}My Profile - JobbAI MVP{% endblock %}
@@ -7,10 +7,12 @@
 {% block styles %}
 <style>
     .profile-header {
-        margin-bottom: 2rem;
+        margin-top: 4rem;
+        margin-bottom: 3rem;
+        font-size: 5rem;
     }
     .profile-header h1 {
-        font-size: 2rem; /* Figma: Hi, Anya - 32px, bold */
+        font-size: 2rem;
         font-weight: bold;
     }
     .stats-container {
@@ -52,45 +54,42 @@
 {% endblock styles %}
 
 {% block content %}
+<div class="profile_page">
 <div class="container mt-4">
-    <div class="profile-header">
+    <div class="profile-header text-center">
         <h1>Hi, {{ user.username }}!</h1> 
     </div>
 
     <div class="stats-container">
-        <div class="stat-card">
+        <div class="glass-card">
             <div class="stat-value">{{ job_matches_count }}</div>
             <div class="stat-label">Job Matches</div>
         </div>
-        <div class="stat-card">
+        <div class="glass-card">
             <div class="stat-value">{{ already_saved_minutes }} mins</div>
             <div class="stat-label">Time Saved Searching</div>
-            <small class="text-muted mt-1">(Based on {{ application_count }} applications at 20 mins each)</small>
+            <small class="text-muted mt-1">Based on {{ application_count }} applications</small>
         </div>
-        <div class="stat-card">
+        <div class="glass-card">
             <div class="stat-value">{{ tips_to_improve_count }}</div>
             <div class="stat-label">Tips to Improve</div>
         </div>
     </div>
 
     {# Placeholder sections for CV/Resume, Preferences, Newsletter as per Figma #}
-    <div class="row mt-4">
+    <div class="glass-card row mt-4">
         <div class="col-md-12">
-            <div class="placeholder-section">
                 <h4>CV/Resume</h4>
                 <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}No CV uploaded.{% endif %}</strong></p>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
-            </div>
+                <button type="button" class="btn btn-outline-dark w-80" data-bs-toggle="modal" data-bs-target="#cvModal">Update CV/Resume</button>
         </div>
     </div>
 
-    <div class="row mt-3">
+    <div class="glass-card row mt-3">
         <div class="col-md-12">
-            <div class="placeholder-section">
                 <h4>Preferences</h4>
                 <p>Your default preferences for jobs: <strong>{% if user_preferences_text %}{{ user_preferences_text|truncatewords:10 }}{% else %}Little German required, startup... (Placeholder){% endif %}</strong></p>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
-            </div>
+                <button type="button" class="btn btn-outline-dark w-80" data-bs-toggle="modal" data-bs-target="#preferencesModal">Edit Preferences</button>
         </div>
     </div>
 
@@ -196,13 +195,11 @@
                     </div>
                 </div>
 
-    <div class="row mt-3 mb-5">
+    <div class="glass-card row mt-3 mb-5">
         <div class="col-md-12">
-            <div class="placeholder-section">
                 <h4>Newsletter</h4>
                 <p>You'll get an actionable email at 8:00am: <strong>{% if user_email %}{{ user_email }}{% else %}No email set.{% endif %}</strong></p>
-                <button type="button" class="btn btn-sm btn-outline-secondary" data-bs-toggle="modal" data-bs-target="#emailModal">Edit Email</button>
-            </div>
+                <button type="button" class="btn btn-outline-dark w-80" data-bs-toggle="modal" data-bs-target="#emailModal">Edit Email</button>
         </div>
     </div>
 
@@ -256,6 +253,7 @@
       </div>
     </div>
   </div>
+</div>
 </div>
 
 <script>
