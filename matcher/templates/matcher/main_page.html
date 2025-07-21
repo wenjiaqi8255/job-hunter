@@ -64,25 +64,95 @@
                                         <small class="d-block text-muted mt-0">Match Score</small>
                                     </div>
                                 </div>
-                                <div class="mb-3">
+
+                                {% if user.is_authenticated %}
+                                    <div class="mb-2">
+                                        {% if match_item.saved_status == 'applied' %}
+                                            <span class="badge status-badge status-applied" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Applied</span>
+                                        {% elif match_item.saved_status == 'viewed' %}
+                                            <span class="badge status-badge status-viewed" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: Viewed</span>
+                                        {% else %}
+                                            <span class="badge status-badge status-not-applied" id="job-status-badge-matched-{{ match_item.job_object.id }}">Status: {% if match_item.saved_status %}{{ match_item.saved_status|capfirst }}{% else %}Not Applied{% endif %}</span>
+                                        {% endif %}
+                                    </div>
+                                {% endif %}
+                                
+                                <div class="mb-2">
                                     <small class="text-muted">
-                                        {% if match_item.job_object.level %}<i class="fas fa-briefcase"></i> {{ match_item.job_object.level }}{% if match_item.job_object.location %} | {% endif %}{% endif %}
-                                        {% if match_item.job_object.location %}<i class="fas fa-map-marker-alt"></i> {{ match_item.job_object.location }}{% endif %}
+                                        {% if match_item.job_object.level %}<i class="fas fa-briefcase"></i> {{ match_item.job_object.level|default:"N/A" }}{% if match_item.job_object.location or match_item.job_object.industry or match_item.job_object.flexibility or match_item.job_object.salary_range %} | {% endif %}{% endif %}
+                                        {% if match_item.job_object.location %}<i class="fas fa-map-marker-alt"></i> {{ match_item.job_object.location|default:"N/A" }}{% if match_item.job_object.industry or match_item.job_object.flexibility or match_item.job_object.salary_range %} | {% endif %}{% endif %}
+                                        {% if match_item.job_object.industry %}<i class="fas fa-industry"></i> {{ match_item.job_object.industry|default:"N/A" }}{% if match_item.job_object.flexibility or match_item.job_object.salary_range %} | {% endif %}{% endif %}
+                                        {% if match_item.job_object.flexibility %}<i class="fas fa-clock"></i> {{ match_item.job_object.flexibility|default:"N/A"}}{% if match_item.job_object.salary_range %} | {% endif %}{% endif %}
+                                        {% if match_item.job_object.salary_range %}<i class="fas fa-dollar-sign"></i> {{ match_item.job_object.salary_range|default:"N/A"}}{% endif %}
                                     </small>
                                 </div>
+
                                 <p class="card-text small mb-2">
                                     {{ match_item.reason|truncatewords:20|linebreaksbr }}
                                 </p>
+                                
+                                {% if match_item.parsed_insights_list %}
+                                    <div class="accordion accordion-flush accordion-sm mb-2" id="accordionInsights{{ match_item.job_object.id }}">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingInsights{{ match_item.job_object.id }}">
+                                                <button class="accordion-button p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseInsights{{ match_item.job_object.id }}" aria-expanded="true" aria-controls="collapseInsights{{ match_item.job_object.id }}">
+                                                    <small><strong><i class="fas fa-lightbulb me-1"></i> Key Insights</strong></small>
+                                                </button>
+                                            </h2>
+                                            <div id="collapseInsights{{ match_item.job_object.id }}" class="accordion-collapse collapse show" aria-labelledby="headingInsights{{ match_item.job_object.id }}">
+                                                <div class="accordion-body p-0">
+                                                    <table class="table table-sm small table-borderless mb-0">
+                                                        <thead>
+                                                            <tr>
+                                                                <th scope="col" class="w-50 ps-2 text-success"><small>Pros</small></th>
+                                                                <th scope="col" class="w-50 ps-2 text-danger"><small>Cons</small></th>
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {% for pro_insight, con_insight in match_item.parsed_insights_list %}
+                                                            <tr>
+                                                                <td class="ps-2 align-top"><small>{% if pro_insight %}<i class="fas fa-check-circle text-success me-1"></i>{{ pro_insight }}{% endif %}</small></td>
+                                                                <td class="ps-2 align-top"><small>{% if con_insight %}<i class="fas fa-times-circle text-danger me-1"></i>{{ con_insight }}{% endif %}</small></td>
+                                                            </tr>
+                                                            {% endfor %}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
+
+                                {% if match_item.tips and match_item.tips != 'N/A' %}
+                                    <div class="accordion accordion-flush accordion-sm mb-3" id="accordionTips{{ match_item.job_object.id }}">
+                                        <div class="accordion-item">
+                                            <h2 class="accordion-header" id="headingTips{{ match_item.job_object.id }}">
+                                                <button class="accordion-button p-2" type="button" data-bs-toggle="collapse" data-bs-target="#collapseTips{{ match_item.job_object.id }}" aria-expanded="true" aria-controls="collapseTips{{ match_item.job_object.id }}">
+                                                     <small><strong><i class="fas fa-bullseye me-1"></i> Application Tips</strong></small>
+                                                </button>
+                                            </h2>
+                                            <div id="collapseTips{{ match_item.job_object.id }}" class="accordion-collapse collapse show" aria-labelledby="headingTips{{ match_item.job_object.id }}">
+                                                <div class="accordion-body p-2">
+                                                    <small>{{ match_item.tips|linebreaksbr }}</small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endif %}
                             </div>
-                            <div class="card-footer bg-light border-top-0 p-2">
+                            <div class="card-footer border-top-0 p-2">
                                 <div class="d-flex justify-content-end">
                                     <a href="{% url 'matcher:job_detail_page' job_id=match_item.job_object.id match_session_id=current_match_session_id %}" class="btn btn-outline-secondary btn-sm me-2">
                                         <i class="fas fa-info-circle me-1"></i> View Details
                                     </a>
                                     {% if match_item.job_object.application_url %}
-                                    <a href="{{ match_item.job_object.application_url }}" class="btn btn-success btn-sm apply-now-btn-trigger" target="_blank" rel="noopener noreferrer" data-job-id="{{ match_item.job_object.id }}" data-job-title="{{ match_item.job_object.job_title }}">
-                                        <i class="fas fa-external-link-alt me-1"></i> Apply Now
-                                    </a>
+                                        <a href="{{ match_item.job_object.application_url }}" class="btn btn-success btn-sm apply-now-btn-trigger" target="_blank" rel="noopener noreferrer" data-job-id="{{ match_item.job_object.id }}" data-job-title="{{ match_item.job_object.job_title }}" data-list-type="matched">
+                                            <i class="fas fa-external-link-alt me-1"></i> Apply Now
+                                        </a>
+                                    {% else %}
+                                        <button type="button" class="btn btn-success btn-sm" disabled title="No application link available">
+                                            <i class="fas fa-external-link-alt me-1"></i> Apply Now
+                                        </button>
                                     {% endif %}
                                 </div>
                             </div>

@@ -217,4 +217,23 @@
     </div>
   </div>
 </div>
+
+{% if job.application_url or True %}
+<nav class="navbar fixed-bottom navbar-light bg-light shadow-lg py-3">
+  <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
+    <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" class="btn btn-lg btn-outline-secondary">
+        <i class="fas fa-envelope me-2"></i>Generate Cover Letter
+    </a>
+    <a href="{% url 'matcher:generate_custom_resume_page' job.id %}" class="btn btn-lg btn-outline-primary">
+        <i class="fas fa-file-alt me-2"></i>Customize CV
+    </a>
+    {% if job.application_url %}
+    <a href="{{ job.application_url }}" class="btn btn-lg" style="background-color: #0AEDC7; border-color: #0AEDC7; color: #121717;" target="_blank">
+        <i class="fas fa-external-link-alt me-2"></i>Apply Now
+    </a>
+    {% endif %}
+  </div>
+</nav>
+{% endif %}
+
 {% endblock %}
