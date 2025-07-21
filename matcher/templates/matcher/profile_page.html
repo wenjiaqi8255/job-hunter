@@ -5,55 +5,12 @@
 {% block title %}My Profile - JobbAI MVP{% endblock %}
 
 {% block styles %}
-<style>
-    .profile-header {
-        margin-bottom: 2rem;
-    }
-    .profile-header h1 {
-        font-size: 2rem; /* Figma: Hi, Anya - 32px, bold */
-        font-weight: bold;
-    }
-    .stats-container {
-        display: flex;
-        justify-content: space-around;
-        margin-bottom: 2rem;
-        gap: 1rem; /* Add gap between cards */
-    }
-    .stat-card {
-        border: 1px solid #dee2e6; /* Figma border color */
-        border-radius: 8px; /* Figma border radius */
-        padding: 1.5rem; /* Figma padding */
-        text-align: center;
-        background-color: #fff;
-        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
-        flex-basis: 30%; /* Distribute space among 3 cards */
-        display: flex;
-        flex-direction: column;
-        justify-content: center; /* Center content vertically */
-        min-height: 120px; /* Ensure cards have a minimum height */
-    }
-    .stat-value {
-        font-size: 2rem; /* Figma: 24px, bold */
-        font-weight: bold;
-        color: #121417; /* Figma text color */
-    }
-    .stat-label {
-        font-size: 1rem; /* Figma: 16px, medium */
-        color: #121417; /* Figma text color */
-        margin-top: 0.5rem;
-    }
-    .placeholder-section {
-        background-color: #f8f9fa;
-        padding: 1.5rem;
-        border-radius: .25rem;
-        margin-top: 2rem;
-    }
-</style>
+{# 样式已迁移到 static/matcher/css/jobbAI_styles.css，无需内联样式 #}
 {% endblock styles %}
 
 {% block content %}
 <div class="container mt-4">
-    <div class="profile-header">
+    <div class="h1">
         <h1 class="h1">Hi, {{ user.username }}!</h1> 
     </div>
 
@@ -74,8 +31,8 @@
     </div>
 
     {# Placeholder sections for CV/Resume, Preferences, Newsletter as per Figma #}
-    <div class="row mt-4">
-        <div class="col-md-12">
+    <div class="card jobbAI-job-card">
+        <div class="card-body">
             <div class="placeholder-section">
                 <h4 class="h4">CV/Resume</h4>
                 <p>Your default CV/Resume: <strong>{% if user_cv_text %}{{ user_cv_text|truncatewords:10 }}{% else %}No CV uploaded.{% endif %}</strong></p>
@@ -84,8 +41,8 @@
         </div>
     </div>
 
-    <div class="row mt-3">
-        <div class="col-md-12">
+    <div class="card jobbAI-job-card">
+        <div class="card-body">
             <div class="placeholder-section">
                 <h4 class="h4">Preferences</h4>
                 <p>Your default preferences for jobs: <strong>{% if user_preferences_text %}{{ user_preferences_text|truncatewords:10 }}{% else %}Little German required, startup... (Placeholder){% endif %}</strong></p>
@@ -195,8 +152,8 @@
                     </div>
                 </div>
 
-    <div class="row mt-3 mb-5">
-        <div class="col-md-12">
+    <div class="card jobbAI-job-card">
+        <div class="card-body">
             <div class="placeholder-section">
                 <h4 class="h4">Newsletter</h4>
                 <p>You'll get an actionable email at 8:00am: <strong>{% if user_email %}{{ user_email }}{% else %}No email set.{% endif %}</strong></p>

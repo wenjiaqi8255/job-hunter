@@ -37,6 +37,38 @@
     --shadow-hover: 0 8px 24px rgba(18, 23, 23, 0.1);
   }
   
+  /* === 全局 h1 样式（来自 profile_page.html） === */
+  .h1 {
+      font-size: 2rem; /* Figma: Hi, Anya - 32px, bold */
+      font-weight: bold;
+  }
+
+  /* === stat-value 样式（用于数字高亮展示） === */
+  .stat-value {
+      font-size: 2rem; /* Figma: 24px, bold */
+      font-weight: bold;
+      color: #121417; /* Figma text color */
+  }
+  
+  .stats-container {
+    display: flex;
+    justify-content: space-around;
+    margin-bottom: 2rem;
+    gap: 1rem; /* Add gap between cards */
+    }
+    .stat-card {
+        border: 1px solid #dee2e6; /* Figma border color */
+        border-radius: 8px; /* Figma border radius */
+        padding: 1.5rem; /* Figma padding */
+        text-align: center;
+        background-color: #fff;
+        box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,.075);
+        flex-basis: 30%; /* Distribute space among 3 cards */
+        display: flex;
+        flex-direction: column;
+        justify-content: center; /* Center content vertically */
+        min-height: 120px; /* Ensure cards have a minimum height */
+    }
   /* -------------------------------------------------------------------
       BASE & LAYOUT
   ------------------------------------------------------------------- */
