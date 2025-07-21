@@ -212,6 +212,48 @@ def download_custom_resume(request, job_id):
 
 
 @login_required
+def download_cover_letter(request, job_id):
+    job = get_object_or_404(JobListing, id=job_id)
+    user = request.user
+    
+    # CoverLetter is linked via SavedJob
+    saved_job = get_object_or_404(SavedJob, job_listing=job, user=user)
+    cover_letter = get_object_or_404(CoverLetter, saved_job=saved_job)
+    
+    cover_letter_content = cover_letter.content
+
+    buffer = BytesIO()
+    p = canvas.Canvas(buffer, pagesize=A4)
+    width, height = A4
+
+    # Simple styling
+    left_margin = 20 * mm
+    right_margin = 20 * mm
+    top_margin = height - 20 * mm
+    bottom_margin = 20 * mm
+    line_height = 14
+
+    p.setFont("Helvetica", 11)
+    y = top_margin
+
+    for paragraph in cover_letter_content.split('\n'):
+        lines = textwrap.wrap(paragraph, width=90) if paragraph.strip() else ['']
+        for line in lines:
+            if y < 20 * mm:
+                p.showPage()
+                y = top_margin
+                p.setFont("Helvetica", 11)
+            p.drawString(left_margin, y, line)
+            y -= line_height
+        y -= 4  # extra space between paragraphs
+
+    p.save()
+    buffer.seek(0)
+    filename = f"cover_letter_{job.id}.pdf"
+    return FileResponse(buffer, as_attachment=True, filename=filename)
+
+
+@login_required
 def my_applications_page(request):
     """
     Displays a list of jobs the user has saved, with filtering by status.

@@ -7,6 +7,7 @@ from .application_views import (
     generate_cover_letter_page, 
     generate_custom_resume_page,
     download_custom_resume,
+    download_cover_letter,
     my_applications_page,
     update_job_application_status
 )

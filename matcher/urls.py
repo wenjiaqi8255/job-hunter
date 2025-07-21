@@ -40,6 +40,7 @@ urlpatterns = [
     path('api/experience-completed-callback/', views.experience_completed_callback, name='experience_completed_callback'),
 
     path('job/<str:job_id>/download-custom-resume-pdf/', views.download_custom_resume, name='download_custom_resume_pdf'),
+    path('job/<str:job_id>/download-cover-letter-pdf/', views.download_cover_letter, name='download_cover_letter_pdf'),
     
     # API 端点
     path('api/check-auth/', views.api_check_auth, name='api_check_auth'),
