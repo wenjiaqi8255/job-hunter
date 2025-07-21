@@ -6,7 +6,7 @@
 {% block content %}
 <div class="container-fluid mt-4">
     <div class="all-matches-header mb-4">
-        <h1>{{ page_title }}</h1>
+        <h1 class="h1">{{ page_title }}</h1>
         {% if has_sessions %}
             <p class="text-muted">Browse through all your past job matching sessions.</p>
         {% endif %}
@@ -23,13 +23,12 @@
                             </h5>
                             <a href="{% url 'matcher:main_page' %}?session_id={{ session.id }}" class="btn btn-sm btn-outline-primary">View Details &rarr;</a>
                         </div>
-                        <hr>
                         <p class="card-text mb-2">
-                            <strong>Your Input:</strong>
-                            <span class="text-muted fst-italic">"{{ session.skills_text|truncatechars:150 }}"</span>
+                            Preference:
+                            <span class="text-muted">"{{ session.user_preferences_text|truncatechars:150 }}"</span>
                         </p>
                         <p class="card-text">
-                            <strong>Matches Found:</strong> {{ session.matched_jobs.count }}
+                            Matches Found: {{ session.matched_jobs.count }}
                         </p>
                     </div>
                 </div>

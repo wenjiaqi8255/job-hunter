@@ -663,8 +663,9 @@
   }
   
   .session-card .card-title {
-      color: var(--brand-secondary);
-      font-size: var(--text-lg);
+      font-size: var(--text-base);
+      font-weight: 700;
+      color: var(--brand-text);
   }
   
   /* Dynamic White Box inside Glass Card */
