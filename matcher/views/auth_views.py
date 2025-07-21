@@ -12,6 +12,9 @@ from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from django.conf import settings
 from django.core.cache import cache
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate
+from matcher.forms import RegisterForm
 
 from supabase import create_client, Client
 import json
@@ -153,6 +156,29 @@ def google_callback(request):
         print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
         messages.error(request, "An error occurred during authentication.")
         return redirect('matcher:login_page')
+
+
+def register_view(request):
+    if request.method == 'POST':
+        form = RegisterForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password1']
+            user = User.objects.create_user(username=username, password=password)
+            user.save()
+            user = authenticate(request, username=username, password=password)
+            if user is not None:
+                login(request, user)
+                return redirect('matcher:main_page')
+            else:
+                messages.error(request, 'Registration succeeded but login failed.')
+                return redirect('matcher:login')
+        else:
+            # 表单无效，回显错误
+            return render(request, 'matcher/register.html', {'form': form})
+    else:
+        form = RegisterForm()
+    return render(request, 'matcher/register.html', {'form': form})
 
 
 def logout_view(request):
