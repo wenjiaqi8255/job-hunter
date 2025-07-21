@@ -152,15 +152,16 @@ body {
 }
 /* Shared button style */
 .sidebar-toggle-btn-open {
-  position: relative;
-  top: 20px;
-  left: 40px;
-  width: 90px;
-  height: 36px;
-  border: none;
-  border-radius: 10%;
+  position: fixed;
+  top: 100px; /* adjust vertically as needed */
+  left: 0;
+  width: 40px;
+  height: 80px;
   background-color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border: none;
+  border-top-right-radius: 40px;
+  border-bottom-right-radius: 40px;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -168,20 +169,26 @@ body {
   cursor: pointer;
   transition: background 0.3s ease;
 }
+
+.sidebar-toggle-btn-open i {
+  color: #1098F7;
+  font-size: 18px;
+}
 .sidebar-toggle-btn-close {
-  position: relative;
-  top: 20px;
-  left: 40px;
-  width: 90px;
-  height: 36px;
+  position: fixed;
+  top: 100px; /* adjust vertically as needed */
+  left: 0;
+  width: 40px;
+  height: 80px;
+  background-color: rgba(1000,1000,1000,0.5);
   border: none;
-  border-radius: 10%;
-  background-color: #ffffff;
-  box-shadow: 0 2px 6px rgba(0,0,0,0.1);
+  border-top-right-radius: 40px;
+  border-bottom-right-radius: 40px;
+  box-shadow: 2px 4px 10px rgba(0, 0, 0, 0.1);
   display: flex;
   align-items: center;
   justify-content: center;
-  z-index: 1100;
+  z-index: 999;
   cursor: pointer;
   transition: background 0.3s ease;
 }
