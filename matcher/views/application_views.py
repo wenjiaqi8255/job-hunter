@@ -258,10 +258,10 @@ def update_job_application_status(request, job_id):
         if not new_status or new_status not in [choice[0] for choice in SavedJob.STATUS_CHOICES]:
             return JsonResponse({'success': False, 'error': 'Invalid status value.'}, status=400)
 
-        saved_job, created = SavedJob.objects.get_or_create(
+        saved_job, created = SavedJob.objects.update_or_create(
             user=request.user,
             job_listing=job_listing,
-            defaults={'status': new_status}
+            defaults={'status': 'not_applied'}
         )
 
         if not created:
