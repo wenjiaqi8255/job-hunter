@@ -5,6 +5,7 @@
     /* 品牌色系 */
     --brand-primary: #0CDEBA;
     --brand-primary-hover: #0acda8;
+    --brand-primary-light: #DBF2F0;
     --brand-secondary: #1098F7;
     --brand-text: #121717;
     --brand-text-primary: #04987f;
@@ -166,13 +167,13 @@
   }
   
   .new-session-btn {
-      background-color: var(--brand-primary);
+      background-color: var(--brand-primary-light);
       border: none;
       color: var(--brand-text);
       font-weight: 500;
       font-size: 0.95rem;
       padding: var(--spacing-sm) var(--spacing-lg);
-      border-radius: var(--radius-md);
+      border-radius: var(--radius-xl);
       width: 100%;
       display: flex;
       align-items: center;
