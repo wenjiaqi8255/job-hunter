@@ -11,7 +11,7 @@ body {
     min-height: 100vh;
 }
 
-/* ─── NAVBAR ────────────────────────────────────────────────────── */
+/* ─── MENU NAVBAR (TOP) ────────────────────────────────────────────────────── */
 .jobbAI-top-nav {
     background: transparent !important;
     backdrop-filter: blur(16px) saturate(120%);
@@ -76,6 +76,64 @@ body {
 }
 .with-navbar-padding {
   padding-top: 20px;
+}
+.nav-tabs {
+    display: flex;
+    justify-content: flex-start;
+    gap: 1.5rem;
+    margin-bottom: 0;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    padding: 0 1rem;
+    background: none; /* No background */
+    box-shadow: none; /* No outer box */
+    border: none;
+}
+.nav-tabs .nav-link {
+    color: #121717; /* black text */
+    font-weight: 500;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    background: none; /* No background */ /* No border */
+    border-bottom: 0px solid transparent; /* invisible line */
+    border-radius: 0; /* remove rounded corners */
+    padding: 0.75rem 0.25rem;
+    transition: all 0.2s ease-in-out;
+    font-family: 'Montserrat', sans-serif;
+}
+
+.nav-tabs .nav-link:hover,
+.nav-tabs .nav-link:focus {
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    color: #1098F7;
+    border-bottom: 2px solid rgba(16, 152, 247, 0.3); /* subtle line on hover */
+}
+
+.nav-tabs .nav-link.active {
+    color: #1098F7;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-bottom: 3px solid #1098F7;
+    mso-border-shadow: 0 3px 6px -2px rgba(16, 152, 247, 0.5); /* underline shadow only */
+    font-weight: 600;
+}
+
+.nav-tabs .nav-link .badge {
+    background-color: rgba(16, 152, 247, 0.3);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35em 0.6em;
+    border-radius: 1rem;
+}
+
+.nav-tabs .nav-link.active .badge,
+.nav-tabs .nav-link:hover .badge {
+    background-color: white;
+    color: white;
 }
 
 /* ─── SIDEBAR ────────────────────────────────────────────────────── */
@@ -371,10 +429,11 @@ body {
     color: #121717;
     font-weight: 700;
     font-size: 14px;
-    border-radius: 20px; /* Fully rounded */
+    border-radius: 2rem;
 }
 .jobbAI-job-card .card-footer .btn-outline-secondary:hover {
     background-color: #cce9e6;
+    border-radius: 2rem;
 }
 .jobbAI-job-card .card-footer .btn-success { /* Apply Now button */
     background-color: #0AEDC7; /* Figma primary green/teal */
@@ -382,11 +441,12 @@ body {
     color: #121717;
     font-weight: 700;
     font-size: 14px;
-    border-radius: 20px; /* Fully rounded */
+    border-radius: 2rem; /* Fully rounded */
 }
 .jobbAI-job-card .card-footer .btn-success:hover {
     background-color: #09dcb5;
     border-color: #09dcb5;
+    border-radius: 2rem;
 }
 
 /* Styling for "All Jobs" cards for consistency, can be less detailed than matched */
@@ -399,6 +459,7 @@ body {
  .jobbAI-job-card-all .card-footer .btn-success {
     font-size: 0.8rem;
     padding: 0.3rem 0.6rem;
+     border-radius: 2rem;
  }
 
 /* Dashed border for initial input card */
@@ -473,7 +534,7 @@ button[data-bs-target="#sidebarMenu"] {
     /* display: none !important; */ /* Let Bootstrap handle it, or integrate with new top nav toggler */
 }
 
-/* ─── SAVED JOBS PAGE ────────────────────────────────────────────────────── */
+/* ─── APPLICATIONS PAGE ────────────────────────────────────────────────────── */
 .glass-card {
     background: rgba(255, 255, 255, 0.5);
     backdrop-filter: blur(16px) saturate(180%);
@@ -513,6 +574,56 @@ button[data-bs-target="#sidebarMenu"] {
     text-decoration: none;
     transform: translateY(-2px);
 }
+.nav-tabs-app-page {
+    border: none;
+    display: flex;
+    justify-content: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+.nav-tabs-app-page .nav-link {
+    font-family: 'Montserrat', sans-serif;
+    background: rgba(255, 255, 255, 0.15);
+    border: none;
+    border-radius: 50px;
+    padding: 0.5rem 1rem;
+    color: #6B827D;
+    font-weight: 500;
+    transition: all 0.2s ease-in-out;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transform: translateY(0);
+}
+
+.nav-tabs-app-page .nav-link:hover,
+.nav-tabs-app-page .nav-link:focus {
+    background: rgba(16, 152, 247, 0.2);
+    color: #1098F7;
+    transform: translateY(-2px);
+}
+
+.nav-tabs-app-page .nav-link.active {
+    background: #1098F7;
+    color: white;
+    font-weight: 600;
+    box-shadow: 0 4px 12px rgba(16, 152, 247, 0.3);
+}
+
+.nav-tabs-app-page .nav-link .badge {
+    background-color: rgba(16, 152, 247, 0.3);
+    color: white;
+    font-size: 0.75rem;
+    padding: 0.35em 0.6em;
+    border-radius: 1rem;
+}
+
+.nav-tabs-app-page .nav-link.active .badge,
+.nav-tabs-app-page .nav-link:hover .badge {
+    background-color: white;
+    color: white;
+}
 
 @keyframes animated-gradient {
     0% {
@@ -525,66 +636,6 @@ button[data-bs-target="#sidebarMenu"] {
         background-position: 0% 50%;
     }
 }
-
-.nav-tabs {
-    display: flex;
-    justify-content: flex-start;
-    gap: 1.5rem;
-    margin-bottom: 0;
-    flex-wrap: nowrap;
-    align-items: flex-end;
-    padding: 0 1rem;
-    background: none; /* No background */
-    box-shadow: none; /* No outer box */
-    border: none;
-}
-.nav-tabs .nav-link {
-    color: #121717; /* black text */
-    font-weight: 500;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    background: none; /* No background */ /* No border */
-    border-bottom: 0px solid transparent; /* invisible line */
-    border-radius: 0; /* remove rounded corners */
-    padding: 0.75rem 0.25rem;
-    transition: all 0.2s ease-in-out;
-    font-family: 'Montserrat', sans-serif;
-}
-
-.nav-tabs .nav-link:hover,
-.nav-tabs .nav-link:focus {
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    color: #1098F7;
-    border-bottom: 2px solid rgba(16, 152, 247, 0.3); /* subtle line on hover */
-}
-
-.nav-tabs .nav-link.active {
-    color: #1098F7;
-    border-top: none;
-    border-left: none;
-    border-right: none;
-    border-bottom: 3px solid #1098F7;
-    mso-border-shadow: 0 3px 6px -2px rgba(16, 152, 247, 0.5); /* underline shadow only */
-    font-weight: 600;
-}
-
-.nav-tabs .nav-link .badge {
-    background-color: rgba(16, 152, 247, 0.3);
-    color: white;
-    font-size: 0.75rem;
-    padding: 0.35em 0.6em;
-    border-radius: 1rem;
-}
-
-.nav-tabs .nav-link.active .badge,
-.nav-tabs .nav-link:hover .badge {
-    background-color: white;
-    color: white;
-}
-
 
 /* ─── LOGIN PAGE ────────────────────────────────────────────────────── */
 body {
