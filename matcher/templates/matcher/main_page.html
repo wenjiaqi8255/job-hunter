@@ -422,10 +422,15 @@
                                         </div>
 
                                     {% if user.is_authenticated and item.saved_status %}
-                                            <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}"><small><strong>Status:</strong>
-                                                <span class="badge status-badge {% if item.saved_status == 'applied' %}status-applied{% elif item.saved_status == 'viewed' %}status-viewed{% else %}status-not-applied{% endif %}" id="job-status-badge-all-{{ item.job_object.id }}">
-                                                    {% if item.saved_status %}{{ item.saved_status|capfirst }}{% else %}Not Applied{% endif %}
-                                                </span></small>
+                                            <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}">
+                                                <small>
+                                                    <strong>Status:</strong>
+                                                    <span class="badge status-badge {% if item.saved_status == 'applied' %}status-applied{% elif item.saved_status == 'viewed' %}status-viewed{% else %}status-not-applied{% endif %}" id="job-status-badge-all-{{ item.job_object.id }}">
+                                                        {% if item.saved_status %}{{ item.saved_status|capfirst }}
+                                                        {% else %}Not Applied
+                                                        {% endif %}
+                                                    </span>
+                                                </small>
                                             </p>
                                     {% elif user.is_authenticated %}
                                             <p class="mb-1 small" id="job-status-paragraph-all-{{ item.job_object.id }}" style="display: none;"><small><strong>Status:</strong>
