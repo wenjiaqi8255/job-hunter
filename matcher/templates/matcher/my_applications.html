@@ -46,7 +46,7 @@
                             <p class="mt-2 mb-1"><small><strong>Notes:</strong> {{ saved_job.notes|truncatewords:15|linebreaksbr }}</small></p>
                         {% endif %}
                     </div>
-                    <div class="card-footer bg-light">
+                    <div class="card-footer">
                         <a href="{% url 'matcher:job_detail_page_no_session' saved_job.job_listing.id %}" 
                         class="btn btn-outline-primary btn-sm me-2">
                         <i class="fas fa-eye"></i> View Details</a>
