@@ -49,3 +49,14 @@ def parse_anomaly_analysis(analysis_data):
             anomalies.append(f"{anomaly_type}: {chunk}")
             
     return anomalies
+
+
+def parse_tips_string(tips_str):
+    """
+    将类似 '* tip1. * tip2. * tip3.' 的字符串解析为列表。
+    """
+    if not tips_str:
+        return []
+    # 以 * 分割，去除空项和前后空格
+    items = [item.strip() for item in tips_str.split('*') if item.strip()]
+    return items
