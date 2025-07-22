@@ -36,7 +36,7 @@
     <div class="card-footer">
         <form method="post" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-warning">
+            <button type="submit" class="btn btn-outline-primary">
                 <i class="fas fa-sync-alt"></i> 
                 {% if has_existing_resume %}Regenerate{% else %}Generate{% endif %}
             </button>

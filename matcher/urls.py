@@ -9,6 +9,7 @@ from matcher.views.main_views import (
 )
 from matcher.views.job_views import job_detail_page
 from .views.auth_views import register_view  # 新增注册视图导入
+from matcher.views.profile_views import tips_to_improve_page  # 新增tips页面view导入
 
 app_name = 'matcher'
 
@@ -32,6 +33,7 @@ urlpatterns = [
     path('my-applications/', views.my_applications_page, name='my_applications_page'),
     path('job/<str:job_id>/update_status/', views.update_job_application_status, name='update_job_application_status'),
     path('profile/', views.profile_page, name='profile_page'),
+    path('tips-to-improve/', tips_to_improve_page, name='tips_to_improve'),  # 新增tips页面路由
 
     # Experience Pool URLs
     path('experiences/', views.experience_list, name='experience_list'),
