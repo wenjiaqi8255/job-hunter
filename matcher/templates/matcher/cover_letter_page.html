@@ -38,13 +38,28 @@
             <a href="{% url 'matcher:download_cover_letter_pdf' job.id %}" class="btn btn-primary ms-2"><i class="fas fa-file-pdf"></i> Download PDF</a>
             {% endif %}
             {% if has_existing_cover_letter and not generation_error %}
-            <form method="post" class="d-inline">
+            <form id="cover-letter-form" method="post" class="d-inline">
                 {% csrf_token %}
-                <button type="submit" class="btn btn-outline-primary ms-2"><i class="fas fa-sync-alt"></i> Regenerate</button>
+                <button id="cover-letter-btn" type="submit" class="btn btn-outline-primary ms-2"><i class="fas fa-sync-alt"></i> Regenerate</button>
             </form>
             {% endif %}
         </div>
     <!-- </div> -->
+</div>
+
+<!-- 全局Loading Modal for Cover Letter Generation -->
+<div class="modal fade" id="globalLoadingModal" tabindex="-1" aria-labelledby="globalLoadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4">
+      <div class="modal-body">
+        <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 id="globalLoadingModalLabel">Generating your cover letter, please wait...</h5>
+        <div id="globalLoadingModalSubtext" class="mt-2 text-muted small"></div>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
@@ -60,5 +75,20 @@ function copyCoverLetter() {
             alert("Failed to copy text. Please try selecting and copying manually. Error: " + err);
         });
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const coverLetterForm = document.getElementById('cover-letter-form');
+    const coverLetterBtn = document.getElementById('cover-letter-btn');
+    const globalLoadingModal = new bootstrap.Modal(document.getElementById('globalLoadingModal'));
+    const globalLoadingModalSubtext = document.getElementById('globalLoadingModalSubtext');
+    if (coverLetterForm && coverLetterBtn) {
+        coverLetterForm.addEventListener('submit', function(e) {
+            coverLetterBtn.disabled = true;
+            coverLetterBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span> Generating...';
+            globalLoadingModalSubtext.textContent = '';
+            globalLoadingModal.show();
+        });
+    }
+});
 </script>
 {% endblock %}
