@@ -17,7 +17,7 @@
             <a class="nav-link {% if current_status == status_val %}active{% endif %}" 
                href="{% url 'matcher:my_applications_page' %}?status={{ status_val }}">
                 {{ status_display }} 
-                <span class="badge rounded-pill bg-secondary">{{ status_counts|lookup:status_val|default:0 }}</span>
+                <span class="badge rounded-pill bg-secondary text-white">{{ status_counts|lookup:status_val|default:0 }}</span>
             </a>
         </li>
         {% endfor %}
