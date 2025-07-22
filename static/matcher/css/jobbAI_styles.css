@@ -100,6 +100,10 @@
       color: #6c757d;
   }
   
+  .footer-overlay {
+    background-color: white;
+    backdrop-filter: blur(10px);
+  }
   .welcome-page-background {
     background: url('/static/matcher/images/main_page_bg.jpg') no-repeat center center fixed;
     background-size: cover;

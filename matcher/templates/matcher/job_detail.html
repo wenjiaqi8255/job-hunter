@@ -226,7 +226,7 @@
 </div>
 
 {% if job.application_url or True %}
-<nav class="navbar fixed-bottom navbar-light shadow-lg py-3">
+<nav class="navbar fixed-bottom navbar-light footer-overlay shadow-lg py-3">
   <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
     <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" 
        class="btn btn-outline-primary requires-login"
