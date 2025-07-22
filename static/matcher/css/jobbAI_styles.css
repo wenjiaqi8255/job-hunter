@@ -1024,3 +1024,209 @@
         display: none !important;
     }
 }
+
+/* -------------------------------------------------------------------
+    JOB ANALYSIS STYLES
+------------------------------------------------------------------- */
+
+/* Job Analysis Accordion */
+.job-analysis-accordion {
+    --bs-accordion-border-width: 0;
+    --bs-accordion-border-radius: var(--radius-md);
+}
+
+.job-analysis-accordion .accordion-item {
+    border: 1px solid var(--brand-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-sm);
+    overflow: hidden;
+}
+
+.job-analysis-accordion .accordion-header .accordion-button {
+    background-color: #ffffff;
+    border: none;
+    color: var(--brand-text);
+    font-weight: 600;
+    font-size: var(--text-base);
+    padding: var(--spacing-md) var(--spacing-lg);
+    border-radius: var(--radius-md);
+}
+
+.job-analysis-accordion .accordion-button:not(.collapsed) {
+    background-color: #ffffff;
+    border-bottom: 1px solid var(--brand-border);
+    border-radius: var(--radius-md) var(--radius-md) 0 0;
+}
+
+.job-analysis-accordion .accordion-button:focus {
+    box-shadow: 0 0 0 0.25rem rgba(12, 222, 186, 0.15);
+}
+
+.job-analysis-accordion .accordion-body {
+    padding: var(--spacing-lg);
+    background-color: #ffffff;
+}
+
+/* Progress Bar Heights */
+.progress-sm {
+    height: 4px;
+}
+
+.progress-md {
+    height: 6px;
+}
+
+.progress-lg {
+    height: 8px;
+}
+
+.progress-xl {
+    height: 12px;
+}
+
+/* Role Similarity Progress Bars */
+.role-similarity-item {
+    margin-bottom: var(--spacing-md);
+}
+
+.role-similarity-item:last-child {
+    margin-bottom: 0;
+}
+
+.role-similarity-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.role-similarity-name {
+    font-weight: 500;
+    color: var(--brand-text);
+}
+
+.role-similarity-badge {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 0.25em 0.6em;
+    border-radius: var(--radius-sm);
+    background-color: var(--brand-text-muted) !important;
+    color: white !important;
+}
+
+/* Anomaly Cards */
+.anomaly-card {
+    border: 1px solid var(--brand-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--spacing-md);
+    background-color: #ffffff;
+    transition: box-shadow 0.2s ease-in-out;
+}
+
+.anomaly-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.anomaly-card:last-child {
+    margin-bottom: 0;
+}
+
+.anomaly-card .card-body {
+    padding: var(--spacing-lg);
+}
+
+.anomaly-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+}
+
+.anomaly-type-badge {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    padding: 0.3em 0.7em;
+    border-radius: var(--radius-sm);
+    background-color: #FEF3C7;
+    color: #92400E;
+    border: none;
+}
+
+.anomaly-metadata {
+    text-align: right;
+    font-size: var(--text-xs);
+    color: var(--brand-text-muted);
+    line-height: 1.4;
+}
+
+.anomaly-text {
+    font-size: var(--text-sm);
+    color: var(--brand-text);
+    margin-bottom: var(--spacing-sm);
+    line-height: 1.5;
+}
+
+.anomaly-progress-container {
+    margin-bottom: var(--spacing-xs);
+}
+
+.anomaly-progress-label {
+    font-size: var(--text-xs);
+    color: var(--brand-text-muted);
+}
+
+/* Role Composition */
+.composition-intro {
+    font-size: var(--text-sm);
+    color: var(--brand-text-muted);
+    margin-bottom: var(--spacing-lg);
+}
+
+.composition-item {
+    margin-bottom: var(--spacing-md);
+}
+
+.composition-item:last-child {
+    margin-bottom: 0;
+}
+
+.composition-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: var(--spacing-xs);
+}
+
+.composition-name {
+    font-weight: 500;
+    color: var(--brand-text);
+}
+
+.composition-badge {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: 0.25em 0.6em;
+    border-radius: var(--radius-sm);
+    background-color: #DBEAFE;
+    color: #1E40AF;
+}
+
+/* Accordion Icon Animation */
+.job-analysis-accordion .accordion-button::after {
+    transition: transform 0.2s ease-in-out;
+}
+
+.job-analysis-accordion .accordion-button:not(.collapsed)::after {
+    transform: rotate(180deg);
+}
+
+/* Utility Classes for Job Analysis */
+.anomaly-count-badge {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    padding: 0.25em 0.5em;
+    border-radius: var(--radius-sm);
+    background-color: #FEF3C7;
+    color: #92400E;
+    margin-left: var(--spacing-sm);
+}

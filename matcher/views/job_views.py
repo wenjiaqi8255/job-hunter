@@ -64,8 +64,9 @@ def job_detail_page(request, job_id, match_session_id=None):
     # Fetch and parse anomaly data - available to all users
     job_anomalies = []
     anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(request.supabase, [job.id])
-    analysis_data = anomaly_data_map.get(str(job.id))
-    if analysis_data:
+    analysis_row = anomaly_data_map.get(str(job.id))
+    if analysis_row and 'analysis_data' in analysis_row:
+        analysis_data = analysis_row['analysis_data']
         job_anomalies = parse_anomaly_analysis(analysis_data)
 
     if request.method == 'POST':
