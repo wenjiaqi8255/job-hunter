@@ -8,7 +8,7 @@ from django.conf import settings
 
 import fitz  # PyMuPDF
 
-from ..models import UserProfile, SavedJob
+from ..models import UserProfile, SavedJob, MatchedJob
 from ..services.experience_service import get_user_experiences
 
 
@@ -81,3 +81,10 @@ def profile_page(request):
         'n8n_chat_url': full_n8n_url,
     }
     return render(request, 'matcher/profile_page.html', context)
+
+
+
+def tips_to_improve_page(request):
+    matched_jobs = MatchedJob.objects.filter(match_session__user=request.user, tips__isnull=False).order_by('-id')[:7]
+    tips_list = [job.tips for job in matched_jobs if job.tips]
+    return render(request, 'matcher/tips_to_improve.html', {'tips': tips_list})

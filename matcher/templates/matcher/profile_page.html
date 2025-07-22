@@ -16,8 +16,10 @@
 
     <div class="stats-container">
         <div class="stat-card">
-            <div class="stat-value">{{ job_matches_count }}</div>
-            <div class="stat-label">Job Matches</div>
+            <a href="{% url 'matcher:my_applications_page' %}" style="text-decoration:none; color:inherit;">
+                <div class="stat-value">{{ job_matches_count }}</div>
+                <div class="stat-label">Job Matches</div>
+            </a>
         </div>
         <div class="stat-card">
             <div class="stat-value">{{ already_saved_minutes }}</div>
@@ -25,8 +27,10 @@
             <!-- <small class="text-muted mt-1">(Based on {{ application_count }} applications at 20 mins each)</small> -->
         </div>
         <div class="stat-card">
-            <div class="stat-value">{{ tips_to_improve_count }}</div>
-            <div class="stat-label">Tips to Improve</div>
+            <a href="{% url 'matcher:tips_to_improve' %}" style="text-decoration:none; color:inherit;">
+                <div class="stat-value">{{ tips_to_improve_count }}</div>
+                <div class="stat-label">Tips to Improve</div>
+            </a>
         </div>
     </div>
 
