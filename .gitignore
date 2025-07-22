@@ -9,6 +9,9 @@ documentation
 .DS_Store
 .venv
 .cursor
+.cursorrules
+
+*/migrations
 
 .env.local
 .env.development.local
