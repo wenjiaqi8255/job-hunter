@@ -213,7 +213,7 @@ welcome-page-background
                                     </div>
                                 {% endif %}
 
-                                {% if match_item.tips and match_item.tips != 'N/A' %}
+                                {% if match_item.parsed_tips_list %}
                                     <div class="accordion accordion-flush accordion-sm mb-3" id="accordionTips{{ match_item.job_object.id }}">
                                         <div class="accordion-item">
                                             <h6 class="accordion-header" id="headingTips{{ match_item.job_object.id }}">
@@ -223,7 +223,11 @@ welcome-page-background
                                             </h6>
                                             <div id="collapseTips{{ match_item.job_object.id }}" class="accordion-collapse collapse show" aria-labelledby="headingTips{{ match_item.job_object.id }}">
                                                 <div class="accordion-body p-2">
-                                                    <small>{{ match_item.tips|linebreaksbr }}</small>
+                                                    <ul class="list-unstyled mb-0">
+                                                        {% for tip in match_item.parsed_tips_list %}
+                                                            <li class="mb-1"><small><i class="fas fa-arrow-right text-primary me-2"></i>{{ tip }}</small></li>
+                                                        {% endfor %}
+                                                    </ul>
                                                 </div>
                                             </div>
                                         </div>

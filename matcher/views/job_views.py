@@ -8,7 +8,7 @@ from django.conf import settings
 from uuid import UUID
 
 from ..models import JobListing, MatchSession, MatchedJob, SavedJob, UserProfile
-from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis
+from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis, parse_tips_string
 from ..services.job_listing_service import fetch_anomaly_analysis_for_jobs_from_supabase
 
 
@@ -61,6 +61,9 @@ def job_detail_page(request, job_id, match_session_id=None):
             except (ValueError, MatchSession.DoesNotExist, TypeError):
                 active_match_session = None
 
+    # Parse tips for display
+    parsed_tips_for_match = parse_tips_string(tips_for_match) if tips_for_match else []
+    
     # Fetch and parse anomaly data - available to all users
     job_anomalies = []
     anomaly_data_map = fetch_anomaly_analysis_for_jobs_from_supabase(request.supabase, [job.id])
@@ -105,6 +108,7 @@ def job_detail_page(request, job_id, match_session_id=None):
         'active_match_session': active_match_session,
         'reason_for_match': reason_for_match,
         'tips_for_match': tips_for_match,
+        'parsed_tips_for_match': parsed_tips_for_match,
         'parsed_insights_list': parsed_insights,
         'job_anomalies': job_anomalies,
         'user_cv_text': user_cv_text,
