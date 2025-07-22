@@ -26,7 +26,7 @@ from ..models import (
     UserProfile
 )
 from .. import gemini_utils
-from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis
+from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis, parse_tips_string
 from ..services.job_listing_service import (
     fetch_todays_job_listings_from_supabase,
     fetch_anomaly_analysis_for_jobs_from_supabase
@@ -473,6 +473,9 @@ def _process_matched_jobs_for_session(request, current_match_session, saved_job_
             analysis_data = analysis_row['analysis_data']
             job_anomalies = parse_anomaly_analysis(analysis_data)
             
+        # Parse tips into a list
+        parsed_tips = parse_tips_string(job_match.tips) if job_match.tips else []
+        
         # Get saved status from the map
         saved_status = saved_job_map.get(str(job.id))
 
@@ -481,6 +484,7 @@ def _process_matched_jobs_for_session(request, current_match_session, saved_job_
             'reason': job_match.reason,
             'score': job_match.score,
             'tips': job_match.tips,
+            'parsed_tips_list': parsed_tips,
             'parsed_insights_list': parsed_insights,
             'job_anomalies': job_anomalies,
             'saved_status': saved_status,
