@@ -1,23 +1,30 @@
 import json
+import itertools
 
-def parse_and_prepare_insights_for_template(insights_text):
-    """
-    Parses the insights string into pairs for pro/con template display.
-    Returns list of tuples (pro_insight, con_insight).
-    """
-    if not insights_text:
+def parse_and_prepare_insights_for_template(insights_str):
+    if not insights_str or insights_str == 'N/A':
+        return [] 
+    
+    pros = []
+    cons = []
+    # Normalize: remove leading/trailing whitespace, then split by '*'
+    # Each item will be like " Pro: text" or " Con: text" or empty string
+    items = [item.strip() for item in insights_str.strip().split('*') if item.strip()]
+    
+    for item in items:
+        if item.startswith("Pro:"):
+            pros.append(item[len("Pro:"):].strip())
+        elif item.startswith("Con:"):
+            cons.append(item[len("Con:"):].strip())
+        # else:
+            # Optionally handle items that don't fit the Pro/Con format
+            # print(f"Warning: Unrecognized insight format: {item}")
+            
+    # Ensure we have at least one pro or con to make a table
+    if not pros and not cons:
         return []
-    
-    lines = [line.strip().lstrip('* ').strip() for line in insights_text.strip().split('\n') if line.strip()]
-    
-    # Group lines into pairs for pro/con display
-    pairs = []
-    for i in range(0, len(lines), 2):
-        pro = lines[i] if i < len(lines) else ""
-        con = lines[i + 1] if i + 1 < len(lines) else ""
-        pairs.append((pro, con))
-    
-    return pairs
+
+    return list(itertools.zip_longest(pros, cons, fillvalue=None))
 
 def parse_anomaly_analysis(analysis_data):
     """
