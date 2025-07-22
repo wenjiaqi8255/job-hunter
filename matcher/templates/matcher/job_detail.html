@@ -128,7 +128,7 @@
           {% if job.description %}
           <div class="mt-4">
              <h5 class="h6 mb-2"><i class="fas fa-file-alt me-2 brand-text-muted"></i>Job Description</h5>
-              <div class="border rounded p-3 bg-light">
+              <div class="border rounded p-3">
                   {% get_current_language as lang_code %}
                   {% if lang_code != 'de' and job.translated_description %}
                       {{ job.translated_description|linebreaksbr }}
@@ -165,7 +165,7 @@
           {% endif %}
 
         </div>
-        <div class="card-footer bg-light text-muted small py-2 px-4">
+        <div class="card-footer text-muted small py-2 px-4">
             Source: {{ job.source|default:"N/A" }} | Posted: {{ job.created_at|date:"Y-m-d H:i" }}
             {% if job.processed_at %}| Processed: {{ job.processed_at|date:"Y-m-d H:i" }}{% endif %}
         </div>
@@ -226,7 +226,7 @@
 </div>
 
 {% if job.application_url or True %}
-<nav class="navbar fixed-bottom navbar-light bg-light shadow-lg py-3">
+<nav class="navbar fixed-bottom navbar-light shadow-lg py-3">
   <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
     <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" 
        class="btn btn-outline-primary requires-login"
