@@ -80,7 +80,7 @@
                 <li class="{% if session.id|stringformat:"s" == current_match_session_id %}active{% endif %}">
                     <a href="{% url 'matcher:main_page' %}?session_id={{ session.id }}">
                         <span class="history-time">{{ session.matched_at|date:"M d, H:i" }}</span>
-                        <span class="history-details">{{ session.skills_text|truncatechars:25 }}</span>
+                        <span class="history-details">{{ session.user_preferences_text|truncatechars:25 }}</span>
                     </a>
                 </li>
                 {% empty %}
