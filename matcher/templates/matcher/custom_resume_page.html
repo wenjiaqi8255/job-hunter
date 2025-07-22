@@ -33,10 +33,10 @@
             <textarea id="customResumeContent" class="d-none" readonly>{{ custom_resume_content }}</textarea>
         {% endif %}
     </div>
-    <div class="card-footer">
-        <form method="post" class="d-inline">
+    <div class="card-footer mt-3 mb-3">
+        <form id="custom-resume-form" method="post" class="d-inline">
             {% csrf_token %}
-            <button type="submit" class="btn btn-outline-primary">
+            <button id="custom-resume-btn" type="submit" class="btn btn-outline-primary">
                 <i class="fas fa-sync-alt"></i> 
                 {% if has_existing_resume %}Regenerate{% else %}Generate{% endif %}
             </button>

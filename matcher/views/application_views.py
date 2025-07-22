@@ -160,8 +160,22 @@ def generate_custom_resume_page(request, job_id):
             custom_resume_content = existing_resume.content
             has_existing_resume = True # It exists
         except CustomResume.DoesNotExist:
-            # No existing resume, no operation needed on GET
-            pass
+            # No existing resume,自动生成并保存
+            if not user_cv_text:
+                custom_resume_content = "Please complete your CV in your profile before generating a custom resume."
+                generation_error = True
+            else:
+                custom_resume_content = gemini_utils.generate_custom_resume(user_cv_text, job_dict)
+                if not custom_resume_content.startswith("(Error generating"):
+                    # Save the newly generated resume
+                    CustomResume.objects.create(
+                        user=user,
+                        job_listing=job,
+                        content=custom_resume_content
+                    )
+                    has_existing_resume = True
+                else:
+                    generation_error = True
 
     context = {
         'job': job,
