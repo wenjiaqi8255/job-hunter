@@ -156,7 +156,7 @@ def start_new_match_session(request):
     job_matches_from_api = gemini_utils.match_jobs(
         structured_profile_dict, 
         job_listings_for_api,
-        max_jobs_to_process=10  # Keeping this low for testing
+        max_jobs_to_process=36  # Keeping this low for testing
     )
     with transaction.atomic():
         new_match_session = MatchSession.objects.create(
@@ -468,8 +468,9 @@ def _process_matched_jobs_for_session(request, current_match_session, saved_job_
         
         # Parse anomaly data if available
         job_anomalies = []
-        analysis_data = anomaly_data_map.get(str(job.id))
-        if analysis_data:
+        analysis_row = anomaly_data_map.get(str(job.id))
+        if analysis_row and 'analysis_data' in analysis_row:
+            analysis_data = analysis_row['analysis_data']
             job_anomalies = parse_anomaly_analysis(analysis_data)
             
         # Get saved status from the map
