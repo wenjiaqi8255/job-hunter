@@ -195,7 +195,7 @@
                 <textarea name="notes" id="id_notes" class="form-control" rows="4">{{ saved_job.notes|default:"" }}</textarea>
             </div>
             
-            <button type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
+            <button id="applicationStatusBtn" type="submit" class="btn btn-primary w-100"><i class="fas fa-save me-2"></i>Save Status & Notes</button>
             {% if saved_job and saved_job.updated_at %}
                 <p class="mt-2 mb-0 text-muted text-center"><small>Last updated: {{ saved_job.updated_at|date:"M d, Y H:i" }}</small></p>
             {% endif %}
@@ -247,6 +247,21 @@
 </nav>
 {% endif %}
 
+<!-- 全局Loading Modal for AI Generation -->
+<div class="modal fade" id="globalLoadingModal" tabindex="-1" aria-labelledby="globalLoadingModalLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content text-center p-4">
+      <div class="modal-body">
+        <div class="spinner-border text-primary mb-3" role="status" style="width:3rem;height:3rem;">
+          <span class="visually-hidden">Loading...</span>
+        </div>
+        <h5 id="globalLoadingModalLabel">Generating, please wait...</h5>
+        <div id="globalLoadingModalSubtext" class="mt-2 text-muted small"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -262,14 +277,25 @@ document.addEventListener('DOMContentLoaded', function () {
         button.addEventListener('click', function (event) {
             if (!userIsAuthenticated) {
                 event.preventDefault(); // Stop the link from navigating immediately
-                
                 const loginUrl = this.dataset.loginUrl;
-
                 toast.show();
-
                 setTimeout(() => {
                     window.location.href = loginUrl;
                 }, 1500); // Wait 1.5 seconds for the user to read the toast
+            } else {
+                // 只对AI生成按钮加loading
+                const isCoverLetter = this.href.includes('generate_cover_letter');
+                const isCustomResume = this.href.includes('generate_custom_resume');
+                if (isCoverLetter || isCustomResume) {
+                    const globalLoadingModal = new bootstrap.Modal(document.getElementById('globalLoadingModal'));
+                    const globalLoadingModalLabel = document.getElementById('globalLoadingModalLabel');
+                    if (isCoverLetter) {
+                        globalLoadingModalLabel.textContent = 'Generating your cover letter, please wait...';
+                    } else if (isCustomResume) {
+                        globalLoadingModalLabel.textContent = 'Generating your custom resume, please wait...';
+                    }
+                    globalLoadingModal.show();
+                }
             }
         });
     });
