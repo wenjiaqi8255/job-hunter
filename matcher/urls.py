@@ -35,13 +35,6 @@ urlpatterns = [
     path('profile/', views.profile_page, name='profile_page'),
     path('tips-to-improve/', tips_to_improve_page, name='tips_to_improve'),  # 新增tips页面路由
 
-    # Experience Pool URLs
-    path('experiences/', views.experience_list, name='experience_list'),
-    path('experiences/<uuid:experience_id>/delete/', views.experience_delete, name='experience_delete'),
-    
-    # URL for N8n to call when it's done
-    path('api/experience-completed-callback/', views.experience_completed_callback, name='experience_completed_callback'),
-
     path('job/<str:job_id>/download-custom-resume-pdf/', views.download_custom_resume, name='download_custom_resume_pdf'),
     path('job/<str:job_id>/download-cover-letter-pdf/', views.download_cover_letter, name='download_cover_letter_pdf'),
     

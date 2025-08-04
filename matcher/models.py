@@ -123,18 +123,6 @@ class CoverLetter(models.Model):
     def __str__(self):
         return f"Cover Letter for {self.saved_job.job_listing.job_title} (SavedJob PK: {self.saved_job.pk})"
 
-class Experience(models.Model):
-    # This is a placeholder model. The actual data is in Supabase.
-    # This model helps avoid migration errors if other parts of the app
-    # have temporary foreign key relationships or content type dependencies.
-    # The fields can be defined based on the Supabase schema if direct
-    # Django integration is ever needed.
-    class Meta:
-        # By setting managed to False, Django's migrate command will not
-        # create, modify, or delete the database table for this model.
-        # This is ideal when the table is managed by an external service like Supabase.
-        managed = False
-
 class CustomResume(models.Model):
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE)
     job_listing = models.ForeignKey(JobListing, on_delete=models.CASCADE, related_name='custom_resumes')
@@ -149,19 +137,19 @@ class CustomResume(models.Model):
     def __str__(self):
         return f"Custom Resume for {self.job_listing.job_title} by {self.user.username}"
 
-class JobAnomalyAnalysis(models.Model):
-    job_listing = models.OneToOneField(
-        JobListing,
-        on_delete=models.DO_NOTHING,
-        primary_key=True,
-        db_column='job_id',
-        related_name='anomaly_analysis'
-    )
-    analysis_data = models.JSONField()
+# class JobAnomalyAnalysis(models.Model):
+#     job_listing = models.OneToOneField(
+#         JobListing,
+#         on_delete=models.DO_NOTHING,
+#         primary_key=True,
+#         db_column='job_id',
+#         related_name='anomaly_analysis'
+#     )
+#     analysis_data = models.JSONField()
 
-    class Meta:
-        managed = False
-        db_table = 'job_anomaly_analysis'
+#     class Meta:
+#         managed = False
+#         db_table = 'job_anomaly_analysis'
 
-    def __str__(self):
-        return f"Anomaly Analysis for {self.job_listing.job_title}"
+#     def __str__(self):
+#         return f"Anomaly Analysis for {self.job_listing.job_title}"

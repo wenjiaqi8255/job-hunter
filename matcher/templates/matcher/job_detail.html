@@ -194,9 +194,9 @@
 
               <!-- Semantic Anomalies -->
               {% if job_anomalies.top_anomalies %}
-              <div class="accordion-item">
+              <div class="accordion-item border rounded">
                 <h2 class="accordion-header" id="headingAnomalies{{ job.id }}">
-                  <button class="accordion-button p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAnomalies{{ job.id }}" aria-expanded="false" aria-controls="collapseAnomalies{{ job.id }}">
+                  <button class="accordion-button p-3" type="button" data-bs-toggle="collapse" data-bs-target="#collapseAnomalies{{ job.id }}" aria-expanded="true" aria-controls="collapseAnomalies{{ job.id }}">
                     <i class="fas fa-exclamation-triangle me-2"></i>
                     <span>Potential Anomalies</span>
                     <span class="anomaly-count-badge">{{ job_anomalies.top_anomalies|length }}</span>
