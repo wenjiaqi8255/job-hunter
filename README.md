@@ -86,13 +86,13 @@ First, apply the database migrations to set up the required tables. Then, load t
 
 ```bash
 # Activate the virtual environment
-poetry shell
+source "$(poetry env info --path)/bin/activate"
 
 # Apply migrations
 python manage.py migrate
 
 # Load initial data (User Profiles, Job Listings, etc.)
-python manage.py loaddata initial_data.json
+python manage.py loaddata matcher/fixtures/initial_data.json
 ```
 
 ### 6. Create a Superuser (Optional)
