@@ -31,7 +31,7 @@ Follow these instructions to set up and run the project on your local machine fo
 ### 2. Clone the Repository
 
 ```bash
-git clone https://github.com/your-username/job_hunting_django.git
+git clone https://github.com/wenjiaqi8255/job-hunter.git
 cd job_hunting_django
 ```
 
@@ -42,9 +42,6 @@ You will need to configure your environment variables. In the project root direc
 Copy the following content into your new `.env` file and fill in the required values.
 
 ```ini
-# Django Settings
-DJANGO_SECRET_key="your_django_secret_key_here"
-DJANGO_DEBUG="True"
 
 # AI Simulation
 # Set to 'False' to use the real Gemini API.
@@ -57,10 +54,7 @@ GEMINI_API_KEY=""
 # Supabase Credentials (Required for user authentication)
 SUPABASE_URL=""
 SUPABASE_KEY=""
-SUPABASE_SERVICE_ROLE_KEY=""
 
-# Optional: Google OAuth for Supabase
-# These are only needed if you configure Google as a social login provider in Supabase.
 GOOGLE_CLIENT_ID=""
 GOOGLE_CLIENT_SECRET=""
 ```
@@ -92,18 +86,10 @@ source "$(poetry env info --path)/bin/activate"
 python manage.py migrate
 
 # Load initial data (User Profiles, Job Listings, etc.)
-python manage.py loaddata matcher/fixtures/initial_data.json
+python manage.py loaddata initial_data.json
 ```
 
-### 6. Create a Superuser (Optional)
-
-If you want to access the Django admin panel, create a superuser account.
-
-```bash
-python manage.py createsuperuser
-```
-
-### 7. Run the Development Server
+### 6. Run the Development Server
 
 You're all set! Start the Django development server.
 
@@ -116,7 +102,7 @@ The application will be running at `http://127.0.0.1:8000/`.
 ## How to Use the App
 
 1.  Navigate to `http://127.0.0.1:8000/`.
-2.  Register for a new account.
+2.  Use an test account or register for a new account.
 3.  On the main page, upload your CV (PDF format) and enter your job preferences.
 4.  Click "Find Matches" to see a list of jobs scored and ranked by the AI.
 5.  Click on any job to view details, generate a custom resume, or create a cover letter.
