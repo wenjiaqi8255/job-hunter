@@ -2,9 +2,6 @@ from supabase import Client
 import os
 from datetime import datetime, date, time
 
-# 注意：全局的 Supabase 客户端初始化已被移除。
-# 所有函数现在都希望接收一个已认证的 supabase 客户端实例。
-
 def fetch_todays_job_listings_from_supabase(supabase: Client):
     """
     Fetches job listings from Supabase that were created today.

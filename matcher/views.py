@@ -1,9 +1,8 @@
 # -*- coding: utf-8 -*-
 """
-已重构的视图模块 - 向后兼容性导入
-所有视图已重新组织到views/子模块中以提高可维护性
+Refactored views module - backward compatibility imports
+All views have been reorganized into views/submodule for better maintainability
 """
 
-# 为了向后兼容，从新的子模块导入所有视图
 from .views import *
 

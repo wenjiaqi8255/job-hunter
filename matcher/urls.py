@@ -8,15 +8,12 @@ from matcher.views.main_views import (
     all_matches_page
 )
 from matcher.views.job_views import job_detail_page
-from .views.auth_views import register_view  # 新增注册视图导入
-from matcher.views.profile_views import tips_to_improve_page  # 新增tips页面view导入
+from .views.auth_views import register_view  
+from matcher.views.profile_views import tips_to_improve_page 
 
 app_name = 'matcher'
 
 urlpatterns = [
-    # URL to display the login page. This is the target for failed auth redirects.
-    path('login/', auth_views.LoginView.as_view(template_name='matcher/login.html'), name='login_page'),
-
     # NOTE: OAuth routes are now defined in the main project urls.py to avoid i18n conflicts
 
     # Job and session management
@@ -33,12 +30,12 @@ urlpatterns = [
     path('my-applications/', views.my_applications_page, name='my_applications_page'),
     path('job/<str:job_id>/update_status/', views.update_job_application_status, name='update_job_application_status'),
     path('profile/', views.profile_page, name='profile_page'),
-    path('tips-to-improve/', tips_to_improve_page, name='tips_to_improve'),  # 新增tips页面路由
+    path('tips-to-improve/', tips_to_improve_page, name='tips_to_improve'),  
 
     path('job/<str:job_id>/download-custom-resume-pdf/', views.download_custom_resume, name='download_custom_resume_pdf'),
     path('job/<str:job_id>/download-cover-letter-pdf/', views.download_cover_letter, name='download_cover_letter_pdf'),
     
-    # API 端点
+    # API endpoints
     path('api/check-auth/', views.api_check_auth, name='api_check_auth'),
-    path('register/', register_view, name='register'),  # 新增注册路由
+    path('register/', register_view, name='register'),  
 ]

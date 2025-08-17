@@ -40,23 +40,23 @@ def main_page(request):
     Accepts an optional session_id to display a specific match session.
     """
     # ===================================
-    # 调试：打印所有请求参数
+    # Debug: print all request parameters
     # ===================================
-    print(f"[DEBUG] Main page accessed - URL: {request.build_absolute_uri()}")
-    print(f"[DEBUG] GET parameters: {dict(request.GET)}")
-    print(f"[DEBUG] User authenticated: {request.user.is_authenticated}")
-    if request.user.is_authenticated:
-        print(f"[DEBUG] Current user: {request.user.username}")
+    # print(f"[DEBUG] Main page accessed - URL: {request.build_absolute_uri()}")
+    # print(f"[DEBUG] GET parameters: {dict(request.GET)}")
+    # print(f"[DEBUG] User authenticated: {request.user.is_authenticated}")
+    # if request.user.is_authenticated:
+    #     print(f"[DEBUG] Current user: {request.user.username}")
     
     # ===================================
-    # 处理 OAuth 回调（如果直接重定向到首页）
+    # Handle OAuth callback (if directly redirected to homepage)
     # ===================================
     oauth_handled = _handle_oauth_callback_on_main_page(request)
     if oauth_handled:
         return oauth_handled
     
     # ===================================
-    # 正常的 main_page 逻辑继续
+    # Continue with normal main_page logic
     # ===================================
     user = request.user
     user_profile = None
@@ -121,7 +121,7 @@ def start_new_match_session(request):
     """
     Creates a new match session for the logged-in user.
     This view handles the core job matching logic.
-    Implements 30秒防抖，防止重复请求。
+    Implements 30-second debounce to prevent duplicate requests.
     """
     user_profile = get_object_or_404(UserProfile, user=request.user)
 
@@ -129,21 +129,21 @@ def start_new_match_session(request):
         messages.info(request, "Please complete your profile with a CV before starting a match.")
         return redirect('matcher:profile_page')
 
-    # 防抖逻辑：30秒内只允许一次请求
+    # Debounce logic: only allow one request within 30 seconds
     cache_key = f"matching_in_progress_{request.user.id}"
     existing_session_id = cache.get(cache_key)
     if existing_session_id:
-        # 检查该session是否还存在（已被处理完则允许新建）
+        # Check if the session still exists (if it has been processed, allow new session)
         try:
             session_obj = MatchSession.objects.get(id=existing_session_id, user=request.user)
-            # 直接重定向到该session
-            messages.info(request, "已有匹配请求正在进行，请勿重复提交。")
+            # Redirect directly to the session
+            messages.info(request, "A matching request is already in progress. Please do not submit again.")
             return redirect(f"{reverse('matcher:main_page')}?session_id={session_obj.id}&in_progress=1")
         except MatchSession.DoesNotExist:
-            # session已被处理完，允许新建
+            # session has been processed, allow new session
             pass
-    # 设置防抖标记，有效期30秒
-    # 先创建session对象，后续如有异常可清理
+    # Set debounce flag, valid for 30 seconds
+    # First create session object, then clean up if there's an exception
     # Use the CV and preferences stored in the user's profile
     user_cv_text = user_profile.user_cv_text
     user_preferences_text = user_profile.user_preferences_text
@@ -166,7 +166,7 @@ def start_new_match_session(request):
             structured_user_profile_json=structured_profile_dict
         )
         _save_job_matches_to_db(request, job_matches_from_api, new_match_session)
-        # 设置防抖cache，30秒
+        # Set debounce cache, valid for 30 seconds
         cache.set(cache_key, str(new_match_session.id), timeout=30)
     if no_match_reason:
         messages.warning(request, no_match_reason)
@@ -174,14 +174,14 @@ def start_new_match_session(request):
 
 
 def _handle_oauth_callback_on_main_page(request):
-    """处理在主页上的OAuth回调"""
+    """Handle OAuth callback on main page"""
     oauth_code = request.GET.get('code')
     oauth_error = request.GET.get('error')
     oauth_error_description = request.GET.get('error_description')
     oauth_access_token = request.GET.get('access_token')
     oauth_refresh_token = request.GET.get('refresh_token')
     
-    # 检查是否有任何 OAuth 相关参数
+    # Check if any OAuth-related parameters are present
     oauth_params_present = any([oauth_code, oauth_error, oauth_access_token, oauth_refresh_token])
     
     if not oauth_params_present:
@@ -194,7 +194,7 @@ def _handle_oauth_callback_on_main_page(request):
     print(f"[DEBUG] Error: {oauth_error}")
     print(f"[DEBUG] Error description: {oauth_error_description}")
     
-    # 检查是否直接收到了 tokens（fragment-based flow）
+    # Check if tokens were directly received (fragment-based flow)
     if oauth_access_token:
         return _handle_direct_token_auth(request, oauth_access_token, oauth_refresh_token)
     
@@ -208,13 +208,13 @@ def _handle_oauth_callback_on_main_page(request):
 
 
 def _handle_direct_token_auth(request, access_token, refresh_token):
-    """处理直接接收到的token认证"""
+    """Handle direct token authentication"""
     print(f"[DEBUG] Direct token received - processing...")
     
     try:
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
         
-        # 使用 token 获取用户信息
+        # Use token to get user information
         user_response = supabase.auth.get_user(access_token)
         
         if user_response and user_response.user:
@@ -222,7 +222,7 @@ def _handle_direct_token_auth(request, access_token, refresh_token):
             
             print(f"[DEBUG] User authenticated via token on main page: {user.email if user else 'No user'}")
             
-            # 存储用户会话信息到 Django session
+            # Store user session information to Django session
             request.session['supabase_access_token'] = access_token
             request.session['supabase_refresh_token'] = refresh_token
             request.session['user_id'] = user.id
@@ -232,7 +232,7 @@ def _handle_direct_token_auth(request, access_token, refresh_token):
             
             print(f"[DEBUG] Session data stored successfully via token on main page")
             
-            # 使用 Django 认证系统
+            # Use Django authentication system
             from job_hunting_project.auth_backend import SupabaseUserBackend
             auth_backend = SupabaseUserBackend()
             django_user = auth_backend.authenticate(request=request, supabase_user=user)
@@ -245,7 +245,7 @@ def _handle_direct_token_auth(request, access_token, refresh_token):
                 print("[DEBUG] Failed to create/retrieve Django user via token on main page")
                 messages.error(request, "Could not complete login. Please try again.")
             
-            # 重定向到干净的主页（移除 OAuth 参数）
+            # Redirect to clean homepage (remove OAuth parameters)
             return redirect(reverse('matcher:main_page'))
         else:
             print("[DEBUG] No user returned from token validation on main page")
@@ -261,13 +261,13 @@ def _handle_direct_token_auth(request, access_token, refresh_token):
 
 
 def _handle_oauth_error(request, oauth_error, oauth_error_description, oauth_code, oauth_access_token):
-    """处理OAuth错误"""
+    """Handle OAuth error"""
     if oauth_error == 'invalid_request' and 'bad_oauth_state' in (oauth_error_description or ''):
         print(f"[DEBUG] Bad OAuth state error - this is expected, proceeding anyway")
-        # 即使有 state 错误，如果有 code，我们仍然尝试处理
+        # Even if there's a state error, if there's a code, we still try to process
         if not oauth_code and not oauth_access_token:
             messages.error(request, f"OAuth error: {oauth_error_description or oauth_error}")
-            # 清除 URL 参数并重定向到干净的首页
+            # Clear URL parameters and redirect to clean homepage
             return redirect(reverse('matcher:main_page'))
     else:
         messages.error(request, f"OAuth error: {oauth_error_description or oauth_error}")
@@ -277,14 +277,14 @@ def _handle_oauth_error(request, oauth_error, oauth_error_description, oauth_cod
 
 
 def _handle_oauth_code_exchange(request, oauth_code):
-    """处理OAuth代码交换"""
+    """Handle OAuth code exchange"""
     print(f"[DEBUG] Processing OAuth code on main page: {oauth_code[:10]}...")
     
     try:
-        # 初始化 Supabase 客户端
+        # Initialize Supabase client
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
         
-        # 使用最新的 exchange_code_for_session 方法
+        # Use the latest exchange_code_for_session method
         session_response = supabase.auth.exchange_code_for_session(oauth_code)
         
         if session_response and session_response.session:
@@ -293,7 +293,7 @@ def _handle_oauth_code_exchange(request, oauth_code):
             
             print(f"[DEBUG] User authenticated successfully on main page: {user.email if user else 'No user'}")
             
-            # 存储用户会话信息到 Django session
+            # Store user session information to Django session
             request.session['supabase_access_token'] = session.access_token
             request.session['supabase_refresh_token'] = session.refresh_token
             request.session['user_id'] = user.id
@@ -303,7 +303,7 @@ def _handle_oauth_code_exchange(request, oauth_code):
             
             print(f"[DEBUG] Session data stored successfully on main page")
             
-            # 使用 Django 认证系统
+            # Use Django authentication system
             from job_hunting_project.auth_backend import SupabaseUserBackend
             auth_backend = SupabaseUserBackend()
             django_user = auth_backend.authenticate(request=request, supabase_user=user)
@@ -316,7 +316,7 @@ def _handle_oauth_code_exchange(request, oauth_code):
                 print("[DEBUG] Failed to create/retrieve Django user on main page")
                 messages.error(request, "Could not complete login. Please try again.")
             
-            # 重定向到干净的主页（移除 OAuth 参数）
+            # Redirect to clean homepage (remove OAuth parameters)
             return redirect(reverse('matcher:main_page'))
         else:
             print("[DEBUG] No session returned from code exchange on main page")
@@ -332,7 +332,7 @@ def _handle_oauth_code_exchange(request, oauth_code):
 
 
 def _save_job_matches_to_db(request, job_matches_from_api, new_match_session):
-    """保存工作匹配结果到数据库"""
+    """Save job matches to database"""
     with transaction.atomic():
         for match_item in job_matches_from_api:
             job_data_from_api = match_item['job']
@@ -375,7 +375,7 @@ def _save_job_matches_to_db(request, job_matches_from_api, new_match_session):
 
 
 def _handle_session_view_get(request, current_match_session_id_str, user, user_profile, saved_job_map):
-    """处理查看特定匹配会话的GET请求"""
+    """Handle GET request to view a specific match session"""
     if not user.is_authenticated:
         messages.error(request, "You must be logged in to view a specific match session.")
         return redirect(reverse('matcher:main_page'))

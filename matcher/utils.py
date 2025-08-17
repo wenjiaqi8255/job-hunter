@@ -57,8 +57,8 @@ def _role_key_to_display_name(role_key):
 
 def parse_anomaly_analysis(analysis_data):
     """
-    解析anomaly analysis数据（JSON或dict）并返回结构化的数据用于模板展示。
-    返回包含职位相似性、语义异常和基准组成的完整分析。
+    Parse anomaly analysis data (JSON or dict) and return structured data for template display.
+    Return a complete analysis containing role similarity, semantic anomalies, and baseline composition.
     """
     if not analysis_data:
         return {
@@ -68,7 +68,7 @@ def parse_anomaly_analysis(analysis_data):
             'baseline_composition': []
         }
     
-    # 如果analysis_data是字符串，解析为JSON
+    # If analysis_data is a string, parse it as JSON
     if isinstance(analysis_data, str):
         try:
             analysis_data = json.loads(analysis_data)
@@ -84,7 +84,7 @@ def parse_anomaly_analysis(analysis_data):
             'baseline_composition': []
         }
 
-    # 解析基本信息
+    # Parse basic information
     job_basic_info = {
         'job_id': analysis_data.get('job_id', 'N/A'),
         'primary_role': analysis_data.get('role', 'unknown'),
@@ -93,11 +93,11 @@ def parse_anomaly_analysis(analysis_data):
         'company_name': analysis_data.get('company_name', 'N/A')
     }
 
-    # 解析职位相似性分析 - 取前3个
+    # Parse role similarity analysis - take top 3
     role_similarity = analysis_data.get('role_similarity_analysis', {})
     top_similar_roles = []
     if role_similarity:
-        # 如果role_similarity是字符串，尝试解析为JSON
+        # If role_similarity is a string, try to parse it as JSON
         if isinstance(role_similarity, str):
             try:
                 role_similarity = json.loads(role_similarity)
@@ -106,20 +106,20 @@ def parse_anomaly_analysis(analysis_data):
                 role_similarity = {}
         
         if isinstance(role_similarity, dict):
-            # 按相似度降序排序并取前3个
+            # Sort by similarity in descending order and take top 3
             sorted_roles = sorted(role_similarity.items(), key=lambda x: x[1], reverse=True)[:3]
             for role_key, similarity in sorted_roles:
                 top_similar_roles.append({
                     'role': role_key,
-                    'similarity': round(similarity * 100, 1),  # 转换为百分比
+                    'similarity': round(similarity * 100, 1),  # Convert to percentage
                     'display_name': _role_key_to_display_name(role_key)
                 })
 
-    # 解析语义异常 - 取前3个
+    # Parse semantic anomalies - take top 3
     semantic_anomalies = analysis_data.get('semantic_anomalies', [])
     top_anomalies = []
     if semantic_anomalies:
-        # 如果semantic_anomalies是字符串，尝试解析为JSON
+        # If semantic_anomalies is a string, try to parse it as JSON
         if isinstance(semantic_anomalies, str):
             try:
                 semantic_anomalies = json.loads(semantic_anomalies)
@@ -128,7 +128,7 @@ def parse_anomaly_analysis(analysis_data):
                 semantic_anomalies = []
         
         if isinstance(semantic_anomalies, list):
-            for anomaly in semantic_anomalies[:3]:  # 只取前3个异常
+            for anomaly in semantic_anomalies[:3]:  # Take top 3 anomalies
                 if isinstance(anomaly, dict):
                     top_anomalies.append({
                         'chunk': anomaly.get('chunk', 'N/A'),
@@ -139,11 +139,11 @@ def parse_anomaly_analysis(analysis_data):
                         'display_related_role': _role_key_to_display_name(anomaly.get('related_to_role', 'unknown'))
                     })
 
-    # 解析基准组成
+    # Parse baseline composition
     baseline_composition = analysis_data.get('baseline_composition', {})
     baseline_roles = []
     if baseline_composition:
-        # 如果baseline_composition是字符串，尝试解析为JSON
+        # If baseline_composition is a string, try to parse it as JSON
         if isinstance(baseline_composition, str):
             try:
                 baseline_composition = json.loads(baseline_composition)
@@ -155,10 +155,10 @@ def parse_anomaly_analysis(analysis_data):
             for role_key, percentage in baseline_composition.items():
                 baseline_roles.append({
                     'role': role_key,
-                    'percentage': round(percentage * 100, 1),  # 转换为百分比
+                    'percentage': round(percentage * 100, 1),  # Convert to percentage
                     'display_name': _role_key_to_display_name(role_key)
                 })
-            # 按百分比降序排序
+            # Sort by percentage in descending order
             baseline_roles.sort(key=lambda x: x['percentage'], reverse=True)
 
     return {
@@ -171,10 +171,10 @@ def parse_anomaly_analysis(analysis_data):
 
 def parse_tips_string(tips_str):
     """
-    将类似 '* tip1. * tip2. * tip3.' 的字符串解析为列表。
+    Parse a string like '* tip1. * tip2. * tip3.' into a list.
     """
     if not tips_str:
         return []
-    # 以 * 分割，去除空项和前后空格
+    # Split by *, remove empty items and leading/trailing whitespace
     items = [item.strip() for item in tips_str.split('*') if item.strip()]
     return items

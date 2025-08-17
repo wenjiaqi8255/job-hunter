@@ -56,14 +56,14 @@ def profile_page(request):
         return redirect('matcher:profile_page')
 
     # Fetch work experiences from Supabase for the current user
-    experiences = get_user_experiences(request.supabase)
-    experience_count = len(experiences) if experiences else 0
+    # experiences = get_user_experiences(request.supabase)
+    # experience_count = len(experiences) if experiences else 0
 
     # Fetch saved jobs count from Django's SavedJob model
     application_count = SavedJob.objects.filter(user=request.user).count()
     already_saved_minutes = application_count * 20
     
-    # 计算 tips_to_improve_count
+    # count tips_to_improve_count
     latest_session = MatchSession.objects.filter(user=request.user).order_by('-matched_at').first()
     tips_to_improve_count = 0
     if latest_session:
@@ -83,10 +83,10 @@ def profile_page(request):
         'already_saved_minutes': already_saved_minutes,
         'application_count': application_count,
         'user_cv_text': user_profile.user_cv_text or "",
-        'user_preferences_text': user_profile.user_preferences_text or "",
+        # 'user_preferences_text': user_profile.user_preferences_text or "",
         'user_email': user_profile.user_email or "",
-        'experiences': experiences,
-        'experience_count': experience_count,
+        # 'experiences': experiences,
+        # 'experience_count': experience_count,
         'tips_to_improve_count': tips_to_improve_count,
         'n8n_chat_url': full_n8n_url,
     }
@@ -95,17 +95,17 @@ def profile_page(request):
 
 
 def tips_to_improve_page(request):
-    # 1. 找到当前用户最新的 MatchSession
+    # 1. find the latest MatchSession for the current user
     latest_session = MatchSession.objects.filter(user=request.user).order_by('-matched_at').first()
     tips_list = []
     if latest_session:
-        # 2. 找到该 session 下 score > 70 且 tips 不为空的 MatchedJob，按 score 降序，最多10条
+        # 2. find MatchedJobs with score > 70 and tips not empty, ordered by score descending, max 10
         matched_jobs = MatchedJob.objects.filter(
             match_session=latest_session,
             score__gt=70,
             tips__isnull=False
         ).order_by('-score')[:10]
-        # 解析每个 tips 字段，合并成一个大列表
+        # parse each tips field, merge into a big list
         for job in matched_jobs:
             tips_list.extend(parse_tips_string(job.tips))
     return render(request, 'matcher/tips_to_improve.html', {'tips': tips_list})

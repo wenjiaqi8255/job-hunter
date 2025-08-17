@@ -29,33 +29,33 @@ def google_login(request):
     try:
         print(f"[DEBUG] Starting Google OAuth login with Supabase default redirect")
         
-        # 不使用自定义 redirect_to，让 Supabase 使用 Dashboard 中配置的 Site URL
-        # 这样 OAuth 回调会直接到达首页，我们在首页处理 OAuth 参数
+        # Don't use custom redirect_to, let Supabase use the Site URL configured in Dashboard
+        # This way, OAuth callback will directly reach the homepage, and we handle OAuth parameters there
         
         oauth_params = {
             'provider': 'google',
-            # 不设置 redirect_to 和 state，避免 bad_oauth_state 错误
+            # Don't set redirect_to and state to avoid bad_oauth_state error
         }
         
-        # 构建完整的 OAuth URL
+        # Build the complete OAuth URL
         base_oauth_url = f"{settings.SUPABASE_URL}/auth/v1/authorize"
         oauth_url = f"{base_oauth_url}?" + urllib.parse.urlencode(oauth_params)
         
         print(f"[DEBUG] Redirecting to OAuth URL (using Supabase default): {oauth_url}")
-        print(f"[DEBUG] OAuth 成功后将重定向到 Supabase Dashboard 中配置的 Site URL")
+        print(f"[DEBUG] After OAuth success, will redirect to the Site URL configured in Supabase Dashboard")
         
         return redirect(oauth_url)
         
     except Exception as e:
         print(f"[DEBUG] Error in google_login: {str(e)}")
         messages.error(request, f"OAuth login failed: {str(e)}")
-        return redirect('matcher:login_page')
+        return redirect('login')
 
 
 def google_callback(request):
     """
-    处理 Google OAuth 回调 - 最新最佳实践
-    使用最新的 exchange_code_for_session 方法
+    Handle Google OAuth callback - latest best practices
+    Use the latest exchange_code_for_session method
     """
     try:
         print(f"[DEBUG] === OAuth Callback Debug ===")
@@ -64,7 +64,7 @@ def google_callback(request):
         print(f"[DEBUG] GET params: {dict(request.GET)}")
         print(f"[DEBUG] ========================================")
         
-        # 1. 获取参数
+        # 1. Get parameters
         code = request.GET.get('code')
         state = request.GET.get('state')
         error = request.GET.get('error')
@@ -75,35 +75,35 @@ def google_callback(request):
         print(f"[DEBUG] Extracted - error: {error}")
         print(f"[DEBUG] Extracted - error_description: {error_description}")
         
-        # 2. 错误处理
+        # 2. Error handling
         if error:
             print(f"[DEBUG] OAuth error: {error} - {error_description}")
             messages.error(request, f"OAuth error: {error_description or error}")
-            return redirect('matcher:login_page')
+            return redirect('login')
         
         if not code:
             print("[DEBUG] No authorization code received")
             messages.error(request, "Authentication failed: No authorization code received.")
-            return redirect('matcher:login_page')
+            return redirect('login')
         
-        # 3. 验证 state（如果有）
+        # 3. Validate state (if any)
         if state:
             cached_state = cache.get(f"oauth_state_{state}")
             if not cached_state:
                 print("[DEBUG] Invalid or expired state parameter")
                 messages.error(request, "Authentication failed: Invalid state parameter.")
-                return redirect('matcher:login_page')
+                return redirect('login')
             cache.delete(f"oauth_state_{state}")
             print("[DEBUG] State parameter validated successfully")
         
-        # 4. 使用最新的 exchange_code_for_session 方法
+        # 4. Use the latest exchange_code_for_session method
         print(f"[DEBUG] Exchanging code for session: {code[:10]}...")
         
-        # 初始化 Supabase 客户端
+        # Initialize Supabase client
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
         
         try:
-            # 这是最新的推荐方法 - 只传递授权码
+            # This is the latest recommended method - only pass the authorization code
             session_response = supabase.auth.exchange_code_for_session(code)
             
             if session_response and session_response.session:
@@ -112,7 +112,7 @@ def google_callback(request):
                 
                 print(f"[DEBUG] User authenticated successfully: {user.email if user else 'No user'}")
                 
-                # 5. 存储用户会话信息到 Django session（最佳实践）
+                # 5. Store user session information to Django session (best practice)
                 request.session['supabase_access_token'] = session.access_token
                 request.session['supabase_refresh_token'] = session.refresh_token
                 request.session['user_id'] = user.id
@@ -122,7 +122,7 @@ def google_callback(request):
                 
                 print(f"[DEBUG] Session data stored successfully")
                 
-                # 6. 使用 Django 认证系统（可选，如果你需要的话）
+                # 6. Use Django authentication system (optional, if you need it)
                 from job_hunting_project.auth_backend import SupabaseUserBackend
                 auth_backend = SupabaseUserBackend()
                 django_user = auth_backend.authenticate(request=request, supabase_user=user)
@@ -134,28 +134,28 @@ def google_callback(request):
                 else:
                     print("[DEBUG] Failed to create/retrieve Django user")
                     messages.error(request, "Could not complete login. Please try again.")
-                    return redirect('matcher:login_page')
+                    return redirect('login')
                 
                 print(f"[DEBUG] Redirecting to main page")
                 return redirect(reverse('matcher:main_page'))
             else:
                 print("[DEBUG] No session returned from code exchange")
                 messages.error(request, "Authentication failed: No session returned.")
-                return redirect('matcher:login_page')
+                return redirect('login')
                 
         except Exception as exchange_error:
             print(f"[DEBUG] Error exchanging code for session: {str(exchange_error)}")
             import traceback
             print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
             messages.error(request, f"Authentication failed: {str(exchange_error)}")
-            return redirect('matcher:login_page')
+            return redirect('login')
             
     except Exception as e:
         print(f"[DEBUG] Error in google_callback: {str(e)}")
         import traceback
         print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
         messages.error(request, "An error occurred during authentication.")
-        return redirect('matcher:login_page')
+        return redirect('login')
 
 
 def register_view(request):
@@ -172,9 +172,9 @@ def register_view(request):
                 return redirect('matcher:main_page')
             else:
                 messages.error(request, 'Registration succeeded but login failed.')
-                return redirect('matcher:login')
+                return redirect('login')
         else:
-            # 表单无效，回显错误
+            # Form is invalid, display errors
             return render(request, 'matcher/register.html', {'form': form})
     else:
         form = RegisterForm()
@@ -182,12 +182,12 @@ def register_view(request):
 
 
 def logout_view(request):
-    """登出视图"""
+    """Logout view"""
     return logout_user(request)
 
 
 def api_check_auth(request):
-    """API：检查认证状态"""
+    """API: Check authentication status"""
     user = get_current_user_info(request)
     return JsonResponse({
         'authenticated': user is not None,
@@ -199,12 +199,12 @@ def api_check_auth(request):
 @require_POST
 def process_oauth_tokens(request):
     """
-    处理从客户端JavaScript发送的OAuth tokens
+    Handle OAuth tokens sent from client JavaScript
     """
     try:
         print(f"[DEBUG] Processing OAuth tokens from client")
         
-        # 获取tokens
+        # Get tokens
         access_token = request.POST.get('access_token')
         refresh_token = request.POST.get('refresh_token')
         expires_at = request.POST.get('expires_at')
@@ -217,11 +217,11 @@ def process_oauth_tokens(request):
         if not access_token:
             return JsonResponse({'error': 'No access token provided'}, status=400)
         
-        # 使用access_token获取用户信息
+        # Use access_token to get user information
         supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
         
         try:
-            # 使用access_token获取用户信息
+            # Use access_token to get user information
             user_response = supabase.auth.get_user(access_token)
             
             if user_response and user_response.user:
@@ -229,7 +229,7 @@ def process_oauth_tokens(request):
                 
                 print(f"[DEBUG] User authenticated via client tokens: {user.email if user else 'No user'}")
                 
-                # 存储用户会话信息到 Django session
+                # Store user session information to Django session
                 request.session['supabase_access_token'] = access_token
                 request.session['supabase_refresh_token'] = refresh_token or ''
                 request.session['user_id'] = user.id
@@ -239,7 +239,7 @@ def process_oauth_tokens(request):
                 
                 print(f"[DEBUG] Session data stored successfully via client tokens")
                 
-                # 使用 Django 认证系统
+                # Use Django authentication system
                 from job_hunting_project.auth_backend import SupabaseUserBackend
                 auth_backend = SupabaseUserBackend()
                 django_user = auth_backend.authenticate(request=request, supabase_user=user)
@@ -274,17 +274,17 @@ def process_oauth_tokens(request):
 
 
 # ===================================
-# Supabase 用户会话管理辅助函数
+# Supabase user session management helper functions
 # ===================================
 
 def get_current_user_info(request):
-    """获取当前用户信息"""
+    """Get current user information"""
     try:
         access_token = request.session.get('supabase_access_token')
         if not access_token:
             return None
         
-        # 从 session 获取用户信息（推荐，更快）
+        # Get user information from session (recommended, faster)
         user_info = {
             'id': request.session.get('user_id'),
             'email': request.session.get('user_email'),
@@ -303,9 +303,9 @@ def get_current_user_info(request):
 
 
 def logout_user(request):
-    """登出用户"""
+    """Logout user"""
     try:
-        # 从 Supabase 登出
+        # Log out from Supabase
         access_token = request.session.get('supabase_access_token')
         if access_token:
             try:
@@ -314,11 +314,11 @@ def logout_user(request):
             except Exception as e:
                 print(f"[DEBUG] Warning: Error signing out from Supabase: {str(e)}")
         
-        # 清除 Django session
+        # Clear Django session
         request.session.flush()
         
-        return redirect('matcher:login_page')
+        return redirect('login')
     except Exception as e:
         print(f"[DEBUG] Error during logout: {str(e)}")
         request.session.flush()
-        return redirect('matcher:login_page')
+        return redirect('login')

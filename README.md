@@ -32,7 +32,7 @@ Follow these instructions to set up and run the project on your local machine fo
 
 ```bash
 git clone https://github.com/wenjiaqi8255/job-hunter.git
-cd job_hunting_django
+cd job_hunter
 ```
 
 ### 3. Set Up Environment Variables
@@ -71,7 +71,7 @@ GOOGLE_CLIENT_SECRET=""
 Use Poetry to install all the project dependencies specified in `pyproject.toml`. This will create a virtual environment for the project.
 
 ```bash
-poetry install
+poetry install --no-root
 ```
 
 ### 5. Initialize the Database

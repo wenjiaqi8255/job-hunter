@@ -326,12 +326,12 @@
   <div class="container-fluid px-md-5 d-flex justify-content-end gap-2">
     <a href="{% url 'matcher:generate_cover_letter_page' job.id %}" 
        class="btn btn-outline-primary requires-login"
-       data-login-url="{% url 'matcher:login_page' %}?next={% url 'matcher:generate_cover_letter_page' job.id %}">
+       data-login-url="{% url 'login' %}?next={% url 'matcher:generate_cover_letter_page' job.id %}">
         <i class="fas fa-envelope me-2"></i>Generate Cover Letter
     </a>
     <a href="{% url 'matcher:generate_custom_resume_page' job.id %}"
        class="btn btn-outline-primary requires-login"
-       data-login-url="{% url 'matcher:login_page' %}?next={% url 'matcher:generate_custom_resume_page' job.id %}">
+       data-login-url="{% url 'login' %}?next={% url 'matcher:generate_custom_resume_page' job.id %}">
         <i class="fas fa-file-alt me-2"></i>Customize CV
     </a>
     {% if job.application_url %}

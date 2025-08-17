@@ -92,7 +92,7 @@ def _execute_ai_task(
         api_response_text = api_response_object.text
         # print(f"DEBUG API Response Text for {task_name} (first 500 chars):\n{api_response_text[:500]}...")
 
-        # 统一传递 (api_response_text, api_response_object, ...) 给 parser
+        # Pass (api_response_text, api_response_object, ...) to parser
         parser_all_args = (api_response_text, api_response_object) + response_parser_args
 
         return response_parser_func(*parser_all_args)

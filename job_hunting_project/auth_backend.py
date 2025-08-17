@@ -13,29 +13,29 @@ class SupabaseUserBackend(BaseBackend):
             return None
 
         try:
-            # 使用 Supabase user ID 作为 Django 的 username，确保唯一性
+            # Use Supabase user ID as Django username, ensuring uniqueness
             user, created = User.objects.get_or_create(
                 username=supabase_user.id,
                 defaults={
                     'email': supabase_user.email if supabase_user.email else '',
-                    # 对于匿名用户，email 可能为空
+                    # For anonymous users, email may be empty
                 }
             )
 
             if created:
-                # 为新用户设置一个不可用的密码
+                # Set an unusable password for new users
                 user.set_unusable_password()
                 user.save()
             
             return user
         except Exception as e:
-            # 记录潜在的数据库错误
+            # Log potential database errors
             print(f"[SupabaseUserBackend] Error during user get_or_create: {e}")
             return None
 
     def get_user(self, user_id):
         """
-        Django 认证框架要求实现此方法，以便在 session 中检索用户。
+        Django authentication framework requires this method to retrieve users from session.
         """
         try:
             return User.objects.get(pk=user_id)

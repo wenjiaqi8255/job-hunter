@@ -22,7 +22,7 @@ class UserProfile(models.Model):
     user_cv_text = models.TextField(blank=True, null=True)
     cv_file = models.FileField(upload_to=user_cv_path, blank=True, null=True)
     user_preferences_text = models.TextField(blank=True, null=True)
-    user_email = models.EmailField(blank=True, null=True)  # 新增字段：用于保存用户邮箱
+    user_email = models.EmailField(blank=True, null=True) 
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 

@@ -29,7 +29,6 @@ def generate_cover_letter_page(request, job_id):
     generation_error = False
     has_existing_cover_letter = False
 
-    # 构造 job dict
     job_dict = {
         'id': job.id,
         'company_name': job.company_name,
@@ -68,7 +67,7 @@ def generate_cover_letter_page(request, job_id):
                 )
                 has_existing_cover_letter = True
     else:
-        # GET: 优先查历史
+        # GET: prefer existing cover letter
         try:
             saved_job = SavedJob.objects.get(user=user, job_listing=job)
             cover_letter_obj = CoverLetter.objects.get(saved_job=saved_job)
@@ -160,7 +159,7 @@ def generate_custom_resume_page(request, job_id):
             custom_resume_content = existing_resume.content
             has_existing_resume = True # It exists
         except CustomResume.DoesNotExist:
-            # No existing resume,自动生成并保存
+            # No existing resume, generate and save
             if not user_cv_text:
                 custom_resume_content = "Please complete your CV in your profile before generating a custom resume."
                 generation_error = True
