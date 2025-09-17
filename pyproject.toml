@@ -13,19 +13,35 @@ dependencies = [
     "pymupdf (>=1.24.1,<1.25.0)",
     "google-generativeai (>=0.5.0,<0.6.0)",
     "gunicorn (>=23.0.0,<23.1.0)",
-    "python-dotenv (>=1.1.1,<2.0.0)",
-    "django-allauth (>=65.10.0,<66.0.0)",
-    "supabase (>=2.17.0,<3.0.0)",
-    "reportlab (>=4.4.3,<5.0.0)"
+    "python-dotenv (>=1.0.1)",
+    "supabase (>=2.0,<3.0)",
+    "reportlab (>=4.0.0,<4.1.0)",
+    "requests (>=2.31.0,<3.0.0)",
+    "cryptography (>=45.0.6,<46.0.0)",
+    "fastapi (>=0.116.2,<0.117.0)",
+    "pydantic-settings (>=2.10.1,<3.0.0)",
+    "sqlalchemy (>=2.0.43,<3.0.0)",
+    "ipython (>=9.4.0,<9.5.0)",
+    "pipreqs (>=0.4.13,<0.5.0)",
+    "pytest (>=7.4.0,<7.5.0)",
+    "pytest-django (>=4.11.1,<4.12.0)",
+    "pydantic[email] (>=2.11.9,<3.0.0)",
+    "python-multipart (>=0.0.20,<0.0.21)",
+    "uvicorn (>=0.35.0,<0.36.0)"
 ]
 
+[tool.poetry]
+packages = [
+    {include = "job_hunting_project"},
+    {include = "matcher"}
+]
 
 [build-system]
 requires = ["poetry-core>=2.0.0,<3.0.0"]
 build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.group.dev.dependencies]
-ipython = ">=8.26.0,<8.27.0"
+ipython = ">=8.26.0"
 pytest = ">=7.4.0,<7.5.0"
 pytest-django = ">=4.11.1,<4.12.0"
 

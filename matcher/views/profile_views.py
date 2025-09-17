@@ -9,7 +9,7 @@ from django.conf import settings
 import fitz  # PyMuPDF
 
 from ..models import UserProfile, SavedJob, MatchedJob, MatchSession
-from ..utils import parse_tips_string
+from ..utils.utils import parse_tips_string
 
 
 @login_required
@@ -56,8 +56,8 @@ def profile_page(request):
         return redirect('matcher:profile_page')
 
     # Fetch work experiences from Supabase for the current user
-    experiences = get_user_experiences(request.supabase)
-    experience_count = len(experiences) if experiences else 0
+    # experiences = get_user_experiences(request.supabase)
+    # experience_count = len(experiences) if experiences else 0
 
     # Fetch saved jobs count from Django's SavedJob model
     application_count = SavedJob.objects.filter(user=request.user).count()
@@ -85,8 +85,8 @@ def profile_page(request):
         'user_cv_text': user_profile.user_cv_text or "",
         'user_preferences_text': user_profile.user_preferences_text or "",
         'user_email': user_profile.user_email or "",
-        'experiences': experiences,
-        'experience_count': experience_count,
+        # 'experiences': experiences,
+        # 'experience_count': experience_count,
         'tips_to_improve_count': tips_to_improve_count,
         'n8n_chat_url': full_n8n_url,
     }

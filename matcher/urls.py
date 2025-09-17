@@ -8,16 +8,13 @@ from matcher.views.main_views import (
     all_matches_page
 )
 from matcher.views.job_views import job_detail_page
-from .views.auth_views import register_view  # 新增注册视图导入
+from .views.auth_views import register_view
 from matcher.views.profile_views import tips_to_improve_page  # 新增tips页面view导入
 
 app_name = 'matcher'
 
 urlpatterns = [
-    # URL to display the login page. This is the target for failed auth redirects.
-    path('login/', auth_views.LoginView.as_view(template_name='matcher/login.html'), name='login_page'),
-
-    # NOTE: OAuth routes are now defined in the main project urls.py to avoid i18n conflicts
+    # 认证相关的路由(login, logout, oauth)已移至项目主urls.py中，以避免i18n路径冲突
 
     # Job and session management
     path('', main_page, name='main_page'),

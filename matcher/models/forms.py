@@ -1,5 +1,5 @@
 from django import forms
-from .models import SavedJob
+from ..models import SavedJob
 
 class SavedJobForm(forms.ModelForm):
     class Meta:
@@ -15,6 +15,10 @@ class RegisterForm(forms.Form):
         max_length=150,
         required=True,
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Username'})
+    )
+    email = forms.EmailField(
+        required=False,  # 可选字段
+        widget=forms.EmailInput(attrs={'class': 'form-control', 'placeholder': 'Email (optional)'})
     )
     password1 = forms.CharField(
         label='Password',

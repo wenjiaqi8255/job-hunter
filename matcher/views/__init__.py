@@ -1,5 +1,5 @@
 # Views package for the matcher app
-from .auth_views import google_login, google_callback, logout_view, api_check_auth, process_oauth_tokens
+from .auth_views import login_view, logout_view, api_check_auth, register_view
 from .main_views import main_page
 from .profile_views import profile_page
 from .job_views import job_detail_page
@@ -13,11 +13,10 @@ from .application_views import (
 )
 
 __all__ = [
-    'google_login',
-    'google_callback', 
+    'login_view',
     'logout_view',
     'api_check_auth',
-    'process_oauth_tokens',
+    'register_view',
     'main_page',
     'profile_page',
     'job_detail_page',

@@ -44,29 +44,29 @@ ALLOWED_HOSTS = ['*']
 # Application definition
 
 INSTALLED_APPS = [
+    # Django apps
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-    "matcher",
+    # "django.contrib.sites", # No longer needed without allauth
+
+    # Third-party apps
     "corsheaders",
-    'allauth',
-    'allauth.account',
-    'allauth.socialaccount',
+
+    # Local apps
+    "matcher",
 ]
 
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
     "django.contrib.sessions.middleware.SessionMiddleware",
-    "allauth.account.middleware.AccountMiddleware",
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
-    "job_hunting_project.auth_middleware.SupabaseAuthMiddleware", # 新的中间件
     "django.contrib.auth.middleware.AuthenticationMiddleware",
-    # "job_hunting_project.supabase_middleware.SupabaseAuthMiddleware", # 将被新的中间件取代
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "django.middleware.locale.LocaleMiddleware",
@@ -193,9 +193,6 @@ N8N_CHAT_URL = "http://localhost:5678/webhook/bddbcab4-7cb3-4b64-ab9c-70321bbbda
 
 AUTHENTICATION_BACKENDS = [
     'django.contrib.auth.backends.ModelBackend',
-    "job_hunting_project.auth_backend.SupabaseUserBackend", # 新的认证后端
-    # "job_hunting_project.supabase_auth_backend.SupabaseAuthBackend", # 将被新的认证后端取代
-    'allauth.account.auth_backends.AuthenticationBackend',
 ]
 
 
@@ -211,14 +208,24 @@ CACHES = {
 
 SITE_ID = 1
 
+# Allauth settings
+ACCOUNT_SITES_ENABLED = True # Explicitly enable sites framework for allauth
+LOGIN_REDIRECT_URL = '/' # Redirect to home page after login
+ACCOUNT_EMAIL_VERIFICATION = "none" # For simplicity, we'll disable email verification for now
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'SCOPE': [
+            'profile',
+            'email',
+        ],
+        'AUTH_PARAMS': {
+            'access_type': 'online',
+        }
+    }
+}
+
 LOGIN_URL = '/login/'
-LOGIN_REDIRECT_URL = '/en/'
-ACCOUNT_LOGOUT_REDIRECT_URL = '/login/'
-ACCOUNT_SIGNUP_REDIRECT_URL = '/en/'
-
-ACCOUNT_ADAPTER = 'allauth.account.adapter.DefaultAccountAdapter'
-ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
-
-ACCOUNT_LOGIN_ATTEMPTS_LIMIT = 5
+# LOGIN_REDIRECT_URL = '/' # This is handled by allauth's setting now
+LOGOUT_REDIRECT_URL = '/login/'
 
 EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'

@@ -10,26 +10,39 @@
     <div class="login-card p-5 shadow-lg">
         <h2 class="mb-4 text-center h2">Welcome Back!</h2>
 
-        {% if form.errors %}
-            <div class="alert alert-danger">
-                Your username and password didn't match. Please try again.
-            </div>
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
         {% endif %}
 
         <form method="post" class="mb-3">
             {% csrf_token %}
-            {{ form.as_p }}
+            <div class="mb-3">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" class="form-control" id="username" name="username" required>
+            </div>
+            <div class="mb-3">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" class="form-control" id="password" name="password" required>
+            </div>
             <button type="submit" class="btn btn-accent w-100">Login</button>
         </form>
 
         <div class="text-center mb-3 text-muted">or</div>
 
+        <!-- Google Sign-In Button -->
         <a href="{% url 'google_login' %}" class="btn btn-outline-dark w-100">
-            <i class="fab fa-google me-2"></i> Sign in with Google
+            <img src="https://developers.google.com/identity/images/g-logo.png" alt="Google logo" style="height: 20px; margin-right: 10px;">
+            Sign in with Google
         </a>
+        
         <div class="text-center mt-3">
             <a href="{% url 'matcher:register' %}">Don't have an account? Register</a>
         </div>
     </div>
 </div>
+
 {% endblock %}

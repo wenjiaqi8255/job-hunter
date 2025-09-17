@@ -19,14 +19,15 @@ from datetime import date
 from uuid import UUID
 import json
 
+# 保留Supabase导入用于数据获取
 from supabase import create_client, Client
 
 from ..models import (
     JobListing, MatchSession, MatchedJob, SavedJob, 
     UserProfile
 )
-from .. import gemini_utils
-from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis, parse_tips_string
+from ..services import gemini_utils
+from ..utils.utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis, parse_tips_string
 from ..services.job_listing_service import (
     fetch_todays_job_listings_from_supabase,
     fetch_anomaly_analysis_for_jobs_from_supabase
@@ -49,14 +50,7 @@ def main_page(request):
         print(f"[DEBUG] Current user: {request.user.username}")
     
     # ===================================
-    # 处理 OAuth 回调（如果直接重定向到首页）
-    # ===================================
-    oauth_handled = _handle_oauth_callback_on_main_page(request)
-    if oauth_handled:
-        return oauth_handled
-    
-    # ===================================
-    # 正常的 main_page 逻辑继续
+    # 直接进入正常的main_page逻辑，移除OAuth处理
     # ===================================
     user = request.user
     user_profile = None
@@ -171,164 +165,6 @@ def start_new_match_session(request):
     if no_match_reason:
         messages.warning(request, no_match_reason)
     return redirect(f"{reverse('matcher:main_page')}?session_id={new_match_session.id}")
-
-
-def _handle_oauth_callback_on_main_page(request):
-    """处理在主页上的OAuth回调"""
-    oauth_code = request.GET.get('code')
-    oauth_error = request.GET.get('error')
-    oauth_error_description = request.GET.get('error_description')
-    oauth_access_token = request.GET.get('access_token')
-    oauth_refresh_token = request.GET.get('refresh_token')
-    
-    # 检查是否有任何 OAuth 相关参数
-    oauth_params_present = any([oauth_code, oauth_error, oauth_access_token, oauth_refresh_token])
-    
-    if not oauth_params_present:
-        return None
-        
-    print(f"[DEBUG] OAuth callback detected on main page")
-    print(f"[DEBUG] Code: {oauth_code[:20] if oauth_code else None}...")
-    print(f"[DEBUG] Access token: {oauth_access_token[:20] if oauth_access_token else None}...")
-    print(f"[DEBUG] Refresh token: {oauth_refresh_token[:20] if oauth_refresh_token else None}...")
-    print(f"[DEBUG] Error: {oauth_error}")
-    print(f"[DEBUG] Error description: {oauth_error_description}")
-    
-    # 检查是否直接收到了 tokens（fragment-based flow）
-    if oauth_access_token:
-        return _handle_direct_token_auth(request, oauth_access_token, oauth_refresh_token)
-    
-    if oauth_error:
-        return _handle_oauth_error(request, oauth_error, oauth_error_description, oauth_code, oauth_access_token)
-    
-    if oauth_code:
-        return _handle_oauth_code_exchange(request, oauth_code)
-    
-    return None
-
-
-def _handle_direct_token_auth(request, access_token, refresh_token):
-    """处理直接接收到的token认证"""
-    print(f"[DEBUG] Direct token received - processing...")
-    
-    try:
-        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        
-        # 使用 token 获取用户信息
-        user_response = supabase.auth.get_user(access_token)
-        
-        if user_response and user_response.user:
-            user = user_response.user
-            
-            print(f"[DEBUG] User authenticated via token on main page: {user.email if user else 'No user'}")
-            
-            # 存储用户会话信息到 Django session
-            request.session['supabase_access_token'] = access_token
-            request.session['supabase_refresh_token'] = refresh_token
-            request.session['user_id'] = user.id
-            request.session['user_email'] = user.email
-            request.session['user_name'] = user.user_metadata.get('full_name', '')
-            request.session['user_avatar'] = user.user_metadata.get('picture', '')
-            
-            print(f"[DEBUG] Session data stored successfully via token on main page")
-            
-            # 使用 Django 认证系统
-            from job_hunting_project.auth_backend import SupabaseUserBackend
-            auth_backend = SupabaseUserBackend()
-            django_user = auth_backend.authenticate(request=request, supabase_user=user)
-            
-            if django_user:
-                login(request, django_user, backend='job_hunting_project.auth_backend.SupabaseUserBackend')
-                print(f"[DEBUG] Django user logged in successfully via token on main page: {django_user.username}")
-                messages.success(request, "Successfully logged in!")
-            else:
-                print("[DEBUG] Failed to create/retrieve Django user via token on main page")
-                messages.error(request, "Could not complete login. Please try again.")
-            
-            # 重定向到干净的主页（移除 OAuth 参数）
-            return redirect(reverse('matcher:main_page'))
-        else:
-            print("[DEBUG] No user returned from token validation on main page")
-            messages.error(request, "Authentication failed: Could not validate token.")
-            
-    except Exception as token_exception:
-        print(f"[DEBUG] Error processing token on main page: {str(token_exception)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        messages.error(request, f"Authentication failed: {str(token_exception)}")
-    
-    return None
-
-
-def _handle_oauth_error(request, oauth_error, oauth_error_description, oauth_code, oauth_access_token):
-    """处理OAuth错误"""
-    if oauth_error == 'invalid_request' and 'bad_oauth_state' in (oauth_error_description or ''):
-        print(f"[DEBUG] Bad OAuth state error - this is expected, proceeding anyway")
-        # 即使有 state 错误，如果有 code，我们仍然尝试处理
-        if not oauth_code and not oauth_access_token:
-            messages.error(request, f"OAuth error: {oauth_error_description or oauth_error}")
-            # 清除 URL 参数并重定向到干净的首页
-            return redirect(reverse('matcher:main_page'))
-    else:
-        messages.error(request, f"OAuth error: {oauth_error_description or oauth_error}")
-        return redirect(reverse('matcher:main_page'))
-    
-    return None
-
-
-def _handle_oauth_code_exchange(request, oauth_code):
-    """处理OAuth代码交换"""
-    print(f"[DEBUG] Processing OAuth code on main page: {oauth_code[:10]}...")
-    
-    try:
-        # 初始化 Supabase 客户端
-        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        
-        # 使用最新的 exchange_code_for_session 方法
-        session_response = supabase.auth.exchange_code_for_session(oauth_code)
-        
-        if session_response and session_response.session:
-            user = session_response.user
-            session = session_response.session
-            
-            print(f"[DEBUG] User authenticated successfully on main page: {user.email if user else 'No user'}")
-            
-            # 存储用户会话信息到 Django session
-            request.session['supabase_access_token'] = session.access_token
-            request.session['supabase_refresh_token'] = session.refresh_token
-            request.session['user_id'] = user.id
-            request.session['user_email'] = user.email
-            request.session['user_name'] = user.user_metadata.get('full_name', '')
-            request.session['user_avatar'] = user.user_metadata.get('picture', '')
-            
-            print(f"[DEBUG] Session data stored successfully on main page")
-            
-            # 使用 Django 认证系统
-            from job_hunting_project.auth_backend import SupabaseUserBackend
-            auth_backend = SupabaseUserBackend()
-            django_user = auth_backend.authenticate(request=request, supabase_user=user)
-            
-            if django_user:
-                login(request, django_user, backend='job_hunting_project.auth_backend.SupabaseUserBackend')
-                print(f"[DEBUG] Django user logged in successfully on main page: {django_user.username}")
-                messages.success(request, "Successfully logged in!")
-            else:
-                print("[DEBUG] Failed to create/retrieve Django user on main page")
-                messages.error(request, "Could not complete login. Please try again.")
-            
-            # 重定向到干净的主页（移除 OAuth 参数）
-            return redirect(reverse('matcher:main_page'))
-        else:
-            print("[DEBUG] No session returned from code exchange on main page")
-            messages.error(request, "Authentication failed: No session returned.")
-            return redirect(reverse('matcher:main_page'))
-            
-    except Exception as oauth_exception:
-        print(f"[DEBUG] Error processing OAuth on main page: {str(oauth_exception)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        messages.error(request, f"Authentication failed: {str(oauth_exception)}")
-        return redirect(reverse('matcher:main_page'))
 
 
 def _save_job_matches_to_db(request, job_matches_from_api, new_match_session):

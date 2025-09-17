@@ -1,178 +1,65 @@
 """
 认证相关的视图
-处理 OAuth 登录、回调、登出等功能
+处理传统Django认证登录、注册、登出等功能
 """
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, logout, authenticate
 from django.contrib.auth.decorators import login_required
-from django.views.decorators.http import require_POST
+from django.views.decorators.http import require_POST, require_http_methods
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from django.conf import settings
-from django.core.cache import cache
 from django.contrib.auth.models import User
-from django.contrib.auth import authenticate
-from matcher.forms import RegisterForm
-
-from supabase import create_client, Client
+from django.conf import settings
+from matcher.models.forms import RegisterForm
 import json
-import secrets
-import urllib.parse
+import requests
 
 
-def google_login(request):
-    """
-    启动 Google OAuth 登录流程 - 修正版本（使用 Supabase 默认重定向）
-    """
-    try:
-        print(f"[DEBUG] Starting Google OAuth login with Supabase default redirect")
-        
-        # 不使用自定义 redirect_to，让 Supabase 使用 Dashboard 中配置的 Site URL
-        # 这样 OAuth 回调会直接到达首页，我们在首页处理 OAuth 参数
-        
-        oauth_params = {
-            'provider': 'google',
-            # 不设置 redirect_to 和 state，避免 bad_oauth_state 错误
-        }
-        
-        # 构建完整的 OAuth URL
-        base_oauth_url = f"{settings.SUPABASE_URL}/auth/v1/authorize"
-        oauth_url = f"{base_oauth_url}?" + urllib.parse.urlencode(oauth_params)
-        
-        print(f"[DEBUG] Redirecting to OAuth URL (using Supabase default): {oauth_url}")
-        print(f"[DEBUG] OAuth 成功后将重定向到 Supabase Dashboard 中配置的 Site URL")
-        
-        return redirect(oauth_url)
-        
-    except Exception as e:
-        print(f"[DEBUG] Error in google_login: {str(e)}")
-        messages.error(request, f"OAuth login failed: {str(e)}")
-        return redirect('matcher:login_page')
-
-
-def google_callback(request):
-    """
-    处理 Google OAuth 回调 - 最新最佳实践
-    使用最新的 exchange_code_for_session 方法
-    """
-    try:
-        print(f"[DEBUG] === OAuth Callback Debug ===")
-        print(f"[DEBUG] Full URL: {request.build_absolute_uri()}")
-        print(f"[DEBUG] Method: {request.method}")
-        print(f"[DEBUG] GET params: {dict(request.GET)}")
-        print(f"[DEBUG] ========================================")
-        
-        # 1. 获取参数
-        code = request.GET.get('code')
-        state = request.GET.get('state')
-        error = request.GET.get('error')
-        error_description = request.GET.get('error_description')
-        
-        print(f"[DEBUG] Extracted - code: {code[:20] if code else None}...")
-        print(f"[DEBUG] Extracted - state: {state}")
-        print(f"[DEBUG] Extracted - error: {error}")
-        print(f"[DEBUG] Extracted - error_description: {error_description}")
-        
-        # 2. 错误处理
-        if error:
-            print(f"[DEBUG] OAuth error: {error} - {error_description}")
-            messages.error(request, f"OAuth error: {error_description or error}")
-            return redirect('matcher:login_page')
-        
-        if not code:
-            print("[DEBUG] No authorization code received")
-            messages.error(request, "Authentication failed: No authorization code received.")
-            return redirect('matcher:login_page')
-        
-        # 3. 验证 state（如果有）
-        if state:
-            cached_state = cache.get(f"oauth_state_{state}")
-            if not cached_state:
-                print("[DEBUG] Invalid or expired state parameter")
-                messages.error(request, "Authentication failed: Invalid state parameter.")
-                return redirect('matcher:login_page')
-            cache.delete(f"oauth_state_{state}")
-            print("[DEBUG] State parameter validated successfully")
-        
-        # 4. 使用最新的 exchange_code_for_session 方法
-        print(f"[DEBUG] Exchanging code for session: {code[:10]}...")
-        
-        # 初始化 Supabase 客户端
-        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        
-        try:
-            # 这是最新的推荐方法 - 只传递授权码
-            session_response = supabase.auth.exchange_code_for_session(code)
-            
-            if session_response and session_response.session:
-                user = session_response.user
-                session = session_response.session
-                
-                print(f"[DEBUG] User authenticated successfully: {user.email if user else 'No user'}")
-                
-                # 5. 存储用户会话信息到 Django session（最佳实践）
-                request.session['supabase_access_token'] = session.access_token
-                request.session['supabase_refresh_token'] = session.refresh_token
-                request.session['user_id'] = user.id
-                request.session['user_email'] = user.email
-                request.session['user_name'] = user.user_metadata.get('full_name', '')
-                request.session['user_avatar'] = user.user_metadata.get('picture', '')
-                
-                print(f"[DEBUG] Session data stored successfully")
-                
-                # 6. 使用 Django 认证系统（可选，如果你需要的话）
-                from job_hunting_project.auth_backend import SupabaseUserBackend
-                auth_backend = SupabaseUserBackend()
-                django_user = auth_backend.authenticate(request=request, supabase_user=user)
-                
-                if django_user:
-                    login(request, django_user, backend='job_hunting_project.auth_backend.SupabaseUserBackend')
-                    print(f"[DEBUG] Django user logged in successfully: {django_user.username}")
-                    messages.success(request, "Successfully logged in!")
-                else:
-                    print("[DEBUG] Failed to create/retrieve Django user")
-                    messages.error(request, "Could not complete login. Please try again.")
-                    return redirect('matcher:login_page')
-                
-                print(f"[DEBUG] Redirecting to main page")
-                return redirect(reverse('matcher:main_page'))
-            else:
-                print("[DEBUG] No session returned from code exchange")
-                messages.error(request, "Authentication failed: No session returned.")
-                return redirect('matcher:login_page')
-                
-        except Exception as exchange_error:
-            print(f"[DEBUG] Error exchanging code for session: {str(exchange_error)}")
-            import traceback
-            print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-            messages.error(request, f"Authentication failed: {str(exchange_error)}")
-            return redirect('matcher:login_page')
-            
-    except Exception as e:
-        print(f"[DEBUG] Error in google_callback: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        messages.error(request, "An error occurred during authentication.")
-        return redirect('matcher:login_page')
+def login_view(request):
+    """登录页面，支持多种方式"""
+    if request.user.is_authenticated:
+        return redirect('/')
+    
+    context = {
+        'google_client_id': settings.GOOGLE_CLIENT_ID,
+        'show_traditional_login': True,  # 可以控制是否显示传统登录
+    }
+    return render(request, 'matcher/login.html', context)
 
 
 def register_view(request):
+    """用户注册视图"""
     if request.method == 'POST':
         form = RegisterForm(request.POST)
         if form.is_valid():
             username = form.cleaned_data['username']
             password = form.cleaned_data['password1']
-            user = User.objects.create_user(username=username, password=password)
+            email = form.cleaned_data.get('email', '')
+            
+            # 检查用户名是否已存在
+            if User.objects.filter(username=username).exists():
+                messages.error(request, 'Username already exists.')
+                return render(request, 'matcher/register.html', {'form': form})
+            
+            # 创建用户
+            user = User.objects.create_user(
+                username=username, 
+                password=password,
+                email=email
+            )
             user.save()
+            
+            # 自动登录
             user = authenticate(request, username=username, password=password)
             if user is not None:
                 login(request, user)
+                messages.success(request, 'Registration successful! Welcome!')
                 return redirect('matcher:main_page')
             else:
                 messages.error(request, 'Registration succeeded but login failed.')
-                return redirect('matcher:login')
+                return redirect('login')
         else:
             # 表单无效，回显错误
             return render(request, 'matcher/register.html', {'form': form})
@@ -183,142 +70,138 @@ def register_view(request):
 
 def logout_view(request):
     """登出视图"""
-    return logout_user(request)
+    logout(request)
+    messages.success(request, 'Successfully logged out!')
+    return redirect('login')
+
+
+# ===================================
+# Google OAuth Server-Side Flow
+# ===================================
+
+def google_login(request):
+    """
+    Redirects the user to Google's authentication page.
+    """
+    redirect_uri = request.build_absolute_uri(reverse('google_callback'))
+    auth_url = (
+        "https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={settings.GOOGLE_CLIENT_ID}&"
+        f"redirect_uri={redirect_uri}&"
+        "response_type=code&"
+        "scope=openid%20email%20profile"
+    )
+    return redirect(auth_url)
+
+
+def google_callback(request):
+    """
+    Handles the callback from Google after user authentication.
+    """
+    code = request.GET.get('code')
+    if not code:
+        messages.error(request, "Authentication failed: No code provided.")
+        return redirect('login')
+
+    # Exchange code for token
+    token_url = "https://oauth2.googleapis.com/token"
+    redirect_uri = request.build_absolute_uri(reverse('google_callback'))
+    token_data = {
+        'code': code,
+        'client_id': settings.GOOGLE_CLIENT_ID,
+        'client_secret': settings.GOOGLE_CLIENT_SECRET,
+        'redirect_uri': redirect_uri,
+        'grant_type': 'authorization_code',
+    }
+    token_response = requests.post(token_url, data=token_data)
+    token_json = token_response.json()
+
+    access_token = token_json.get('access_token')
+    if not access_token:
+        messages.error(request, "Failed to retrieve access token from Google.")
+        return redirect('login')
+
+    # Get user info
+    user_info_url = "https://www.googleapis.com/oauth2/v2/userinfo"
+    user_info_response = requests.get(user_info_url, headers={'Authorization': f'Bearer {access_token}'})
+    user_info = user_info_response.json()
+
+    # Get or create user
+    user = get_or_create_google_user(user_info)
+
+    if user:
+        login(request, user)
+        messages.success(request, f"Welcome, {user.username}! You have successfully logged in with Google.")
+        return redirect('matcher:main_page')
+    else:
+        messages.error(request, "Could not log in with Google. Please try again.")
+        return redirect('login')
+
+
+def get_or_create_google_user(google_user_info):
+    """获取或创建Google用户"""
+    try:
+        email = google_user_info.get('email')
+        name = google_user_info.get('name', '')
+        picture = google_user_info.get('picture', '')
+        
+        if not email:
+            return None
+        
+        # 尝试通过email查找用户
+        user = User.objects.filter(email=email).first()
+        
+        if not user:
+            # 创建新用户
+            username = email.split('@')[0]  # 使用email前缀作为用户名
+            # 确保用户名唯一
+            base_username = username
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                first_name=name.split()[0] if name else '',
+                last_name=' '.join(name.split()[1:]) if name and len(name.split()) > 1 else ''
+            )
+            user.set_unusable_password()  # Google用户不需要密码
+            user.save()
+        
+        return user
+    except Exception as e:
+        print(f"User creation error: {str(e)}")
+        return None
 
 
 def api_check_auth(request):
     """API：检查认证状态"""
-    user = get_current_user_info(request)
+    user_info = get_current_user_info(request)
     return JsonResponse({
-        'authenticated': user is not None,
-        'user': user
+        'authenticated': user_info is not None,
+        'user': user_info
     })
 
 
-@csrf_exempt
-@require_POST
-def process_oauth_tokens(request):
-    """
-    处理从客户端JavaScript发送的OAuth tokens
-    """
-    try:
-        print(f"[DEBUG] Processing OAuth tokens from client")
-        
-        # 获取tokens
-        access_token = request.POST.get('access_token')
-        refresh_token = request.POST.get('refresh_token')
-        expires_at = request.POST.get('expires_at')
-        provider_token = request.POST.get('provider_token')
-        
-        print(f"[DEBUG] Received tokens - access_token: {access_token[:20] if access_token else None}...")
-        print(f"[DEBUG] Received tokens - refresh_token: {refresh_token[:20] if refresh_token else None}...")
-        print(f"[DEBUG] Received tokens - expires_at: {expires_at}")
-        
-        if not access_token:
-            return JsonResponse({'error': 'No access token provided'}, status=400)
-        
-        # 使用access_token获取用户信息
-        supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-        
-        try:
-            # 使用access_token获取用户信息
-            user_response = supabase.auth.get_user(access_token)
-            
-            if user_response and user_response.user:
-                user = user_response.user
-                
-                print(f"[DEBUG] User authenticated via client tokens: {user.email if user else 'No user'}")
-                
-                # 存储用户会话信息到 Django session
-                request.session['supabase_access_token'] = access_token
-                request.session['supabase_refresh_token'] = refresh_token or ''
-                request.session['user_id'] = user.id
-                request.session['user_email'] = user.email
-                request.session['user_name'] = user.user_metadata.get('full_name', '')
-                request.session['user_avatar'] = user.user_metadata.get('picture', '')
-                
-                print(f"[DEBUG] Session data stored successfully via client tokens")
-                
-                # 使用 Django 认证系统
-                from job_hunting_project.auth_backend import SupabaseUserBackend
-                auth_backend = SupabaseUserBackend()
-                django_user = auth_backend.authenticate(request=request, supabase_user=user)
-                
-                if django_user:
-                    login(request, django_user, backend='job_hunting_project.auth_backend.SupabaseUserBackend')
-                    print(f"[DEBUG] Django user logged in successfully via client tokens: {django_user.username}")
-                    
-                    return JsonResponse({
-                        'success': True,
-                        'redirect': reverse('matcher:main_page'),
-                        'message': 'Successfully logged in!'
-                    })
-                else:
-                    print("[DEBUG] Failed to create/retrieve Django user via client tokens")
-                    return JsonResponse({'error': 'Could not complete login'}, status=400)
-            else:
-                print("[DEBUG] No user returned from token validation via client")
-                return JsonResponse({'error': 'Could not validate token'}, status=400)
-                
-        except Exception as token_error:
-            print(f"[DEBUG] Error validating token via client: {str(token_error)}")
-            import traceback
-            print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-            return JsonResponse({'error': f'Token validation failed: {str(token_error)}'}, status=400)
-            
-    except Exception as e:
-        print(f"[DEBUG] Error in process_oauth_tokens: {str(e)}")
-        import traceback
-        print(f"[DEBUG] Full traceback: {traceback.format_exc()}")
-        return JsonResponse({'error': 'Internal server error'}, status=500)
-
-
 # ===================================
-# Supabase 用户会话管理辅助函数
+# 用户会话管理辅助函数
 # ===================================
 
 def get_current_user_info(request):
     """获取当前用户信息"""
     try:
-        access_token = request.session.get('supabase_access_token')
-        if not access_token:
-            return None
-        
-        # 从 session 获取用户信息（推荐，更快）
-        user_info = {
-            'id': request.session.get('user_id'),
-            'email': request.session.get('user_email'),
-            'name': request.session.get('user_name'),
-            'avatar': request.session.get('user_avatar'),
-        }
-        
-        if user_info['id']:
-            return user_info
-        
+        if request.user.is_authenticated:
+            return {
+                'id': request.user.id,
+                'username': request.user.username,
+                'email': request.user.email,
+                'name': f"{request.user.first_name} {request.user.last_name}".strip() or request.user.username,
+                'avatar': '',  # Django User模型没有头像字段
+            }
         return None
         
     except Exception as e:
         print(f"[DEBUG] Error getting current user: {str(e)}")
         return None
-
-
-def logout_user(request):
-    """登出用户"""
-    try:
-        # 从 Supabase 登出
-        access_token = request.session.get('supabase_access_token')
-        if access_token:
-            try:
-                supabase: Client = create_client(settings.SUPABASE_URL, settings.SUPABASE_KEY)
-                supabase.auth.sign_out()
-            except Exception as e:
-                print(f"[DEBUG] Warning: Error signing out from Supabase: {str(e)}")
-        
-        # 清除 Django session
-        request.session.flush()
-        
-        return redirect('matcher:login_page')
-    except Exception as e:
-        print(f"[DEBUG] Error during logout: {str(e)}")
-        request.session.flush()
-        return redirect('matcher:login_page')

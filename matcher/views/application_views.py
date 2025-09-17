@@ -16,7 +16,7 @@ import json
 import textwrap
 
 from ..models import JobListing, SavedJob, CoverLetter, CustomResume, UserProfile
-from .. import gemini_utils
+from ..services import gemini_utils
 
 
 @login_required

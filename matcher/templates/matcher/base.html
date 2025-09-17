@@ -150,9 +150,15 @@
         const sidebarToggleBtn = document.getElementById('sidebar-toggle-btn');
         const mainContent = document.querySelector('.main-content');
         const body = document.body;
+        
+        // 清除可能存在的折叠状态
+        localStorage.removeItem('sidebarCollapsed');
+        
         // --- Sidebar Toggle Logic ---
         function applySidebarState() {
             const isCollapsed = localStorage.getItem('sidebarCollapsed') === 'true';
+            console.log('Sidebar collapsed state:', isCollapsed);
+            
             if (isCollapsed) {
                 sidebar.classList.add('collapsed');
                 body.classList.add('sidebar-collapsed');
@@ -161,12 +167,22 @@
                 body.classList.remove('sidebar-collapsed');
             }
         }
+        
         sidebarToggleBtn.addEventListener('click', () => {
             const isCollapsed = sidebar.classList.toggle('collapsed');
             localStorage.setItem('sidebarCollapsed', isCollapsed);
             body.classList.toggle('sidebar-collapsed', isCollapsed);
+            console.log('Sidebar toggled, collapsed:', isCollapsed);
         });
+        
         applySidebarState(); // Apply state on page load
+        
+        // 调试信息
+        console.log('Sidebar element:', sidebar);
+        console.log('Sidebar tools element:', document.querySelector('.sidebar-tools'));
+        console.log('User info element:', document.querySelector('.user-info'));
+        console.log('Language switcher element:', document.querySelector('.language-switcher'));
+        
         // --- Active Navigation Link Logic ---
         const currentPath = window.location.pathname;
         const navLinks = document.querySelectorAll('.sidebar-nav .nav-link');
@@ -179,47 +195,6 @@
                 link.closest('.nav-item').classList.add('active');
             }
         });
-        // --- Handle OAuth Fragment (existing logic) ---
-        function handleOAuthFragment() {
-            const hash = window.location.hash;
-            if (hash && hash.includes('access_token')) {
-                const params = new URLSearchParams(hash.substring(1));
-                const accessToken = params.get('access_token');
-                if (accessToken) {
-                    function getCSRFToken() {
-                        const cookieValue = document.cookie.split('; ').find(row => row.startsWith('csrftoken='))?.split('=')[1];
-                        return cookieValue || '';
-                    }
-                    const formData = new FormData();
-                    formData.append('csrfmiddlewaretoken', getCSRFToken());
-                    formData.append('access_token', accessToken);
-                    formData.append('refresh_token', params.get('refresh_token') || '');
-                    fetch('/auth/process-oauth-tokens/', {
-                        method: 'POST',
-                        body: formData,
-                        credentials: 'same-origin'
-                    })
-                    .then(response => response.json())
-                    .then(data => {
-                        if (data.success) {
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                            window.location.href = data.redirect || '/';
-                        } else {
-                            alert('Login failed: ' + (data.error || 'Unknown error'));
-                            window.history.replaceState({}, document.title, window.location.pathname);
-                            window.location.href = '/login/';
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Network error during OAuth processing:', error);
-                        alert('Network error during login. Please try again.');
-                        window.history.replaceState({}, document.title, window.location.pathname);
-                        window.location.href = '/login/';
-                    });
-                }
-            }
-        }
-        handleOAuthFragment();
     });
     </script>
     {% block scripts %}{% endblock scripts %}

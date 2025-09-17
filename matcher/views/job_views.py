@@ -8,7 +8,7 @@ from django.conf import settings
 from uuid import UUID
 
 from ..models import JobListing, MatchSession, MatchedJob, SavedJob, UserProfile
-from ..utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis, parse_tips_string
+from ..utils.utils import parse_and_prepare_insights_for_template, parse_anomaly_analysis, parse_tips_string
 from ..services.job_listing_service import fetch_anomaly_analysis_for_jobs_from_supabase
 
 

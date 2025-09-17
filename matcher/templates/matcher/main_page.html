@@ -64,7 +64,7 @@ welcome-page-background
                     <div class="glass-card p-4 text-center">
                         <h2 class="mb-3 h2">Transform Your Job Hunt with AI</h2>
                         <p class="text-muted mb-3">To get personalized job matches, save applications, and use all features, please log in.</p>
-                        <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary">
+                        <a href="{% url 'login' %}" class="btn btn-primary">
                             <i class="fas fa-sign-in-alt me-1"></i> Login or Sign Up
                         </a>
                     </div>
@@ -178,7 +178,7 @@ welcome-page-background
                                 </div>
 
                                 <p class="card-text small mb-2">
-                                    {{ match_item.reason|truncatewords:20|linebreaksbr }}
+                                    {{ match_item.reason|linebreaksbr }}
                                 </p>
                                 
                                 {% if match_item.parsed_insights_list %}
