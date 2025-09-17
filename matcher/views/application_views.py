@@ -15,7 +15,7 @@ from reportlab.lib.units import mm
 import json
 import textwrap
 
-from ..models import JobListing, SavedJob, CoverLetter, CustomResume, UserProfile
+from ..models.models import JobListing, SavedJob, CoverLetter, CustomResume, UserProfile
 from ..services import gemini_utils
 
 

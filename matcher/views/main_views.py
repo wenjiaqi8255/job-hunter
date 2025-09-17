@@ -22,7 +22,7 @@ import json
 # 保留Supabase导入用于数据获取
 from supabase import create_client, Client
 
-from ..models import (
+from ..models.models import (
     JobListing, MatchSession, MatchedJob, SavedJob, 
     UserProfile
 )

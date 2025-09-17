@@ -8,7 +8,7 @@ from django.conf import settings
 
 import fitz  # PyMuPDF
 
-from ..models import UserProfile, SavedJob, MatchedJob, MatchSession
+from ..models.models import UserProfile, SavedJob, MatchedJob, MatchSession
 from ..utils.utils import parse_tips_string
 
 
