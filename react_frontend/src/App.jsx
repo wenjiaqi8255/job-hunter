@@ -9,8 +9,11 @@ import LoginPage from './pages/LoginPage';
 import RegisterPage from './pages/RegisterPage';
 import ProfilePage from './pages/ProfilePage';
 import ApplicationHistoryPage from './pages/ApplicationHistoryPage';
+import SessionHistoryPage from './pages/SessionHistoryPage';
 import MatchingWizard from './components/matching/MatchingWizard';
 import JobDetailPage from './pages/JobDetailPage';
+import CustomResumePage from './pages/CustomResumePage';
+import CoverLetterPage from './pages/CoverLetterPage';
 
 function App() {
   return (

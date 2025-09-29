@@ -50,14 +50,28 @@ async def get_user_saved_jobs(
     对应Django的my_applications_page
     """
     query = db.query(SavedJobModel).filter(SavedJobModel.user_id == user_id)
-    
+
     # 状态过滤
     if status:
         query = query.filter(SavedJobModel.status == status)
-    
+
     # 排序和分页
     saved_jobs = query.order_by(SavedJobModel.updated_at.desc()).offset(skip).limit(limit).all()
     return saved_jobs
+
+@router.get("/", response_model=List[SavedJob])
+async def get_user_saved_jobs_root(
+    user_id: int,
+    status: Optional[str] = Query(None),
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db)
+):
+    """
+    获取用户保存的工作申请 - 根路径
+    对应Django的my_applications_page
+    """
+    return await get_user_saved_jobs(user_id, status, skip, limit, db)
 
 @router.post("/saved-jobs", response_model=SavedJob)
 async def save_job_application(
@@ -383,6 +397,221 @@ async def download_custom_resume(
         media_type="application/pdf",
         headers={"Content-Disposition": f"attachment; filename=custom_resume_{job_listing_id}.pdf"}
     )
+
+@router.post("/{job_id}/status")
+async def update_job_application_status(
+    job_id: int,
+    status_data: dict,
+    db: Session = Depends(get_db)
+):
+    """
+    更新工作申请状态
+    对应Django的update_job_application_status
+    """
+    new_status = status_data.get('status')
+
+    if not new_status:
+        raise HTTPException(status_code=400, detail="Status is required")
+
+    # 验证状态值
+    valid_statuses = ['not_applied', 'viewed', 'applied', 'interviewing', 'offer', 'rejected']
+    if new_status not in valid_statuses:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid status. Must be one of: {', '.join(valid_statuses)}"
+        )
+
+    # 获取或创建SavedJob记录
+    saved_job = db.query(SavedJobModel).filter(
+        SavedJobModel.job_listing_id == job_id
+    ).first()
+
+    if not saved_job:
+        # 如果不存在，创建新的记录
+        # 这里需要user_id，暂时假设从请求中获取，实际可能需要修改
+        # 暂时使用一个默认值，后续需要修复
+        saved_job = SavedJobModel(
+            job_listing_id=job_id,
+            user_id=1,  # 临时默认值，实际应该从认证中获取
+            status='not_applied'
+        )
+        db.add(saved_job)
+
+    # 更新状态
+    saved_job.status = new_status
+    db.commit()
+    db.refresh(saved_job)
+
+    return {
+        "success": True,
+        "new_status_display": saved_job.status,
+        "new_status": saved_job.status
+    }
+
+@router.post("/{job_id}/cover-letter")
+async def generate_cover_letter_for_job(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    为特定工作生成求职信
+    对应Django的generate_cover_letter_page
+    """
+    # 检查工作是否存在
+    job = db.query(JobListingModel).filter(JobListingModel.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+
+    # 获取用户个人资料 - 暂时使用user_id=1，实际应该从认证中获取
+    user_id = 1
+    user_profile = db.query(UserProfileModel).filter(
+        UserProfileModel.user_id == user_id
+    ).first()
+
+    if not user_profile or not user_profile.user_cv_text:
+        raise HTTPException(
+            status_code=400,
+            detail="User profile or CV not found. Please complete your profile first."
+        )
+
+    # 获取或创建SavedJob记录
+    saved_job, created = db.query(SavedJobModel).get_or_create(
+        user_id=user_id,
+        job_listing_id=job_id,
+        defaults={'status': 'viewed'}
+    )
+
+    # 使用AI服务生成求职信
+    try:
+        # 构建工作信息字典
+        job_dict = {
+            'id': job.id,
+            'company_name': job.company_name,
+            'job_title': job.job_title,
+            'description': job.description,
+            'application_url': job.application_url,
+            'location': job.location,
+            'industry': job.industry,
+            'flexibility': job.flexibility,
+            'salary_range': job.salary_range,
+            'level': job.level,
+        }
+
+        # 调用AI服务生成求职信
+        from ....services import ai_service
+        generated_content = ai_service.generate_cover_letter(user_profile.user_cv_text, job_dict)
+
+        # 检查是否已有求职信
+        existing_cover_letter = db.query(CoverLetterModel).filter(
+            CoverLetterModel.saved_job_id == saved_job.id
+        ).first()
+
+        if existing_cover_letter:
+            # 更新现有求职信
+            existing_cover_letter.content = generated_content
+            db.commit()
+            cover_letter = existing_cover_letter
+        else:
+            # 创建新求职信
+            cover_letter = CoverLetterModel(
+                saved_job_id=saved_job.id,
+                content=generated_content
+            )
+            db.add(cover_letter)
+            db.commit()
+
+        return {
+            "success": True,
+            "content": generated_content,
+            "has_existing_cover_letter": not created
+        }
+
+    except Exception as e:
+        print(f"ERROR: Failed to generate cover letter: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate cover letter. Please try again later."
+        )
+
+@router.post("/{job_id}/resume")
+async def generate_custom_resume_for_job(
+    job_id: int,
+    db: Session = Depends(get_db)
+):
+    """
+    为特定工作生成定制简历
+    对应Django的generate_custom_resume_page
+    """
+    # 检查工作是否存在
+    job = db.query(JobListingModel).filter(JobListingModel.id == job_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+
+    # 获取用户个人资料 - 暂时使用user_id=1，实际应该从认证中获取
+    user_id = 1
+    user_profile = db.query(UserProfileModel).filter(
+        UserProfileModel.user_id == user_id
+    ).first()
+
+    if not user_profile or not user_profile.user_cv_text:
+        raise HTTPException(
+            status_code=400,
+            detail="User profile or CV not found. Please complete your profile first."
+        )
+
+    # 使用AI服务生成定制简历
+    try:
+        # 构建工作信息字典
+        job_dict = {
+            'id': job.id,
+            'company_name': job.company_name,
+            'job_title': job.job_title,
+            'description': job.description,
+            'application_url': job.application_url,
+            'location': job.location,
+            'industry': job.industry,
+            'flexibility': job.flexibility,
+            'salary_range': job.salary_range,
+            'level': job.level,
+        }
+
+        # 调用AI服务生成定制简历
+        from ....services import ai_service
+        generated_content = ai_service.generate_custom_resume(user_profile.user_cv_text, job_dict)
+
+        # 检查是否已有定制简历
+        existing_resume = db.query(CustomResumeModel).filter(
+            CustomResumeModel.user_id == user_id,
+            CustomResumeModel.job_listing_id == str(job_id)
+        ).first()
+
+        if existing_resume:
+            # 更新现有简历
+            existing_resume.content = generated_content
+            db.commit()
+            custom_resume = existing_resume
+        else:
+            # 创建新简历
+            custom_resume = CustomResumeModel(
+                user_id=user_id,
+                job_listing_id=str(job_id),
+                content=generated_content
+            )
+            db.add(custom_resume)
+            db.commit()
+
+        return {
+            "success": True,
+            "content": generated_content,
+            "has_existing_resume": existing_resume is not None
+        }
+
+    except Exception as e:
+        print(f"ERROR: Failed to generate custom resume: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate custom resume. Please try again later."
+        )
 
 @router.get("/status-choices")
 async def get_status_choices():

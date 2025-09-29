@@ -2,7 +2,7 @@
 工作匹配相关API
 对应Django的main_views.py中的核心匹配逻辑
 """
-from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks
+from fastapi import APIRouter, Depends, HTTPException, BackgroundTasks, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional, Dict
 from uuid import UUID
@@ -212,6 +212,55 @@ async def delete_match_session(
 
     return {"message": "Match session deleted successfully"}
 
+@router.get("/sessions")
+async def get_user_match_sessions(
+    user_id: int,
+    skip: int = Query(0, ge=0),
+    limit: int = Query(10, ge=1, le=100),
+    db: Session = Depends(get_db)
+):
+    """
+    获取用户的匹配会话历史
+    对应Django的all_matches_page
+    """
+    # 获取用户的会话列表
+    sessions_query = db.query(MatchSessionModel).filter(
+        MatchSessionModel.user_id == user_id
+    ).order_by(MatchSessionModel.matched_at.desc())
+
+    # 获取总数
+    total = sessions_query.count()
+
+    # 分页查询
+    sessions = sessions_query.offset(skip).limit(limit).all()
+
+    # 为每个会话计算匹配的工作数量
+    sessions_with_counts = []
+    for session in sessions:
+        matched_jobs_count = db.query(MatchedJobModel).filter(
+            MatchedJobModel.match_session_id == session.id
+        ).count()
+
+        session_dict = {
+            "id": session.id,
+            "user_id": session.user_id,
+            "skills_text": session.skills_text,
+            "user_preferences_text": session.user_preferences_text,
+            "created_at": session.created_at,
+            "matched_at": session.matched_at,
+            "matched_jobs_count": matched_jobs_count
+        }
+        sessions_with_counts.append(session_dict)
+
+    return {
+        "sessions": sessions_with_counts,
+        "total": total,
+        "skip": skip,
+        "limit": limit,
+        "has_next": skip + limit < total,
+        "has_prev": skip > 0
+    }
+
 
 # ========== 辅助函数 ==========
 # 防抖缓存 - 防止用户短时间内重复请求
@@ -300,15 +349,17 @@ async def perform_job_matching(session_id: str, db_session: Session):
                 print("ERROR: No job listings available in database")
                 return
 
-            # 使用AI服务进行工作匹配（会使用模拟模式）
-            matches = ai_service.match_jobs(
-                structured_profile,
-                job_listings,
-                max_jobs_to_process=36  # 与Django保持一致
-            )
-
-            # 保存匹配结果到数据库
-            success = _save_matches_to_db(db_session, matches, session)
+            # 使用enhanced mock数据服务直接创建匹配结果
+            matched_jobs = create_mock_matched_jobs(db_session, session.id, session.user_id, job_listings)
+            if matched_jobs:
+                print(f"SUCCESS: Created {len(matched_jobs)} enhanced mock matches for session {session.id}")
+                # 更新会话状态
+                session.matched_at = datetime.now()
+                db_session.commit()
+                success = True
+            else:
+                print(f"ERROR: Failed to create mock matches for session {session.id}")
+                success = False
         else:
             # 正常流程：从Supabase获取今日工作职位
             job_listings = supabase_service.fetch_todays_job_listings_from_supabase(supabase)
@@ -327,7 +378,6 @@ async def perform_job_matching(session_id: str, db_session: Session):
             success = _save_matches_to_db(db_session, matches, session)
 
         if success:
-            print(f"SUCCESS: Completed job matching for session {session_id} with {len(matches)} matches")
             # 更新防抖时间
             if session.user_id:
                 _update_last_match_time(session.user_id)

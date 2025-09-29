@@ -56,34 +56,127 @@ def create_mock_matched_jobs(db: Session, session_id: str, user_id: int, job_lis
             UserProfile.user_id == user_id
         ).first()
 
+        # 获取用户技能和偏好
+        user_skills = []
+        user_preferences = []
+        if user_profile:
+            if user_profile.user_cv_text:
+                # 简单提取技能
+                user_skills = [skill.strip() for skill in user_profile.user_cv_text.lower().split(',') if skill.strip()]
+            if user_profile.user_preferences_text:
+                user_preferences = [pref.strip() for pref in user_profile.user_preferences_text.lower().split(',') if pref.strip()]
+
         # 为每个工作职位创建匹配结果
-        for job in job_listings[:20]:  # 限制最多20个
-            # 基于简单的匹配逻辑生成分数
+        for i, job in enumerate(job_listings[:20]):  # 限制最多20个
+            # 基于详细的匹配逻辑生成分数
             base_score = random.randint(60, 95)
 
-            # 根据用户偏好调整分数
-            if user_profile and user_profile.user_preferences_text:
-                prefs_text = user_profile.user_preferences_text.lower()
-                if 'munich' in prefs_text and 'munich' in job.get('location', '').lower():
+            job_title = job.get('job_title', '').lower()
+            job_location = job.get('location', '').lower()
+            job_industry = job.get('industry', '').lower()
+            company_name = job.get('company_name', '').lower()
+            job_description = job.get('description', '').lower()
+
+            # 技能匹配加分
+            skill_matches = []
+            for skill in user_skills:
+                if skill in job_title or skill in job_description:
+                    skill_matches.append(skill)
+                    base_score += len(skill_matches) * 2
+
+            # 位置匹配加分
+            location_match = False
+            for pref in user_preferences:
+                if pref in job_location:
                     base_score += 5
-                if 'remote' in prefs_text and 'remote' in job.get('location', '').lower():
-                    base_score += 3
+                    location_match = True
+                    break
+
+            # 远程工作加分
+            if 'remote' in user_preferences and 'remote' in job_location:
+                base_score += 3
+
+            # 行业匹配加分
+            for pref in user_preferences:
+                if pref in job_industry:
+                    base_score += 2
+                    break
 
             score = min(100, base_score)
 
-            # 创建匹配原因
-            reasons = ["Mock match based on database data"]
-            if user_profile:
-                if 'python' in user_profile.user_cv_text.lower() and 'python' in job.get('job_title', '').lower():
-                    reasons.append("Good Python skill alignment")
-                if 'munich' in job.get('location', '').lower():
-                    reasons.append("Location matches preference")
+            # 创建详细的匹配原因
+            reason_parts = []
+            if skill_matches:
+                reason_parts.append(f"Strong alignment with your skills: {', '.join(skill_matches[:3])}")
+            if location_match:
+                reason_parts.append(f"Location preference match: {job.get('location', '')}")
+            if 'remote' in job_location and 'remote' in user_preferences:
+                reason_parts.append("Remote work option available")
+            if score >= 85:
+                reason_parts.append("Excellent overall fit for your profile")
+            elif score >= 75:
+                reason_parts.append("Good match with potential for growth")
 
-            reason = " | ".join(reasons) if reasons else "Mock match"
+            reason = ". ".join(reason_parts) + "." if reason_parts else "General position match based on your profile."
 
-            # 创建见解和建议
-            insights = f"Mock insights for {job.get('job_title', 'this position')}"
-            tips = f"Mock tips: Highlight relevant skills for this role"
+            # 创建结构化的见解（包含Pro:和Con:项目）
+            insights_parts = []
+
+            # Pros (优点)
+            pros = []
+            if skill_matches:
+                pros.append(f"Your {', '.join(skill_matches[:2])} skills align well with requirements")
+            if score >= 80:
+                pros.append("Strong overall match with your experience level")
+            if 'remote' in job_location:
+                pros.append("Offers flexible work arrangements")
+            if 'munich' in job_location and any('munich' in pref for pref in user_preferences):
+                pros.append("Preferred location match")
+
+            # Cons (缺点)
+            cons = []
+            if not skill_matches:
+                cons.append("May require additional skill development")
+            if score < 75:
+                cons.append("Could be stretch position - consider skill gaps")
+            if job_location and not any(loc in job_location for loc in ['munich', 'remote', 'berlin'] if any(loc in pref for pref in user_preferences)):
+                cons.append(f"Location ({job.get('location', '')}) may not match preferences")
+            if not job_description:
+                cons.append("Limited job description available for detailed assessment")
+
+            # 构建insights字符串
+            insights_items = []
+            for pro, con in zip(pros, cons):
+                if pro:
+                    insights_items.append(f"Pro: {pro}")
+                if con:
+                    insights_items.append(f"Con: {con}")
+
+            # 添加未配对的pros或cons
+            remaining_pros = pros[len(cons):] if len(pros) > len(cons) else []
+            remaining_cons = cons[len(pros):] if len(cons) > len(pros) else []
+
+            for pro in remaining_pros:
+                insights_items.append(f"Pro: {pro}")
+            for con in remaining_cons:
+                insights_items.append(f"Con: {con}")
+
+            insights = "\n".join(insights_items) if insights_items else "Pro: Standard position fit.\nCon: Review job requirements carefully."
+
+            # 创建详细的建议（使用*分隔）
+            tips_parts = []
+            if skill_matches:
+                tips_parts.append(f"Highlight your {', '.join(skill_matches[:2])} experience in your application")
+            tips_parts.append(f"Research {company_name.title()} to tailor your application")
+            if score >= 80:
+                tips_parts.append("Apply promptly as this is a strong match")
+            else:
+                tips_parts.append("Consider if you meet most qualifications before applying")
+            tips_parts.append("Prepare specific examples from your experience that relate to this role")
+            if 'remote' in job_location:
+                tips_parts.append("Emphasize your remote work experience and communication skills")
+
+            tips = "\n".join(tips_parts) if tips_parts else "Standard application advice.\nResearch the company and role thoroughly."
 
             # 创建匹配的工作记录
             matched_job = MatchedJob(

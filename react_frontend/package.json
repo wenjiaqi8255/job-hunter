@@ -11,6 +11,9 @@
     "generate:api": "npx openapi-typescript-codegen --input ../openapi.json --output ./src/services/api_gen --client axios"
   },
   "dependencies": {
+    "axios": "^1.12.2",
+    "bootstrap": "^5.3.8",
+    "prop-types": "^15.8.1",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
     "react-router-dom": "^7.9.1"

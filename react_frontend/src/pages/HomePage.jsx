@@ -187,6 +187,74 @@ const HomePage = () => {
           </div>
         )}
       </div>
+
+      {/* 用户功能区（仅登录用户可见） */}
+      {token && (
+        <div className="mt-16">
+          <h2 className="text-2xl font-bold mb-8">个人中心</h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            {/* 个人档案卡片 */}
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <i className="fas fa-user text-blue-600 text-2xl"></i>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">个人档案</h3>
+                <p className="text-gray-600 text-sm">管理您的简历信息和求职偏好</p>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate('/profile')}
+                  className="w-full bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 transition"
+                >
+                  <i className="fas fa-edit me-2"></i>
+                  编辑档案
+                </button>
+              </div>
+            </div>
+
+            {/* 申请历史卡片 */}
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <i className="fas fa-briefcase text-green-600 text-2xl"></i>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">申请历史</h3>
+                <p className="text-gray-600 text-sm">查看和管理您的求职申请进度</p>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate('/applications')}
+                  className="w-full bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 transition"
+                >
+                  <i className="fas fa-history me-2"></i>
+                  查看申请
+                </button>
+              </div>
+            </div>
+
+            {/* 匹配历史卡片 */}
+            <div className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+              <div className="text-center mb-4">
+                <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <i className="fas fa-search text-purple-600 text-2xl"></i>
+                </div>
+                <h3 className="text-lg font-semibold mb-2">匹配历史</h3>
+                <p className="text-gray-600 text-sm">浏览历史匹配结果和会话记录</p>
+              </div>
+              <div className="space-y-2">
+                <button
+                  onClick={() => navigate('/sessions')}
+                  className="w-full bg-purple-600 text-white py-2 px-4 rounded hover:bg-purple-700 transition"
+                >
+                  <i className="fas fa-list me-2"></i>
+                  查看历史
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

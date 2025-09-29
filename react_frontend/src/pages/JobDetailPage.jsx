@@ -133,6 +133,17 @@ const JobDetailPage = () => {
                 原始链接
               </a>
             )}
+
+            {/* 生成定制简历按钮 - 仅登录用户可见 */}
+            {token && (
+              <button
+                onClick={() => navigate(`/custom-resume/${jobId}`)}
+                className="bg-green-600 text-white px-6 py-2 rounded hover:bg-green-700 transition-colors text-center block"
+              >
+                <i className="fas fa-file-alt me-2"></i>
+                生成定制简历
+              </button>
+            )}
           </div>
         </div>
 

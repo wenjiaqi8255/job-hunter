@@ -1,36 +1,31 @@
 // useApi.ts - API调用Hook
+// 遵循SOLID原则：单一职责、依赖倒置
 import { useContext } from 'react';
 import { AuthContext } from '../contexts/AuthContext';
 import { useToast } from './useToast';
-import axios from 'axios';
-
-const API_BASE_URL = '/api/v1';
+import httpClient from '../services/httpClient';
+import { CONFIG } from '../config';
 
 export const useApi = () => {
-  const { token, user, logout } = useContext(AuthContext);
+  const { user, logout } = useContext(AuthContext);
   const { showError } = useToast();
 
   // 通用的API请求函数
   const apiRequest = async (endpoint: string, options = {}) => {
-    const config = {
-      headers: {},
-      ...options
-    };
-
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-
     try {
-      const response = await axios(`${API_BASE_URL}${endpoint}`, config);
-      return response.data;
+      const response = await httpClient.request({
+        url: endpoint,
+        ...options,
+      });
+      return response;
     } catch (error) {
-      if (error.response?.status === 401) {
+      // 处理特定错误
+      if (error.code === 'UNAUTHORIZED') {
         // Token过期，自动登出
         logout();
-        showError('Session expired. Please login again.');
+        showError(CONFIG.ERROR.UNAUTHORIZED);
       } else {
-        showError(error.response?.data?.message || 'API request failed');
+        showError(error.message || CONFIG.ERROR.UNKNOWN);
       }
       throw error;
     }
@@ -39,7 +34,7 @@ export const useApi = () => {
   // 启动新的匹配会话
   const startNewMatch = async () => {
     return apiRequest('/matching/start/', {
-      method: 'POST'
+      method: 'POST',
     });
   };
 
@@ -47,26 +42,24 @@ export const useApi = () => {
   const updateJobApplicationStatus = async (jobId: string, status: string) => {
     return apiRequest(`/applications/jobs/${jobId}/status/`, {
       method: 'POST',
-      data: { status }
+      data: { status },
     });
   };
 
-  
   // 切换语言
   const changeLanguage = async (languageCode: string) => {
     return apiRequest('/language/', {
       method: 'POST',
-      data: { language: languageCode }
+      data: { language: languageCode },
     });
   };
 
   return {
     user,
-    token,
     logout,
     startNewMatch,
     updateJobApplicationStatus,
     changeLanguage,
-    apiRequest
+    apiRequest,
   };
 };

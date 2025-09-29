@@ -1,8 +1,7 @@
 import { useState, useEffect, useContext, useRef, useCallback } from 'react';
-import axios from 'axios';
 import { AuthContext } from '../contexts/AuthContext';
-
-const API_BASE_URL = '/api/v1';
+import httpClient from '../services/httpClient';
+import { CONFIG } from '../config';
 
 export const useJobsWithSavedStatus = (limit = null) => {
   const { token, user } = useContext(AuthContext);
@@ -19,22 +18,18 @@ export const useJobsWithSavedStatus = (limit = null) => {
 
     try {
       console.log(`DEBUG: useJobsWithSavedStatus loading jobs (limit: ${limit})...`);
-      const response = await axios.get(`${API_BASE_URL}/jobs/`);
-      let jobsData = limit ? response.data.slice(0, limit) : response.data;
+      const response = await httpClient.get('/jobs/');
+      let jobsData = limit ? response.slice(0, limit) : response;
 
       // 如果用户已登录，获取保存状态
-      if (user && token) {
+      if (user) {
         console.log('DEBUG: User logged in, fetching saved jobs...');
         try {
-          const savedResponse = await axios.get(
-            `${API_BASE_URL}/applications/saved-jobs`,
-            {
-              params: { user_id: user.id },
-              headers: { 'Authorization': `Bearer ${token}` }
-            }
-          );
+          const savedResponse = await httpClient.get('/applications/saved-jobs', {
+            params: { user_id: user.id }
+          });
 
-          const savedJobIds = savedResponse.data.map(job => job.job_listing_id);
+          const savedJobIds = savedResponse.map(job => job.job_listing_id);
           console.log(`DEBUG: Found ${savedJobIds.length} saved jobs`);
 
           // 为每个工作添加保存状态
@@ -53,10 +48,10 @@ export const useJobsWithSavedStatus = (limit = null) => {
       loadingStates.current[limitKey] = true;
     } catch (err) {
       console.error('获取工作列表失败:', err);
-      setError('加载失败');
+      setError(err.message || CONFIG.ERROR.UNKNOWN);
       setLoading(false);
     }
-  }, [token, user, limit]);
+  }, [user, limit]);
 
   useEffect(() => {
     // Create a unique key for this limit value
