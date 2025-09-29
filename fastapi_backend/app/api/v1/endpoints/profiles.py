@@ -6,6 +6,9 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 from typing import Optional
 import os
+import fitz  # PyMuPDF for PDF text extraction
+import docx  # python-docx for DOCX files
+import io
 
 from ....core.database import get_db
 from ....core.config import settings
@@ -100,11 +103,12 @@ async def upload_cv_file(
     对应Django的CV文件上传逻辑
     """
     # 验证文件类型
-    allowed_types = ['application/pdf', 'text/plain', 'application/msword']
+    allowed_types = ['application/pdf', 'text/plain', 'application/msword',
+                     'application/vnd.openxmlformats-officedocument.wordprocessingml.document']
     if file.content_type not in allowed_types:
         raise HTTPException(
-            status_code=400, 
-            detail="Only PDF, TXT, and DOC files are allowed"
+            status_code=400,
+            detail="Only PDF, TXT, DOC, and DOCX files are allowed"
         )
     
     # 验证文件大小
@@ -119,18 +123,94 @@ async def upload_cv_file(
     if not profile:
         raise HTTPException(status_code=404, detail="Profile not found")
     
-    # 保存文件
+    # 读取文件内容
+    content = await file.read()
+
+    # 提取文本内容
+    extracted_text = ""
+    try:
+        if file.content_type == 'application/pdf':
+            extracted_text = extract_text_from_pdf(content)
+        elif file.content_type in ['application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document']:
+            extracted_text = extract_text_from_docx(content)
+        elif file.content_type == 'text/plain':
+            extracted_text = content.decode('utf-8')
+
+        # 清理文本
+        extracted_text = clean_extracted_text(extracted_text)
+
+    except Exception as e:
+        print(f"ERROR: Could not extract text from uploaded file: {e}")
+        # 即使文本提取失败，也保存文件
+        extracted_text = ""
+
+    # 保存文件到磁盘
     upload_dir = os.path.join(settings.media_root, "user_cvs", str(user_id))
     os.makedirs(upload_dir, exist_ok=True)
-    
+
     file_path = os.path.join(upload_dir, file.filename)
     with open(file_path, "wb") as buffer:
-        content = await file.read()
         buffer.write(content)
-    
-    # 更新profile中的文件路径
-    # 注意：这里简化处理，实际应用中可能需要提取文件内容到user_cv_text
-    return {"message": "CV uploaded successfully", "file_path": file_path}
+
+    # 更新profile中的CV文本内容
+    if extracted_text:
+        profile.user_cv_text = extracted_text
+        db.commit()
+        db.refresh(profile)
+
+    return {
+        "message": "CV uploaded successfully",
+        "file_path": file_path,
+        "text_extracted": len(extracted_text) > 0,
+        "text_length": len(extracted_text)
+    }
+
+# ========== 文本提取辅助函数 ==========
+def extract_text_from_pdf(pdf_content: bytes) -> str:
+    """使用PyMuPDF从PDF文件中提取文本"""
+    try:
+        doc = fitz.open(stream=pdf_content, filetype="pdf")
+        text = ""
+        for page in doc:
+            text += page.get_text()
+        doc.close()
+        return text
+    except Exception as e:
+        print(f"ERROR: PDF text extraction failed: {e}")
+        return ""
+
+def extract_text_from_docx(docx_content: bytes) -> str:
+    """从DOCX文件中提取文本"""
+    try:
+        doc = docx.Document(io.BytesIO(docx_content))
+        text = ""
+        for paragraph in doc.paragraphs:
+            text += paragraph.text + "\n"
+        return text
+    except Exception as e:
+        print(f"ERROR: DOCX text extraction failed: {e}")
+        return ""
+
+def clean_extracted_text(text: str) -> str:
+    """清理提取的文本"""
+    if not text:
+        return ""
+
+    # 移除多余的空白字符
+    text = " ".join(text.split())
+
+    # 移除特殊字符但保留基本的标点
+    import re
+    text = re.sub(r'[^\w\s\.\,\!\?\;\:\-\(\)\[\]\{\}\"\'\/\@\#\$\%\^\&\*\+\=\~\`]', '', text)
+
+    # 规范化换行
+    text = text.replace('\r\n', '\n').replace('\r', '\n')
+
+    # 移除过多的空行
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    text = '\n'.join(lines)
+
+    return text.strip()
 
 @router.delete("/{user_id}")
 async def delete_user_profile(

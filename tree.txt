@@ -1,0 +1,224 @@
+.
+├── db.sqlite3
+├── documentation
+│   ├── 0report.md
+│   ├── 1preview_cv.md
+│   ├── auth_arch_design.md
+│   ├── AUTH_ERROR_FIX_SUMMARY.md
+│   ├── AUTH_REFACTOR_SUMMARY.md
+│   ├── auth_replace_2.md
+│   ├── auth_replace_3.md
+│   ├── auth_replace_4.md
+│   ├── auth_replace_5.md
+│   ├── auth_replace_6.md
+│   ├── auth_replace.md
+│   ├── AUTHENTICATION_SIMPLIFIED.md
+│   ├── BREADCRUMB_ENHANCEMENT_REPORT.md
+│   ├── COVER_LETTER_MIGRATION.md
+│   ├── css_old.css
+│   ├── cv_customization.md
+│   ├── cv_parse.md
+│   ├── dataflow-test.md
+│   ├── experience_pool.md
+│   ├── legacy_auth_arch_design.md
+│   ├── main_page_old.html
+│   ├── MATCH_HISTORY_FRONTEND_README.md
+│   ├── MATCH_HISTORY_MIGRATION_PLAN.md
+│   ├── matching.md
+│   ├── mvp.md
+│   ├── NAVBAR_IMPLEMENTATION.md
+│   ├── oauth_backend_implementation.md
+│   ├── ONE_STEP_MIGRATION_COMPLETE.md
+│   ├── PHASE2_API_REFACTOR_COMPLETION_REPORT.md
+│   ├── react_1.md
+│   ├── react_2.md
+│   ├── react_3_breadcrumb_session.md
+│   ├── react_4.md
+│   ├── REACT_JOB_DETAIL_COMPLETION_REPORT.md
+│   ├── react_job_detail.md
+│   ├── react_refactor_PRINCIPLES.md
+│   ├── react_refactor.md
+│   ├── react_refractor_API.md
+│   ├── react_supabase_CRUD_direct.md
+│   ├── react_ui.md
+│   ├── react+python_context.md
+│   ├── README.md
+│   ├── REFACTOR_MIGRATION_COMPLETE.md
+│   ├── RLS_SECURITY_BEST_PRACTICES.md
+│   ├── SESSION_URL_ARCHITECTURE_COMPLETION_REPORT.md
+│   ├── SIMPLIFIED_AUTH_ARCHITECTURE.md
+│   ├── STAGE1_COMPLETION_REPORT.md
+│   ├── STEP2_COMPLETION_REPORT.md
+│   ├── STEP5_COMPLETION_REPORT.md
+│   ├── STEP5_CRITICAL_FIXES.md
+│   ├── supabase (5).ts
+│   ├── supabase_RLS_context.md
+│   ├── supabase.ts
+│   ├── ui_refine.md
+│   ├── UPDATED_AT_FIX_REPORT.md
+│   ├── user_auth.md
+│   └── views_old_py.md
+├── initial_data.json
+├── job_hunting_project
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-311.pyc
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── auth_backend.cpython-311.pyc
+│   │   ├── auth_middleware.cpython-311.pyc
+│   │   ├── auth_sync_middleware.cpython-311.pyc
+│   │   ├── context_processors.cpython-311.pyc
+│   │   ├── settings.cpython-311.pyc
+│   │   ├── settings.cpython-312.pyc
+│   │   ├── supabase_auth_backend.cpython-311.pyc
+│   │   ├── supabase_auth_middleware.cpython-311.pyc
+│   │   ├── supabase_middleware.cpython-311.pyc
+│   │   ├── urls.cpython-311.pyc
+│   │   ├── urls.cpython-312.pyc
+│   │   ├── wsgi.cpython-311.pyc
+│   │   └── wsgi.cpython-312.pyc
+│   ├── asgi.py
+│   ├── auth_backend.py
+│   ├── auth_middleware.py
+│   ├── settings.py
+│   ├── urls.py
+│   └── wsgi.py
+├── job_listings_rows.csv
+├── manage.py
+├── matcher
+│   ├── __init__.py
+│   ├── __pycache__
+│   │   ├── __init__.cpython-311.pyc
+│   │   ├── __init__.cpython-312.pyc
+│   │   ├── admin.cpython-311.pyc
+│   │   ├── admin.cpython-312.pyc
+│   │   ├── apps.cpython-311.pyc
+│   │   ├── apps.cpython-312.pyc
+│   │   ├── data_structures.cpython-311.pyc
+│   │   ├── forms.cpython-311.pyc
+│   │   ├── forms.cpython-312.pyc
+│   │   ├── gemini_utils.cpython-311.pyc
+│   │   ├── gemini_utils.cpython-312.pyc
+│   │   ├── jd_analyzer.cpython-311.pyc
+│   │   ├── models.cpython-311.pyc
+│   │   ├── models.cpython-312.pyc
+│   │   ├── tests.cpython-311.pyc
+│   │   ├── urls.cpython-311.pyc
+│   │   ├── urls.cpython-312.pyc
+│   │   ├── utils.cpython-311.pyc
+│   │   ├── utils.cpython-312.pyc
+│   │   ├── views.cpython-311.pyc
+│   │   └── views.cpython-312.pyc
+│   ├── admin.py
+│   ├── apps.py
+│   ├── forms.py
+│   ├── gemini_utils.py
+│   ├── management
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   └── __init__.cpython-312.pyc
+│   │   └── commands
+│   │       ├── __init__.py
+│   │       ├── __pycache__
+│   │       │   ├── __init__.cpython-311.pyc
+│   │       │   ├── __init__.cpython-312.pyc
+│   │       │   ├── check_security.cpython-311.pyc
+│   │       │   ├── import_jobs.cpython-311.pyc
+│   │       │   ├── import_jobs.cpython-312.pyc
+│   │       │   ├── migrate_cover_letters.cpython-311.pyc
+│   │       │   ├── migrate_saved_jobs_to_supabase.cpython-311.pyc
+│   │       │   └── test_rls_compliance.cpython-311.pyc
+│   │       └── import_jobs.py
+│   ├── migrations
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   └── 0001_initial.cpython-311.pyc
+│   │   └── 0001_initial.py
+│   ├── models.py
+│   ├── services
+│   │   ├── __pycache__
+│   │   │   ├── experience_service.cpython-311.pyc
+│   │   │   ├── job_listing_service.cpython-311.pyc
+│   │   │   ├── match_history_migration.cpython-311.pyc
+│   │   │   ├── pdf_parser.cpython-311.pyc
+│   │   │   ├── supabase_auth_helper.cpython-311.pyc
+│   │   │   ├── supabase_cover_letter_service.cpython-311.pyc
+│   │   │   ├── supabase_match_service.cpython-311.pyc
+│   │   │   ├── supabase_saved_job_service.cpython-311.pyc
+│   │   │   └── supabase_user_profile_service.cpython-311.pyc
+│   │   └── job_listing_service.py
+│   ├── templates
+│   │   └── matcher
+│   │       ├── all_matches.html
+│   │       ├── base.html
+│   │       ├── cover_letter_page.html
+│   │       ├── custom_resume_page.html
+│   │       ├── job_detail.html
+│   │       ├── login.html
+│   │       ├── main_page.html
+│   │       ├── my_applications.html
+│   │       ├── profile_page.html
+│   │       ├── register.html
+│   │       └── tips_to_improve.html
+│   ├── templatetags
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   ├── matcher_extras.cpython-311.pyc
+│   │   │   └── matcher_extras.cpython-312.pyc
+│   │   └── matcher_extras.py
+│   ├── tests.py
+│   ├── urls.py
+│   ├── utils.py
+│   ├── views
+│   │   ├── __init__.py
+│   │   ├── __pycache__
+│   │   │   ├── __init__.cpython-311.pyc
+│   │   │   ├── __init__.cpython-312.pyc
+│   │   │   ├── application_views.cpython-311.pyc
+│   │   │   ├── auth_views.cpython-311.pyc
+│   │   │   ├── auth_views.cpython-312.pyc
+│   │   │   ├── experience_views.cpython-311.pyc
+│   │   │   ├── job_views.cpython-311.pyc
+│   │   │   ├── main_views.cpython-311.pyc
+│   │   │   └── profile_views.cpython-311.pyc
+│   │   ├── application_views.py
+│   │   ├── auth_views.py
+│   │   ├── job_views.py
+│   │   ├── main_views.py
+│   │   ├── profile_views.py
+│   │   └── README.md
+│   └── views.py
+├── media
+│   └── user_cvs
+│       ├── 49dgrwb2tbh222q884gljxia03wj0tp2
+│       │   └── CV_Jiaqi_Wen_Tech.pdf
+│       ├── a
+│       │   ├── CV_Jiaqi_Wen_Tech_tg6tcU7.pdf
+│       │   └── CV_Jiaqi_Wen_Tech.pdf
+│       ├── c
+│       │   └── CV_Jiaqi_Wen_Tech.pdf
+│       ├── d
+│       │   └── CV_Jiaqi_Wen_Tech.pdf
+│       └── xatf4es2uzvoju5repncg4imsex1mx4t
+│           └── CV_Jiaqi_Wen_Tech.pdf
+├── poetry.lock
+├── pyproject.toml
+├── README.md
+├── requirements.txt
+├── static
+│   └── matcher
+│       ├── css
+│       │   └── jobbAI_styles.css
+│       └── images
+│           ├── blue_bg.png
+│           ├── login_bg.png
+│           ├── logo.svg
+│           ├── main_page_bg.jpg
+│           └── noise_pic.png
+└── tree.txt
+
+31 directories, 191 files

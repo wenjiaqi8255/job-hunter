@@ -2,8 +2,9 @@
 FastAPI主应用入口
 基于现有Django项目重构而来
 """
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.exceptions import RequestValidationError
 from contextlib import asynccontextmanager
 import os
 from dotenv import load_dotenv
@@ -42,6 +43,7 @@ app.add_middleware(
 # 注册API路由
 app.include_router(api_router, prefix="/api/v1")
 
+
 @app.get("/")
 async def root():
     """健康检查端点"""
@@ -49,4 +51,4 @@ async def root():
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8001)

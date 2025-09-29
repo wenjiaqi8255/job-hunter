@@ -6,6 +6,19 @@ from pydantic import BaseModel, EmailStr, HttpUrl
 from typing import Optional, List, Dict, Any
 from datetime import datetime
 from uuid import UUID
+from enum import Enum
+
+# ========== 状态枚举 ==========
+class SavedJobStatus(str, Enum):
+    """保存工作的状态选择"""
+    NOT_APPLIED = "not_applied"
+    VIEWED = "viewed"
+    APPLIED = "applied"
+    INTERESTED = "interested"  # 添加前端使用的新状态
+    INTERVIEWING = "interviewing"
+    OFFER = "offer"
+    REJECTED = "rejected"
+    WITHDRAWN = "withdrawn"  # 添加后端验证逻辑中的状态
 
 # ========== User相关 ==========
 class UserBase(BaseModel):
@@ -23,8 +36,8 @@ class UserUpdate(BaseModel):
 
 class User(UserBase):
     id: int
-    created_at: datetime
-    
+    date_joined: datetime
+
     class Config:
         from_attributes = True
 
@@ -130,7 +143,7 @@ class MatchedJob(MatchedJobBase):
 
 # ========== SavedJob ==========
 class SavedJobBase(BaseModel):
-    status: str = "not_applied"  # 对应Django的STATUS_CHOICES
+    status: SavedJobStatus = SavedJobStatus.NOT_APPLIED  # 使用枚举确保状态值有效
     notes: Optional[str] = None
 
 class SavedJobCreate(SavedJobBase):
@@ -138,10 +151,11 @@ class SavedJobCreate(SavedJobBase):
     user_id: int
 
 class SavedJobUpdate(BaseModel):
-    status: Optional[str] = None
+    status: Optional[SavedJobStatus] = None
     notes: Optional[str] = None
 
 class SavedJob(SavedJobBase):
+    id: int
     job_listing_id: str
     user_id: int
     created_at: datetime
@@ -209,14 +223,3 @@ class MatchSessionResponse(BaseModel):
     matched_jobs: List[JobMatchResponse]
     total_matches: int
 
-# ========== 状态枚举 ==========
-from enum import Enum
-
-class SavedJobStatus(str, Enum):
-    """保存工作的状态选择"""
-    NOT_APPLIED = "not_applied"
-    VIEWED = "viewed"
-    APPLIED = "applied"
-    INTERVIEWING = "interviewing"
-    OFFER = "offer"
-    REJECTED = "rejected"

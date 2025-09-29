@@ -14,7 +14,7 @@ from ..core.database import Base
 # ========== User模型 ==========
 class User(Base):
     __tablename__ = "auth_user"  # Django默认用户表名
-    
+
     id = Column(Integer, primary_key=True, index=True)
     username = Column(String(150), unique=True, index=True, nullable=False)
     email = Column(String(254), nullable=True)
@@ -23,12 +23,12 @@ class User(Base):
     is_superuser = Column(Boolean, default=False)
     date_joined = Column(DateTime(timezone=True), server_default=func.now())
     last_login = Column(DateTime(timezone=True), nullable=True)
-    
+
     # Django用户模型的其他必需字段（简化）
     password = Column(String(128), nullable=False)
     first_name = Column(String(150), nullable=True)
     last_name = Column(String(150), nullable=True)
-    
+
     # 关系
     profile = relationship("UserProfile", back_populates="user", uselist=False)
     match_sessions = relationship("MatchSession", back_populates="user")

@@ -7,19 +7,32 @@ from fastapi.responses import StreamingResponse
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from io import BytesIO
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.pdfbase import pdfmetrics
+from reportlab.pdfbase.ttfonts import TTFont
+import io
+import textwrap
+from fastapi.exceptions import RequestValidationError
+from fastapi import Request
 
 from ....core.database import get_db
 from ....schemas import (
     SavedJob, SavedJobCreate, SavedJobUpdate,
     CoverLetter, CoverLetterCreate, CoverLetterUpdate,
-    CustomResume, CustomResumeCreate, CustomResumeUpdate
+    CustomResume, CustomResumeCreate, CustomResumeUpdate,
+    SavedJobStatus
 )
 from ....models import (
     SavedJob as SavedJobModel,
     CoverLetter as CoverLetterModel,
     CustomResume as CustomResumeModel,
-    JobListing as JobListingModel
+    JobListing as JobListingModel,
+    UserProfile as UserProfileModel
 )
+from ....services import ai_service
 
 router = APIRouter()
 
@@ -55,23 +68,44 @@ async def save_job_application(
     保存工作申请
     对应Django的job_detail_page POST请求
     """
+    # 验证用户ID
+    if not job_data.user_id or job_data.user_id <= 0:
+        raise HTTPException(
+            status_code=400,
+            detail="Valid user ID is required"
+        )
+
+    # 检查工作是否存在
+    job = db.query(JobListingModel).filter(JobListingModel.id == job_data.job_listing_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+
     # 检查是否已经保存过
     existing_saved_job = db.query(SavedJobModel).filter(
         SavedJobModel.user_id == job_data.user_id,
         SavedJobModel.job_listing_id == job_data.job_listing_id
     ).first()
-    
+
     if existing_saved_job:
         raise HTTPException(status_code=400, detail="Job already saved")
-    
-    # 创建新的保存记录
-    saved_job_dict = job_data.dict()
-    new_saved_job = SavedJobModel(**saved_job_dict)
-    db.add(new_saved_job)
-    db.commit()
-    db.refresh(new_saved_job)
-    
-    return new_saved_job
+
+    try:
+        # 创建新的保存记录
+        saved_job_dict = job_data.dict()
+        new_saved_job = SavedJobModel(**saved_job_dict)
+        db.add(new_saved_job)
+        db.commit()
+        db.refresh(new_saved_job)
+
+        return new_saved_job
+
+    except Exception as e:
+        db.rollback()
+        print(f"ERROR: Failed to save job application: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to save job application. Please try again."
+        )
 
 @router.put("/saved-jobs/{saved_job_id}", response_model=SavedJob)
 async def update_saved_job_status(
@@ -126,26 +160,69 @@ async def generate_cover_letter(
     saved_job = db.query(SavedJobModel).filter(SavedJobModel.id == cover_letter_data.saved_job_id).first()
     if not saved_job:
         raise HTTPException(status_code=404, detail="Saved job not found")
-    
-    # 检查是否已有求职信
-    existing_cover_letter = db.query(CoverLetterModel).filter(
-        CoverLetterModel.saved_job_id == cover_letter_data.saved_job_id
+
+    # 获取用户个人资料
+    user_profile = db.query(UserProfileModel).filter(
+        UserProfileModel.user_id == saved_job.user_id
     ).first()
-    
-    if existing_cover_letter:
-        # 更新现有求职信
-        existing_cover_letter.content = cover_letter_data.content
-        db.commit()
-        db.refresh(existing_cover_letter)
-        return existing_cover_letter
-    else:
-        # 创建新求职信
-        cover_letter_dict = cover_letter_data.dict()
-        new_cover_letter = CoverLetterModel(**cover_letter_dict)
-        db.add(new_cover_letter)
-        db.commit()
-        db.refresh(new_cover_letter)
-        return new_cover_letter
+
+    if not user_profile or not user_profile.user_cv_text:
+        raise HTTPException(
+            status_code=400,
+            detail="User profile or CV not found. Please complete your profile first."
+        )
+
+    # 获取工作详情
+    job = db.query(JobListingModel).filter(JobListingModel.id == saved_job.job_listing_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+
+    # 使用AI服务生成求职信内容
+    try:
+        # 提取用户技能（从CV中提取关键技能）
+        skills_text = user_profile.user_cv_text
+
+        # 构建工作信息字典
+        job_dict = {
+            'job_title': job.job_title,
+            'company_name': job.company_name,
+            'level': job.level,
+            'description': job.description,
+            'location': job.location,
+            'industry': job.industry
+        }
+
+        # 调用AI服务生成求职信
+        generated_content = ai_service.generate_cover_letter(skills_text, job_dict)
+
+        # 检查是否已有求职信
+        existing_cover_letter = db.query(CoverLetterModel).filter(
+            CoverLetterModel.saved_job_id == cover_letter_data.saved_job_id
+        ).first()
+
+        if existing_cover_letter:
+            # 更新现有求职信
+            existing_cover_letter.content = generated_content
+            db.commit()
+            db.refresh(existing_cover_letter)
+            return existing_cover_letter
+        else:
+            # 创建新求职信
+            new_cover_letter = CoverLetterModel(
+                saved_job_id=cover_letter_data.saved_job_id,
+                content=generated_content
+            )
+            db.add(new_cover_letter)
+            db.commit()
+            db.refresh(new_cover_letter)
+            return new_cover_letter
+
+    except Exception as e:
+        print(f"ERROR: Failed to generate cover letter: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate cover letter. Please try again later."
+        )
 
 @router.get("/cover-letters/{saved_job_id}", response_model=CoverLetter)
 async def get_cover_letter(
@@ -180,8 +257,8 @@ async def download_cover_letter(
     if not cover_letter:
         raise HTTPException(status_code=404, detail="Cover letter not found")
     
-    # 生成PDF（简化实现）
-    pdf_buffer = generate_pdf_from_text(cover_letter.content)
+    # 生成PDF
+    pdf_buffer = generate_pdf_from_text(cover_letter.content, "Cover Letter")
     
     return StreamingResponse(
         BytesIO(pdf_buffer),
@@ -199,26 +276,67 @@ async def generate_custom_resume(
     生成定制简历
     对应Django的generate_custom_resume_page
     """
-    # 检查是否已有定制简历
-    existing_resume = db.query(CustomResumeModel).filter(
-        CustomResumeModel.user_id == resume_data.user_id,
-        CustomResumeModel.job_listing_id == resume_data.job_listing_id
+    # 获取用户个人资料
+    user_profile = db.query(UserProfileModel).filter(
+        UserProfileModel.user_id == resume_data.user_id
     ).first()
-    
-    if existing_resume:
-        # 更新现有简历
-        existing_resume.content = resume_data.content
-        db.commit()
-        db.refresh(existing_resume)
-        return existing_resume
-    else:
-        # 创建新简历
-        resume_dict = resume_data.dict()
-        new_resume = CustomResumeModel(**resume_dict)
-        db.add(new_resume)
-        db.commit()
-        db.refresh(new_resume)
-        return new_resume
+
+    if not user_profile or not user_profile.user_cv_text:
+        raise HTTPException(
+            status_code=400,
+            detail="User profile or CV not found. Please complete your profile first."
+        )
+
+    # 获取工作详情
+    job = db.query(JobListingModel).filter(JobListingModel.id == resume_data.job_listing_id).first()
+    if not job:
+        raise HTTPException(status_code=404, detail="Job listing not found")
+
+    # 使用AI服务生成定制简历内容
+    try:
+        # 构建工作信息字典
+        job_dict = {
+            'job_title': job.job_title,
+            'company_name': job.company_name,
+            'level': job.level,
+            'description': job.description,
+            'location': job.location,
+            'industry': job.industry
+        }
+
+        # 调用AI服务生成定制简历
+        generated_content = ai_service.generate_custom_resume(user_profile.user_cv_text, job_dict)
+
+        # 检查是否已有定制简历
+        existing_resume = db.query(CustomResumeModel).filter(
+            CustomResumeModel.user_id == resume_data.user_id,
+            CustomResumeModel.job_listing_id == resume_data.job_listing_id
+        ).first()
+
+        if existing_resume:
+            # 更新现有简历
+            existing_resume.content = generated_content
+            db.commit()
+            db.refresh(existing_resume)
+            return existing_resume
+        else:
+            # 创建新简历
+            new_resume = CustomResumeModel(
+                user_id=resume_data.user_id,
+                job_listing_id=resume_data.job_listing_id,
+                content=generated_content
+            )
+            db.add(new_resume)
+            db.commit()
+            db.refresh(new_resume)
+            return new_resume
+
+    except Exception as e:
+        print(f"ERROR: Failed to generate custom resume: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Failed to generate custom resume. Please try again later."
+        )
 
 @router.get("/custom-resumes/{user_id}/{job_listing_id}", response_model=CustomResume)
 async def get_custom_resume(
@@ -258,7 +376,7 @@ async def download_custom_resume(
         raise HTTPException(status_code=404, detail="Custom resume not found")
     
     # 生成PDF
-    pdf_buffer = generate_pdf_from_text(custom_resume.content)
+    pdf_buffer = generate_pdf_from_text(custom_resume.content, "Custom Resume")
     
     return StreamingResponse(
         BytesIO(pdf_buffer),
@@ -284,11 +402,74 @@ async def get_status_choices():
     }
 
 # ========== 辅助函数 ==========
-def generate_pdf_from_text(text: str) -> bytes:
+def generate_pdf_from_text(text: str, title: str = "Document") -> bytes:
     """
-    从文本生成PDF
-    简化实现，实际应用中应使用reportlab等库
+    使用reportlab从文本生成PDF
+    对应Django的PDF生成逻辑
     """
-    # 这里应该使用reportlab生成PDF
-    # 暂时返回模拟的PDF内容
-    return b"PDF content placeholder"
+    buffer = io.BytesIO()
+
+    # 创建PDF文档
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=letter,
+        rightMargin=72,
+        leftMargin=72,
+        topMargin=72,
+        bottomMargin=18
+    )
+
+    # 获取样式
+    styles = getSampleStyleSheet()
+
+    # 创建自定义样式
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=16,
+        spaceAfter=30,
+        alignment=1  # 居中
+    )
+
+    normal_style = ParagraphStyle(
+        'CustomNormal',
+        parent=styles['Normal'],
+        fontSize=11,
+        spaceAfter=12,
+        leading=14
+    )
+
+    # 构建内容
+    story = []
+
+    # 添加标题
+    story.append(Paragraph(title, title_style))
+    story.append(Spacer(1, 12))
+
+    # 处理文本内容
+    if text:
+        # 将文本按段落分割
+        paragraphs = text.split('\n\n')
+
+        for paragraph in paragraphs:
+            if paragraph.strip():
+                # 清理文本并处理长段落
+                cleaned_text = paragraph.strip()
+                if len(cleaned_text) > 0:
+                    # 使用textwrap处理长段落
+                    wrapped_lines = textwrap.wrap(cleaned_text, width=80)
+                    for line in wrapped_lines:
+                        if line.strip():
+                            story.append(Paragraph(line, normal_style))
+
+                    # 段落间添加间距
+                    story.append(Spacer(1, 6))
+
+    # 构建PDF
+    doc.build(story)
+
+    # 获取PDF内容
+    pdf_content = buffer.getvalue()
+    buffer.close()
+
+    return pdf_content

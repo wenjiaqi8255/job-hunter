@@ -1,0 +1,69 @@
+fc26907 - Jiaqi Wen, 12 天前 : Edit readme
+9f5ecc0 - Jiaqi Wen, 12 天前 : Update README and initial data fixtures
+1a32255 - Jiaqi Wen, 12 天前 : Update project structure and dependencies
+603a43e - Jiaqi Wen, 4 周前 : minor fix
+0e14672 - Jiaqi Wen, 4 周前 : Refactor job detail and main page templates to enhance tips display
+577157b - Jiaqi Wen, 4 周前 : Refactor job detail and main page templates to enhance tips display
+02e32b3 - Jiaqi Wen, 4 周前 : Enhance job anomaly analysis and display in templates
+d712c7d - Jiaqi Wen, 4 周前 : Add tips parsing functionality and update profile page logic (one of the promised features)
+970bedf - Jiaqi Wen, 4 周前 : Fix: parse_and_prepare_insights_for_template function to improve insight parsing logic
+1055e98 - Jiaqi Wen, 4 周前 : Add loading modal and button enhancements for application status save in job_details (fails because of the inavailability of Django + html)
+ae092de - Jiaqi Wen, 4 周前 : fix transparent bg problem
+4b6fb21 - Jiaqi Wen, 4 周前 : Remove bg-light to reduce overhaul of hierachies
+0dee158 - Jiaqi Wen, 4 周前 : Add global loading modals for cover letter and custom resume generation
+4c0b9c0 - Jiaqi Wen, 4 周前 : Refactor cover letter and custom resume templates for improved layout and user experience
+abb7c2c - Jiaqi Wen, 4 周前 : Refactor sidebar and main page templates for improved layout and user experience
+848fcd2 - Jiaqi Wen, 4 周前 : Add tips to improve feature and update profile page links
+a62624d - Jiaqi Wen, 4 周前 : Update templates for improved user experience and styling consistency
+52267fe - Jiaqi Wen, 4 周前 : Add user email field to UserProfile model and update profile page functionality
+d815f92 - Jiaqi Wen, 4 周前 : Enhance match session functionality with loading indicators and debounce logic. Updated the main page to include a loading modal during match requests, added a spinner to the 'Start New Match Session' button, and implemented a 30-second debounce mechanism to prevent duplicate submissions. Improved user feedback during the matching process with appropriate messages and modal displays.
+476574f - Jiaqi Wen, 4 周前 : Update button styles and enhance recent sessions retrieval. Changed the 'New Session' button class for improved styling, updated match score heading class for consistency, and increased the count of recent sessions retrieved from 5 to 10. Added a new CSS variable for lighter brand color to enhance visual design.
+71efdda - Jiaqi Wen, 4 周前 : Refactor profile and applications templates for improved styling and consistency. Migrate inline styles to external CSS, update heading classes for uniformity, and enhance layout structure with card components. Adjust container padding and remove unnecessary classes for a cleaner design.
+f77d5fa - Jiaqi Wen, 4 周前 : Add user registration functionality
+2b8b90a - Jiaqi Wen, 4 周前 : Refactor main page and base template for improved styling and user experience. Updated dropdown menu classes for consistency, adjusted footer styling, and added a new body class for the welcome page background. Enhanced button styles for better visual coherence across templates and introduced a new CSS class for the welcome page background image.
+eb938d7 - Jiaqi Wen, 4 周前 : Refactor card styles and improve button consistency across templates. Updated the custom resume page, job detail, and main page to enhance visual coherence by adjusting button classes and card header styles. Modified CSS variables for better branding and visual hierarchy.
+9474181 - Jiaqi Wen, 4 周前 : Enhance custom resume page with improved formatting and preview functionality. Added a new template filter for formatting resume text into HTML, and updated the resume display to include a styled preview section. Adjusted CSS for better visual presentation of the resume content.
+3217fd4 - Jiaqi Wen, 4 周前 : fix: Seperate CV and Preference to avoid override each other when submit the form
+d7d91ff - Jiaqi Wen, 4 周前 : fix breadcrumb bug
+c46a34a - Jiaqi Wen, 4 周前 : Refactor heading styles and update session card content for improved UI consistency. Added class attributes to headings in profile and all matches templates, and modified session card text to display user preferences instead of input. Adjusted CSS for session card title for better visual hierarchy.
+6ee9a2d - Jiaqi Wen, 4 周前 : Update job detail and my applications templates for consistent button styles and improved UI. Changed button classes to use 'btn-outline-primary' for better visual coherence. Adjusted heading styles in job detail template for enhanced readability. Added new CSS variables for primary text color and updated button hover effects.
+5d774e2 - Jiaqi Wen, 4 周前 : Add cover letter download functionality
+353b752 - Jiaqi Wen, 4 周前 : Enhance user experience with login prompts and session management. Updated job detail and main page templates to include authentication alerts and improved navigation links. Added JavaScript for handling login redirects and refined session ID handling in views for better user flow.
+235f687 - Jiaqi Wen, 4 周前 : Update HTML templates for consistent heading styles and improve form layouts. Added class attributes to headings for better styling and adjusted form display properties for a cleaner UI across various pages.
+d10b241 - Jiaqi Wen, 4 周前 : Refactor job application status handling and enhance UI components. Updated main page and base HTML for improved layout and user experience, including new job status badges and streamlined CV/preferences sections. Adjusted application status logic to ensure accurate updates on job views.
+8459041 - Jiaqi Wen, 4 周前 : Remove confusing directories (static), and update base HTML to reflect changes. Enhance job detail and main page templates with new application buttons and status badges for improved user interaction. Refactor styles for better responsiveness and visual consistency across components.
+de75b1b - Arina K, 4 周前 : Enhance job matching functionality with new all matches page and improved session management. Updated URL routing to include new views for session handling, and refined CSS for better layout and responsiveness. Added pagination for match sessions and integrated user profile checks for starting new match sessions.
+7e8837c - Arina K, 4 周前 : UI navbar final version
+cd6eea0 - Arina K, 4 周前 : UI main page: unified design for matching card
+fccde33 - Arina K, 5 周前 : UI revamp main page layout with coherent style
+125d4c4 - Arina K, 5 周前 : UI Application page; minor design update on alert message
+27a114d - Jiaqi Wen, 5 周前 : Merge branch 'master' into enhancement/auth-flow-login-ui
+87e0816 - Arina K, 5 周前 : Navbar design update
+c03b0dc - Arina K, 5 周前 : UI My Applications Page: improved layout with reference to login page style
+64dc997 - Arina K, 5 周前 : Branch support (ignore for master); Migrations added/modified
+11a66ee - Jiaqi Wen, 6 周前 : Refactor any user-personal data by removing Supabase service integration and reuse Django ORM.
+e475eac - Arina K, 6 周前 : Merge remote-tracking branch 'origin/enhancement/auth-flow-login-ui' into enhancement/auth-flow-login-ui
+3543d9f - Arina K, 6 周前 : UI update (login page)
+8524906 - Arina K, 7 周前 : Fix auth flow issues + update requirements
+587f411 - Jiaqi Wen, 7 周前 : In order to improve maintainability and code organization, reconstruct views.py into multiple specific modules.
+0b98677 - Jiaqi Wen, 7 周前 : Add Google OAuth integration with Supabase and refactor authentication flow Use Fragment instead of Query Parameters Backend auth instead of frontend auth Align with the proper use of the Supabase auth
+c3e71f1 - Arina K, 7 周前 : Fix auth flow issues + update requirements
+f48212b - Jiaqi Wen, 7 周前 : Enhance user authentication and job management features
+0c26d42 - Jiaqi Wen, 7 周前 : !!Big Update!!: add user auth integration and login/out feature
+199f660 - Jiaqi Wen, 7 周前 : Add JobAnomalyAnalysis model and integrate anomaly detection into job views and templates. Implement helper functions for fetching and parsing anomaly data from Supabase. Update job detail and main page templates to display detected anomalies, enhancing user insights on job listings.
+566f4e0 - Jiaqi Wen, 8 周前 : Refactor job application status update to handle JSON input and improve error handling. Update main page template by removing modal for CV and preferences input, integrating them directly into the page flow for a streamlined user experience. Adjust profile page layout for cleaner presentation.
+95d10ec - Jiaqi Wen, 8 周前 : Add .cursorindexingignore to exclude SpecStory auto-save files and update .gitignore accordingly. Modify URL patterns to streamline language selection and enhance main page functionality. Adjust base template to ensure correct language redirection after selection.
+e9d8770 - Jiaqi Wen, 8 周前 : Add internationalization support by implementing language selection and translation features. Update settings for language management, modify URL patterns for i18n, and enhance job detail display with translated descriptions. Include migration for new translated_description field in JobListing model.
+64687ef - Jiaqi Wen, 9 周前 : Merge pull request #3 from wenjiaqi8255/cv_preview
+5d418cb - Arina K, 9 周前 : Add check for missing UserProfile before accessing session data in main_page
+a21fda0 - Jiaqi Wen, 9 周前 : Merge from branch. Update base and profile page templates to reflect branding change from "Job Matcher MVP" to "JobbAI MVP". Enhance UI with Montserrat font and placeholder adjustments for logo and user email. Remove unused experience pool section from profile page for cleaner layout.
+0cec0c3 - Jiaqi Wen, 9 周前 : Fix Bugs. Add CustomResume model for user-specific resume management, enhance cover letter generation with job dictionary, and implement regeneration functionality in views and templates. Update UI to support existing cover letter and resume checks, ensuring better user experience during document generation.
+cc09349 - Jiaqi Wen, 9 周前 : Refactor project settings to enhance environment variable management, update requirements for additional packages, and improve user profile handling. Introduce new features for custom resume generation and experience management, including UI updates for related templates and views. Migrate saved_jobs to supabase.
+211cb1c - Jiaqi Wen, 2 个月前 : Update profile page to display application count and saved minutes; adjust navbar to include logo; refine main and my applications pages for improved UI and layout consistency.
+3a9f0d4 - Jiaqi Wen, 3 个月前 : Add profile page functionality with user session management for CV, preferences, and email. Update navigation to include profile link and create a new profile template for user data display and updates.
+d2d0816 - Jiaqi Wen, 3 个月前 : Enhance job detail page by adding parsed insights functionality and improving UI with new CSS styles. Introduce a dedicated stylesheet for consistent styling across components, and update templates to utilize the new styles and insights display. Refactor application status management for better user experience.
+f609138 - Jiaqi Wen, 3 个月前 : Change the UI of the main page. Refactor my applications page to enhance session management and status tracking. Introduce status counts for saved jobs, improve template rendering for job applications, and add utility filters for status display and keyword highlighting in templates.
+44620cf - Jiaqi Wen, 3 个月前 : Enhance job matching functionality by integrating dotenv for environment variable management, updating requirements for Python packages, and refining settings for Supabase configuration. Improve job detail and application status handling in views and templates, including session management for job matches.
+ff78f77 - Jiaqi Wen, 3 个月前 : Implement structured user profile extraction and job matching; add saved job functionality with status tracking and cover letter generation. Update UI for job details and applications management.
+ef926e8 - Jiaqi Wen, 3 个月前 : add matching history
+8d75650 - Jiaqi Wen, 3 个月前 : first commit
